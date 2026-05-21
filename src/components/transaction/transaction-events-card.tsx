@@ -27,8 +27,11 @@ function EventItem({ event, index }: { event: EventView; index: number }) {
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">Event #{index + 1}</p>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
-          <p className="text-xs text-muted-foreground">Contract address</p>
-          <code className="break-all rounded-md bg-muted px-2 py-1 text-xs">{event.contractAddress}</code>
+          <p className="text-xs text-muted-foreground">Contract</p>
+          <div className="flex flex-col gap-1">
+            {event.contractName ? <p className="text-sm font-medium">{event.contractName}</p> : null}
+            <code className="break-all rounded-md bg-muted px-2 py-1 text-xs">{event.contractAddress}</code>
+          </div>
         </div>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
           <p className="text-xs text-muted-foreground">Topics</p>
