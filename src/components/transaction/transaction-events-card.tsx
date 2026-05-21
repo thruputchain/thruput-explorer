@@ -26,6 +26,7 @@ function EventItem({ event, index }: { event: EventView; index: number }) {
       {index > 0 ? <Separator /> : null}
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">Event #{index + 1}</p>
+        {event.decoded ? <DecodedEvent event={event.decoded} /> : null}
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
           <p className="text-xs text-muted-foreground">Contract</p>
           <div className="flex flex-col gap-1">
@@ -51,6 +52,31 @@ function EventItem({ event, index }: { event: EventView; index: number }) {
           <p className="text-xs text-muted-foreground">Data</p>
           <code className="break-all rounded-md bg-muted px-2 py-1 text-xs">{event.data ?? "0x"}</code>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DecodedEvent({ event }: { event: NonNullable<EventView["decoded"]> }) {
+  return (
+    <div className="rounded-lg border bg-card/60 p-3">
+      <p className="mb-3 text-sm font-medium">{event.name}</p>
+      <div className="grid gap-2 text-sm sm:grid-cols-[140px_1fr]">
+        {event.kind === "token-transfer" ? (
+          <>
+            <p className="text-xs text-muted-foreground">From</p>
+            <code className="break-all text-xs">{event.from}</code>
+          </>
+        ) : null}
+        <p className="text-xs text-muted-foreground">To</p>
+        <code className="break-all text-xs">{event.to}</code>
+        <p className="text-xs text-muted-foreground">Amount</p>
+        <p>
+          {event.amount}
+          {event.symbol ? ` ${event.symbol}` : ""}
+        </p>
+        <p className="text-xs text-muted-foreground">Raw amount</p>
+        <code className="break-all text-xs">{event.rawAmount}</code>
       </div>
     </div>
   );

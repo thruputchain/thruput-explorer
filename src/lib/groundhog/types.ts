@@ -36,9 +36,29 @@ export type TransactionReceiptView = {
 export type EventView = {
   contractAddress: string;
   contractName?: string;
+  decoded?: DecodedEventView;
   topics: string[];
   data?: string;
 };
+
+export type DecodedEventView =
+  | {
+      kind: "token-transfer";
+      name: string;
+      from: string;
+      to: string;
+      rawAmount: string;
+      amount: string;
+      symbol?: string;
+    }
+  | {
+      kind: "token-mint";
+      name: string;
+      to: string;
+      rawAmount: string;
+      amount: string;
+      symbol?: string;
+    };
 
 export type TransactionPageData = {
   hash: string;
