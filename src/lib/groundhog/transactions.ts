@@ -1,12 +1,13 @@
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
-import { getContractName } from "./contract-registry";
+import { getContractInfo, getContractName } from "./contract-registry";
 import {
   getChainTip,
   getGroundhogRpcUrl,
   getTransactionReceipt,
   getTransactionStatus,
 } from "./rpc";
+import { decodeTokenEvent } from "./token-events";
 import type {
   ChainTipView,
   EventView,
@@ -112,12 +113,17 @@ function readEvents(value: unknown): EventView[] {
   return events.map((event) => {
     const contractAddress =
       readString(event, "contractAddress") ?? readString(event, "contract_address") ?? readString(event, "contract") ?? "-";
-
-    return {
+    const contract = getContractInfo(contractAddress);
+    const eventView = {
       contractAddress,
       contractName: getContractName(contractAddress),
       topics: readArray(event, "topics")?.map((topic) => String(topic)) ?? [],
       data: readString(event, "data") ?? readString(event, "raw") ?? undefined,
+    };
+
+    return {
+      ...eventView,
+      decoded: decodeTokenEvent(eventView, contract),
     };
   });
 }
