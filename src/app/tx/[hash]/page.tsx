@@ -3,6 +3,7 @@ import { AlertCircleIcon } from "lucide-react";
 import { TransactionEventsCard } from "@/components/transaction/transaction-events-card";
 import { TransactionExecutionCard } from "@/components/transaction/transaction-execution-card";
 import { TransactionHeader } from "@/components/transaction/transaction-header";
+import { TransactionRawReceiptCard } from "@/components/transaction/transaction-raw-receipt-card";
 import { TransactionSummaryCard } from "@/components/transaction/transaction-summary-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { loadTransactionPageData } from "@/lib/groundhog/transactions";
@@ -36,6 +37,7 @@ export default async function TransactionPage({ params }: { params: Promise<{ ha
         <TransactionSummaryCard data={data} />
         <TransactionExecutionCard data={data} />
         <TransactionEventsCard events={data.receipt.events} />
+        <TransactionRawReceiptCard data={data} />
       </div>
     </main>
   );

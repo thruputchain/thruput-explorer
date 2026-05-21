@@ -6,10 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "transfer-erc20": "tsx scripts/transfer-erc20.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@groundhogchain/client": "file:../groundhog-client-ts",
+    "@groundhogchain/contract-spec": "file:../groundhog-protocol-ts/packages/contract-spec",
+    "@groundhogchain/protocol": "file:../groundhog-protocol-ts/packages/protocol",
+    "@groundhogchain/xdr": "file:../groundhog-protocol-ts/packages/xdr",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
@@ -28,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }

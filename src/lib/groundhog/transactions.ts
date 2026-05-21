@@ -1,5 +1,6 @@
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
+import { getContractName } from "./contract-registry";
 import {
   getChainTip,
   getGroundhogRpcUrl,
@@ -101,18 +102,24 @@ function normalizeReceipt(result: RpcResult<unknown>): TransactionReceiptView {
     returnData: readNullableString(receipt, "returnData") ?? readNullableString(receipt, "return_data"),
     abortData: readNullableString(receipt, "abortData") ?? readNullableString(receipt, "abort_data"),
     events: readEvents(receipt),
+    rawJson: stringifyJson(result.data),
   };
 }
 
 function readEvents(value: unknown): EventView[] {
   const events = readArray(value, "events") ?? [];
 
-  return events.map((event) => ({
-    contractAddress:
-      readString(event, "contractAddress") ?? readString(event, "contract_address") ?? readString(event, "contract") ?? "-",
-    topics: readArray(event, "topics")?.map((topic) => String(topic)) ?? [],
-    data: readString(event, "data") ?? readString(event, "raw") ?? undefined,
-  }));
+  return events.map((event) => {
+    const contractAddress =
+      readString(event, "contractAddress") ?? readString(event, "contract_address") ?? readString(event, "contract") ?? "-";
+
+    return {
+      contractAddress,
+      contractName: getContractName(contractAddress),
+      topics: readArray(event, "topics")?.map((topic) => String(topic)) ?? [],
+      data: readString(event, "data") ?? readString(event, "raw") ?? undefined,
+    };
+  });
 }
 
 function unwrapOutput(value: unknown) {
@@ -164,4 +171,12 @@ function readArray(value: unknown, key: string) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function stringifyJson(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return undefined;
+  }
 }

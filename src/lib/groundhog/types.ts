@@ -29,11 +29,13 @@ export type TransactionReceiptView = {
   events: EventView[];
   returnData?: string | null;
   abortData?: string | null;
+  rawJson?: string;
   error?: RpcFailure;
 };
 
 export type EventView = {
   contractAddress: string;
+  contractName?: string;
   topics: string[];
   data?: string;
 };
