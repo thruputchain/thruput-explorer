@@ -22,7 +22,7 @@ export default async function TransactionPage({
     <main className="min-h-screen bg-background px-4 pt-4">
       <TransactionHeader data={data} />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-8">
-        {data.status.kind === "unavailable" ? (
+        {data.status.status === "unavailable" ? (
           <Alert variant="destructive">
             <AlertCircleIcon />
             <AlertTitle>Groundhog RPC unavailable</AlertTitle>
@@ -30,7 +30,7 @@ export default async function TransactionPage({
           </Alert>
         ) : null}
 
-        {data.status.kind === "unknown" ? (
+        {data.status.status === "unknown" ? (
           <Alert>
             <AlertCircleIcon />
             <AlertTitle>Unknown transaction</AlertTitle>
@@ -42,7 +42,7 @@ export default async function TransactionPage({
 
         <TransactionSummaryCard data={data} />
         <TransactionExecutionCard data={data} />
-        <TransactionEventsCard events={data.receipt.events} />
+        <TransactionEventsCard events={data.receipt?.events ?? []} />
         <TransactionRawReceiptCard data={data} />
       </div>
     </main>

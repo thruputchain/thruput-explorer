@@ -2,9 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import type { TransactionStatusView } from "@/lib/groundhog/types";
 
 export function StatusBadge({ status }: { status: TransactionStatusView }) {
-  if (status.kind === "committed") return <Badge>Committed</Badge>;
-  if (status.kind === "pending") return <Badge variant="secondary">Pending</Badge>;
-  if (status.kind === "invalid") return <Badge variant="destructive">Invalid</Badge>;
-  if (status.kind === "unavailable") return <Badge variant="destructive">RPC unavailable</Badge>;
+  if (status.status === "committed") return <Badge>Committed</Badge>;
+  if (status.status === "pending") return <Badge variant="secondary">Pending</Badge>;
+  if (status.status === "invalid") return <Badge variant="destructive">Invalid</Badge>;
+  if (status.status === "unavailable") return <Badge variant="destructive">RPC unavailable</Badge>;
+  if (status.status === "malformed") return <Badge variant="destructive">Invalid hash</Badge>;
   return <Badge variant="outline">Unknown</Badge>;
 }

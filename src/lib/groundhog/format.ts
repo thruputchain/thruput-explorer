@@ -1,9 +1,3 @@
-export function formatMaybeHex(value: unknown) {
-  if (typeof value === "string") return value;
-  if (value == null) return null;
-  return String(value);
-}
-
 export function stringifyJson(value: unknown) {
   return JSON.stringify(
     value,

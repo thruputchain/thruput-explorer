@@ -1,48 +1,24 @@
-import type { RpcFailure, RpcResult } from "./types";
-
 const DEFAULT_RPC_URL = "http://localhost:9545";
 
 type JsonRpcResponse<T> = {
   result?: T;
-  error?: {
-    code?: number;
-    message?: string;
-  };
+  error?: unknown;
 };
 
 export function getGroundhogRpcUrl() {
   return process.env.GROUNDHOG_RPC_URL ?? DEFAULT_RPC_URL;
 }
 
-async function rpcRequest<T>(method: string, params: unknown[] = []): Promise<RpcResult<T>> {
-  try {
-    const response = await fetch(getGroundhogRpcUrl(), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-      cache: "no-store",
-    });
+export async function getRawTransactionReceipt(hash: string) {
+  const response = await fetch(getGroundhogRpcUrl(), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "groundhog_getTransactionReceipt", params: [hash] }),
+    cache: "no-store",
+  });
 
-    if (!response.ok) {
-      return failure(`HTTP ${response.status} from Groundhog RPC`);
-    }
+  if (!response.ok) return undefined;
 
-    const payload = (await response.json()) as JsonRpcResponse<T>;
-
-    if (payload.error) {
-      return failure(payload.error.message ?? "Groundhog RPC error", payload.error.code);
-    }
-
-    return { ok: true, data: payload.result as T };
-  } catch (error) {
-    return failure(error instanceof Error ? error.message : "Unable to reach Groundhog RPC");
-  }
-}
-
-export function getRawTransactionReceipt(hash: string) {
-  return rpcRequest<unknown>("groundhog_getTransactionReceipt", [hash]);
-}
-
-function failure(message: string, code?: number): { ok: false; error: RpcFailure } {
-  return { ok: false, error: { message, code } };
+  const payload = (await response.json()) as JsonRpcResponse<unknown>;
+  return payload.error ? undefined : payload.result;
 }

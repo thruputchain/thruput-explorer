@@ -13,7 +13,7 @@ import {
 import {
   AuthClaimType,
   CxsWriter,
-  Uint64Codec,
+  Uint128Codec,
   bitMap,
   blockHeight,
   calldata,
@@ -21,6 +21,7 @@ import {
   contractEntrypointID,
   gasAmount,
   serialize,
+  toHex as bytesToHex,
   weight,
 } from "@groundhogchain/protocol";
 import type { ContractAddress, Invocation, SHA256Hash } from "@groundhogchain/protocol";
@@ -30,7 +31,6 @@ const DEFAULT_RPC_URL = process.env.GROUNDHOG_RPC_URL ?? "http://localhost:9545"
 const DEFAULT_SPEC_PATH =
   "/home/chambaz/Work/groundhog-test/token/target/groundhog/token.spec.json";
 const DEFAULT_DECIMALS = 6;
-const MAX_U64 = BigInt("18446744073709551615");
 const WALLET_GAS_LIMIT = gasAmount(BigInt(10_000_000));
 const CALL_GAS_LIMIT = gasAmount(BigInt(500_000));
 const WALLET_DO_ACTION_ENTRYPOINT_HEX = "0x19846d750fad81d6";
@@ -135,7 +135,7 @@ async function loadSpec(specPath: string) {
 function encodeTransferCalldata(to: ContractAddress, amount: bigint) {
   const writer = new CxsWriter();
   codec.ContractAddress.encode(writer, to);
-  Uint64Codec.encode(writer, amount);
+  Uint128Codec.encode(writer, amount);
   return calldata(writer.finish());
 }
 
@@ -206,10 +206,6 @@ function parseTokenAmount(value: string, decimals: number) {
   const rawText = `${whole}${fraction.padEnd(decimals, "0")}`.replace(/^0+(?=\d)/, "");
   const rawAmount = BigInt(rawText);
 
-  if (rawAmount > MAX_U64) {
-    throw new Error("Invalid --amount. Raw amount exceeds u64 max.");
-  }
-
   return rawAmount;
 }
 
@@ -268,7 +264,7 @@ function stringifyExecStatus(value: unknown) {
 }
 
 function toHex(value: Uint8Array) {
-  return `0x${Buffer.from(value).toString("hex")}`;
+  return `0x${bytesToHex(value)}`;
 }
 
 void main().catch((error) => {

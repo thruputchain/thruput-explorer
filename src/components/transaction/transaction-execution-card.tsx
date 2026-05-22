@@ -12,15 +12,15 @@ export function TransactionExecutionCard({ data }: { data: TransactionPageData }
       </CardHeader>
       <CardContent>
         <dl>
-          <FieldRow label="Exec result">{data.receipt.execResult ?? "-"}</FieldRow>
-          <FieldRow label="Receipt height">{data.receipt.height ?? "-"}</FieldRow>
+          <FieldRow label="Exec result">{data.receipt?.execResult ?? "-"}</FieldRow>
+          <FieldRow label="Receipt height">{data.receipt?.height ?? "-"}</FieldRow>
           <FieldRow label="Return data">
-            <span className="break-all font-mono">{data.receipt.returnData || "-"}</span>
+            <span className="break-all font-mono">{data.receipt?.returnData || "-"}</span>
           </FieldRow>
           <FieldRow label="Abort data">
-            <span className="break-all font-mono">{data.receipt.abortData || "-"}</span>
+            <span className="break-all font-mono">{data.receipt?.abortData || "-"}</span>
           </FieldRow>
-          {data.status.kind === "invalid" ? <FieldRow label="Invalid reason">{data.status.reason ?? "-"}</FieldRow> : null}
+          {data.status.status === "invalid" || data.status.status === "malformed" ? <FieldRow label="Invalid reason">{data.status.reason}</FieldRow> : null}
         </dl>
       </CardContent>
     </Card>
