@@ -14,7 +14,7 @@ export function getGroundhogRpcUrl() {
   return process.env.GROUNDHOG_RPC_URL ?? DEFAULT_RPC_URL;
 }
 
-export async function rpcRequest<T>(method: string, params: unknown[] = []): Promise<RpcResult<T>> {
+async function rpcRequest<T>(method: string, params: unknown[] = []): Promise<RpcResult<T>> {
   try {
     const response = await fetch(getGroundhogRpcUrl(), {
       method: "POST",
@@ -39,16 +39,8 @@ export async function rpcRequest<T>(method: string, params: unknown[] = []): Pro
   }
 }
 
-export function getTransactionStatus(hash: string) {
-  return rpcRequest<unknown>("groundhog_getTransactionStatus", [hash]);
-}
-
-export function getTransactionReceipt(hash: string) {
+export function getRawTransactionReceipt(hash: string) {
   return rpcRequest<unknown>("groundhog_getTransactionReceipt", [hash]);
-}
-
-export function getChainTip() {
-  return rpcRequest<unknown>("groundhog_chainTip");
 }
 
 function failure(message: string, code?: number): { ok: false; error: RpcFailure } {
