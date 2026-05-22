@@ -3,7 +3,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import type { TransactionPageData } from "@/lib/groundhog/types";
 
 export function TransactionRawReceiptCard({ data }: { data: TransactionPageData }) {
-  if (!data.receipt.rawJson) return null;
+  if (!data.receipt?.rawJson) return null;
 
   return (
     <Card>

@@ -1,49 +1,20 @@
+import type { GroundhogClient } from "@groundhogchain/client";
+
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 import { getContractInfo, getContractName } from "./contract-registry";
+import { stringifyJson } from "./format";
 import { getGroundhogRpcUrl, getRawTransactionReceipt } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import type {
-  ChainTipView,
-  EventView,
   RpcFailure,
-  RpcResult,
   TransactionPageData,
-  TransactionReceiptView,
-  TransactionStatusView,
 } from "./types";
-
-type ChainTip = {
-  height: bigint;
-  blockHash: Uint8Array;
-};
-
-type TransactionStatus =
-  | { status: "pending" }
-  | { status: "committed"; height: bigint }
-  | { status: "invalid"; reason: string }
-  | { status: "unknown" };
-
-type TransactionReceipt = {
-  txHash: Uint8Array;
-  height: bigint;
-  execResult: number;
-  events: Array<{
-    contractAddress: Uint8Array;
-    topics: Uint8Array[];
-    data: Uint8Array;
-  }>;
-  returnData: Uint8Array | null;
-  abortData: Uint8Array | null;
-};
 
 type GroundhogClientSdk = {
   HttpTransport: new (url: string) => unknown;
-  createGroundhogClient: (transport: unknown) => {
-    getTransactionStatus: (hash: Uint8Array) => Promise<TransactionStatus>;
-    getTransactionReceipt: (hash: Uint8Array) => Promise<TransactionReceipt | null>;
-    getChainTip: () => Promise<ChainTip>;
-  };
+  createGroundhogClient: (transport: unknown) => GroundhogClient;
+  hashFromHex: (value: string) => Parameters<GroundhogClient["getTransactionStatus"]>[0];
 };
 
 export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
@@ -53,114 +24,66 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
     return {
       hash,
       rpcUrl: getGroundhogRpcUrl(),
-      status: { kind: "invalid", label: "Invalid", reason: "Malformed transaction hash" },
-      chainTip: { available: false },
-      receipt: { available: false, events: [] },
+      status: { status: "malformed", reason: "Malformed transaction hash" },
+      receipt: null,
     };
   }
 
-  const sdk = await loadGroundhogClientSdk();
-  const client = sdk.createGroundhogClient(new sdk.HttpTransport(getGroundhogRpcUrl()));
-  const txHash = hashFromHex(hash);
-  const [statusResult, receiptResult, chainTipResult, rawReceiptResult] = await Promise.all([
-    sdkRequest(() => client.getTransactionStatus(txHash)),
-    sdkRequest(() => client.getTransactionReceipt(txHash)),
-    sdkRequest(() => client.getChainTip()),
-    getRawTransactionReceipt(hash),
-  ]);
+  try {
+    const sdk = await loadGroundhogClientSdk();
+    const client = createClient(sdk);
+    const txHash = sdk.hashFromHex(hash);
 
-  return {
-    hash,
-    rpcUrl: getGroundhogRpcUrl(),
-    status: normalizeStatus(statusResult),
-    chainTip: normalizeChainTip(chainTipResult),
-    receipt: normalizeReceipt(receiptResult, rawReceiptResult),
-  };
-}
-
-function normalizeStatus(result: RpcResult<TransactionStatus>): TransactionStatusView {
-  if (!result.ok) return { kind: "unavailable", label: "Unavailable", error: result.error };
-
-  switch (result.data.status) {
-    case "pending":
-      return { kind: "pending", label: "Pending" };
-    case "committed":
-      return { kind: "committed", label: "Committed", height: result.data.height.toString() };
-    case "invalid":
-      return { kind: "invalid", label: "Invalid", reason: result.data.reason };
-    case "unknown":
-    default:
-      return { kind: "unknown", label: "Unknown" };
-  }
-}
-
-function normalizeChainTip(result: RpcResult<ChainTip>): ChainTipView {
-  if (!result.ok) return { available: false, error: result.error };
-  return {
-    available: true,
-    height: result.data.height.toString(),
-    blockHash: toHex(result.data.blockHash),
-  };
-}
-
-function normalizeReceipt(
-  result: RpcResult<TransactionReceipt | null>,
-  rawReceiptResult: RpcResult<unknown>,
-): TransactionReceiptView {
-  if (!result.ok) return { available: false, events: [], error: result.error };
-  if (result.data == null) return { available: false, events: [] };
-
-  return {
-    available: true,
-    txHash: toHex(result.data.txHash),
-    height: result.data.height.toString(),
-    execResult: formatExecResult(result.data.execResult),
-    returnData: result.data.returnData ? toHex(result.data.returnData) : null,
-    abortData: result.data.abortData ? toHex(result.data.abortData) : null,
-    events: readEvents(result.data.events),
-    rawJson: rawReceiptResult.ok ? stringifyJson(rawReceiptResult.data) : undefined,
-  };
-}
-
-function readEvents(events: TransactionReceipt["events"]): EventView[] {
-  return events.map((event) => {
-    const contractAddress = toHex(event.contractAddress);
-    const contract = getContractInfo(contractAddress);
-    const eventView = {
-      contractAddress,
-      contractName: getContractName(contractAddress),
-      topics: event.topics.map((topic) => toHex(topic)),
-      data: toHex(event.data),
-    };
+    const [status, receipt, chainTip, rawReceipt] = await Promise.all([
+      client.getTransactionStatus(txHash),
+      client.getTransactionReceipt(txHash),
+      client.getChainTip(),
+      getRawTransactionReceipt(hash).catch(() => undefined),
+    ]);
 
     return {
-      ...eventView,
-      decoded: decodeTokenEvent(eventView, contract),
+      hash,
+      rpcUrl: getGroundhogRpcUrl(),
+      status: status.status === "committed" ? { status: "committed", height: status.height.toString() } : status,
+      chainTipHeight: chainTip.height.toString(),
+      receipt: receipt
+        ? {
+            txHash: toHex(receipt.txHash),
+            height: receipt.height.toString(),
+            execResult: formatExecResult(receipt.execResult),
+            returnData: receipt.returnData ? toHex(receipt.returnData) : null,
+            abortData: receipt.abortData ? toHex(receipt.abortData) : null,
+            events: receipt.events.map((event) => {
+              const contractAddress = toHex(event.contractAddress);
+              const contract = getContractInfo(contractAddress);
+              const eventView = {
+                contractAddress,
+                contractName: getContractName(contractAddress),
+                topics: event.topics.map(toHex),
+                data: toHex(event.data),
+              };
+
+              return {
+                ...eventView,
+                decoded: decodeTokenEvent(eventView, contract),
+              };
+            }),
+            rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),
+          }
+        : null,
     };
-  });
-}
-
-function stringifyJson(value: unknown) {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return undefined;
-  }
-}
-
-async function sdkRequest<T>(request: () => Promise<T>): Promise<RpcResult<T>> {
-  try {
-    return { ok: true, data: await request() };
   } catch (error) {
-    return { ok: false, error: rpcFailure(error) };
+    return {
+      hash,
+      rpcUrl: getGroundhogRpcUrl(),
+      status: { status: "unavailable", error: toRpcFailure(error) },
+      receipt: null,
+    };
   }
 }
 
-function rpcFailure(error: unknown): RpcFailure {
-  if (error instanceof Error && "code" in error && typeof error.code === "number") {
-    return { message: error.message, code: error.code };
-  }
-  return { message: error instanceof Error ? error.message : "Unable to reach Groundhog RPC" };
+function createClient(sdk: GroundhogClientSdk) {
+  return sdk.createGroundhogClient(new sdk.HttpTransport(getGroundhogRpcUrl()));
 }
 
 async function loadGroundhogClientSdk() {
@@ -173,16 +96,11 @@ async function loadGroundhogClientSdk() {
   return dynamicImport(packageName);
 }
 
-function hashFromHex(value: string) {
-  const bytes = bytesFromHex(value);
-  if (bytes.length !== 32) throw new Error(`Expected 32-byte transaction hash, got ${bytes.length} bytes`);
-  return bytes;
-}
-
-function bytesFromHex(value: string) {
-  const hex = value.startsWith("0x") ? value.slice(2) : value;
-  if (hex.length % 2 !== 0 || !/^[\da-f]*$/i.test(hex)) throw new Error(`Invalid hex value: ${value}`);
-  return new Uint8Array(Buffer.from(hex, "hex"));
+function toRpcFailure(error: unknown): RpcFailure {
+  if (error instanceof Error && "code" in error && typeof error.code === "number") {
+    return { message: error.message, code: error.code };
+  }
+  return { message: error instanceof Error ? error.message : "Unable to reach Groundhog RPC" };
 }
 
 function toHex(value: Uint8Array) {
