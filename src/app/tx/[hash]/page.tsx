@@ -10,14 +10,18 @@ import { loadTransactionPageData } from "@/lib/groundhog/transactions";
 
 export const dynamic = "force-dynamic";
 
-export default async function TransactionPage({ params }: { params: Promise<{ hash: string }> }) {
+export default async function TransactionPage({
+  params,
+}: {
+  params: Promise<{ hash: string }>;
+}) {
   const { hash } = await params;
   const data = await loadTransactionPageData(hash);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background px-4 pt-4">
       <TransactionHeader data={data} />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8 sm:px-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-8">
         {data.status.kind === "unavailable" ? (
           <Alert variant="destructive">
             <AlertCircleIcon />
@@ -30,7 +34,9 @@ export default async function TransactionPage({ params }: { params: Promise<{ ha
           <Alert>
             <AlertCircleIcon />
             <AlertTitle>Unknown transaction</AlertTitle>
-            <AlertDescription>The node does not know this transaction hash yet.</AlertDescription>
+            <AlertDescription>
+              The node does not know this transaction hash yet.
+            </AlertDescription>
           </Alert>
         ) : null}
 
