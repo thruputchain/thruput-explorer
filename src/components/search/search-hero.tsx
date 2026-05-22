@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -29,35 +35,35 @@ export function SearchHero() {
   }
 
   return (
-    <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-10 px-6 py-16">
-      <div className="flex flex-col gap-4">
-        <p className="font-mono text-sm text-muted-foreground">Groundhog local explorer</p>
-        <div className="flex max-w-3xl flex-col gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
-            Inspect a transaction without leaving your local node.
-          </h1>
-          <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Search by transaction hash to inspect status, receipt data, emitted events, and local dev execution detail.
-          </p>
-        </div>
+    <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-8 px-6 py-16">
+      <div className="flex max-w-3xl flex-col gap-2">
+        <h2 className="uppercase text-lg font-mono">Groundhog Protocol</h2>
+        <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
+          Transaction Explorer
+        </h1>
       </div>
 
-      <Card className="max-w-3xl">
-        <CardHeader>
+      <Card>
+        <CardHeader className="sr-only">
           <CardTitle>Transaction search</CardTitle>
-          <CardDescription>Only transaction hashes are supported in this MVP.</CardDescription>
+          <CardDescription>
+            Search for a transaction by its hash to view details, events, and
+            more.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submit}>
-            <div className="flex flex-1 flex-col gap-2">
+            <div className="flex flex-1 flex-col gap-2 min-h-10">
               <Input
                 aria-invalid={error ? true : undefined}
                 value={hash}
                 onChange={(event) => setHash(event.target.value)}
-                placeholder="0x..."
-                className="font-mono"
+                placeholder="Search transaction hash (e.g. 0x1234abcd)"
+                className="font-mono h-10 md:text-xl"
               />
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
             </div>
             <Button type="submit" size="lg" disabled={isPending}>
               <SearchIcon data-icon="inline-start" />

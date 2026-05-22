@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 
-export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+export function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -18,9 +18,12 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" onClick={copy} disabled={isPending}>
-      {copied ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}
-      {copied ? "Copied" : label}
+    <Button type="button" variant="ghost" onClick={copy} disabled={isPending}>
+      {copied ? (
+        <CheckIcon data-icon="inline-start" />
+      ) : (
+        <CopyIcon data-icon="inline-start" />
+      )}
     </Button>
   );
 }

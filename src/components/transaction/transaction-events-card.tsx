@@ -21,25 +21,36 @@ export function TransactionEventsCard({ events }: { events: EventView[] }) {
 }
 
 function EventItem({ event, index }: { event: EventView; index: number }) {
+  if (event.decoded) {
+    return (
+      <div className="flex flex-col gap-3">
+        {index > 0 ? <Separator /> : null}
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium">Event #{index + 1}</p>
+          <DecodedEvent event={event.decoded} contractAddress={event.contractAddress} contractName={event.contractName} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {index > 0 ? <Separator /> : null}
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">Event #{index + 1}</p>
-        {event.decoded ? <DecodedEvent event={event.decoded} /> : null}
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
-          <p className="text-xs text-muted-foreground">Contract</p>
+          <EventLabel>Contract</EventLabel>
           <div className="flex flex-col gap-1">
             {event.contractName ? <p className="text-sm font-medium">{event.contractName}</p> : null}
-            <code className="break-all rounded-md bg-muted px-2 py-1 text-xs">{event.contractAddress}</code>
+            <code className="break-all text-xs">{event.contractAddress}</code>
           </div>
         </div>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
-          <p className="text-xs text-muted-foreground">Topics</p>
+          <EventLabel>Topics</EventLabel>
           <div className="flex flex-col gap-2">
             {event.topics.length > 0 ? (
               event.topics.map((topic, topicIndex) => (
-                <code className="break-all rounded-md bg-muted px-2 py-1 text-xs" key={`${topic}-${topicIndex}`}>
+                <code className="break-all text-xs" key={`${topic}-${topicIndex}`}>
                   [{topicIndex}] {topic}
                 </code>
               ))
@@ -49,35 +60,52 @@ function EventItem({ event, index }: { event: EventView; index: number }) {
           </div>
         </div>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
-          <p className="text-xs text-muted-foreground">Data</p>
-          <code className="break-all rounded-md bg-muted px-2 py-1 text-xs">{event.data ?? "0x"}</code>
+          <EventLabel>Data</EventLabel>
+          <code className="break-all text-xs">{event.data ?? "0x"}</code>
         </div>
       </div>
     </div>
   );
 }
 
-function DecodedEvent({ event }: { event: NonNullable<EventView["decoded"]> }) {
+function DecodedEvent({
+  event,
+  contractAddress,
+  contractName,
+}: {
+  event: NonNullable<EventView["decoded"]>;
+  contractAddress: string;
+  contractName?: string;
+}) {
   return (
-    <div className="rounded-lg border bg-card/60 p-3">
+    <div className="flex flex-col gap-3">
       <p className="mb-3 text-sm font-medium">{event.name}</p>
-      <div className="grid gap-2 text-sm sm:grid-cols-[140px_1fr]">
+      <div className="grid gap-3 text-sm sm:grid-cols-[140px_1fr] sm:gap-4">
+        <EventLabel>Contract</EventLabel>
+        <div className="flex flex-col gap-1">
+          {contractName ? <p className="text-sm font-medium">{contractName}</p> : null}
+          <code className="break-all text-xs">{contractAddress}</code>
+        </div>
         {event.kind === "token-transfer" ? (
           <>
-            <p className="text-xs text-muted-foreground">From</p>
+            <EventLabel>From</EventLabel>
             <code className="break-all text-xs">{event.from}</code>
           </>
         ) : null}
-        <p className="text-xs text-muted-foreground">To</p>
+        <EventLabel>To</EventLabel>
         <code className="break-all text-xs">{event.to}</code>
-        <p className="text-xs text-muted-foreground">Amount</p>
+        <EventLabel>Amount</EventLabel>
         <p>
           {event.amount}
           {event.symbol ? ` ${event.symbol}` : ""}
         </p>
-        <p className="text-xs text-muted-foreground">Raw amount</p>
+        <EventLabel>Raw amount</EventLabel>
         <code className="break-all text-xs">{event.rawAmount}</code>
       </div>
     </div>
   );
+}
+
+function EventLabel({ children }: { children: string }) {
+  return <p className="font-mono text-xs uppercase text-muted-foreground">{children}</p>;
 }
