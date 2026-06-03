@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import type { NextConfig } from "next";
 
 const groundhogPackages = [
@@ -12,9 +10,6 @@ const groundhogPackages = [
 
 const nextConfig: NextConfig = {
   transpilePackages: groundhogPackages,
-  turbopack: {
-    root: path.join(process.cwd(), ".."),
-  },
 };
 
 export default nextConfig;
