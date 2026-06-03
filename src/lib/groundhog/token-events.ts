@@ -1,41 +1,101 @@
+import { toHex0x, type EmittedEvent } from "@groundhogchain/client";
 import { createHash } from "node:crypto";
+import { CxsReader, Uint128Codec, contractAddress, majorVersionFromSemver, toHex } from "@groundhogchain/protocol";
 
-import { readCompactUint128FromHex } from "./compact-xdr";
 import type { ContractRegistryEntry } from "./contract-registry";
-import type { DecodedEventView, EventView } from "./types";
+import type { DecodedEventView } from "./types";
 
-const TRANSFER_EVENT_TOPIC = eventSignature("0.1.0", "groundhog-erc20-if", "TransferEvent");
+export function decodeTokenEvent(event: EmittedEvent, contract?: ContractRegistryEntry): DecodedEventView | undefined {
+  if (!contract?.standard) return undefined;
 
-export function decodeTokenEvent(event: EventView, contract?: ContractRegistryEntry): DecodedEventView | undefined {
-  if (contract?.standard !== "groundhog-token-v1") return undefined;
-  if (event.topics[0]?.toLowerCase() !== TRANSFER_EVENT_TOPIC) return undefined;
-
-  const from = event.topics[1];
-  const to = event.topics[2];
-  const rawAmount = readCompactUint128FromHex(event.data);
-  if (!from || !to || rawAmount == null) return undefined;
+  const transfer = decodeTransfer(event, contract.standard);
+  if (!transfer) return undefined;
 
   return {
     kind: "token-transfer",
     name: "Transfer",
-    from,
-    to,
-    rawAmount: rawAmount.toString(),
-    amount: formatTokenAmount(rawAmount, contract.decimals),
+    from: toHex0x(transfer.from),
+    to: toHex0x(transfer.to),
+    rawAmount: transfer.amount.toString(),
+    amount: formatTokenAmount(transfer.amount, contract.decimals),
     symbol: contract.symbol,
   };
 }
 
-function eventSignature(version: string, crateName: string, typeName: string) {
-  const majorVersion = majorVersionFromSemver(version);
-  return `0x${createHash("sha256").update(`${majorVersion}::${crateName}::${typeName}`).digest("hex")}`;
+function decodeTransfer(event: EmittedEvent, standard: ContractRegistryEntry["standard"]) {
+  switch (standard) {
+    case "groundhog-token-v1":
+      return decodeErc20TransferEvent(event);
+    case "groundhog-native-hog":
+      return decodeNativeHogTransferEvent(event);
+  }
 }
 
-function majorVersionFromSemver(version: string) {
-  const [major = "0", minor = "0", patch = "0"] = version.split(".");
-  if (major !== "0") return major;
-  if (minor !== "0") return `${major}.${minor}`;
-  return `${major}.${minor}.${patch}`;
+type TransferEvent = {
+  from: Uint8Array;
+  to: Uint8Array;
+  amount: bigint;
+};
+
+const ERC20_TRANSFER_EVENT_TOPIC = eventSignatureTopic("0.1.0", "groundhog-erc20-if", "TransferEvent");
+const NATIVE_HOG_TRANSFER_EVENT_TOPIC = namedEventTopic("TransferEvent");
+
+function decodeErc20TransferEvent(event: EmittedEvent): TransferEvent | undefined {
+  if (!matchesTopic(event, ERC20_TRANSFER_EVENT_TOPIC)) return undefined;
+
+  const from = event.topics[1];
+  const to = event.topics[2];
+  if (!from || !to) return undefined;
+
+  try {
+    const reader = new CxsReader(event.data);
+    const amount = Uint128Codec.decode(reader);
+    if (reader.remaining !== 0) return undefined;
+
+    return { from: contractAddress(from), to: contractAddress(to), amount };
+  } catch {
+    return undefined;
+  }
+}
+
+function decodeNativeHogTransferEvent(event: EmittedEvent): TransferEvent | undefined {
+  if (!matchesTopic(event, NATIVE_HOG_TRANSFER_EVENT_TOPIC)) return undefined;
+
+  const from = event.topics[1];
+  const to = event.topics[2];
+  if (!from || !to) return undefined;
+
+  try {
+    return {
+      from: contractAddress(from),
+      to: contractAddress(to),
+      amount: decodeFixedUint128(event.data),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function matchesTopic(event: EmittedEvent, topic: Uint8Array) {
+  return event.topics[0] != null && toHex(event.topics[0]) === toHex(topic);
+}
+
+function decodeFixedUint128(data: Uint8Array) {
+  if (data.length !== 16) throw new Error("invalid uint128 length");
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  return (view.getBigUint64(0) << BigInt(64)) + view.getBigUint64(8);
+}
+
+function eventSignatureTopic(version: string, crateName: string, typeName: string) {
+  const signature = `${majorVersionFromSemver(version)}::${crateName}::${typeName}`;
+  return createHash("sha256").update(signature).digest();
+}
+
+function namedEventTopic(name: string) {
+  const topic = new Uint8Array(32);
+  topic.set(new TextEncoder().encode(name));
+  return topic;
 }
 
 function formatTokenAmount(rawAmount: bigint, decimals = 0) {

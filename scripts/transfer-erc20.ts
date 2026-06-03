@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import {
   HttpTransport,
   PrivateKeySigner,
@@ -7,13 +5,14 @@ import {
   createGroundhogClient,
   createInvocation,
   createTransaction,
+  buildNamedCodecs,
+  encodeCalldata,
   fromHex0x,
   signTransaction,
 } from "@groundhogchain/client";
 import {
   AuthClaimType,
   CxsWriter,
-  Uint128Codec,
   bitMap,
   blockHeight,
   calldata,
@@ -24,13 +23,15 @@ import {
   toHex as bytesToHex,
   weight,
 } from "@groundhogchain/protocol";
+import { fromHex } from "@groundhogchain/protocol/utils";
+import { ContractTypeKind, contractSpecString } from "@groundhogchain/contract-spec";
+import type { ContractSpec } from "@groundhogchain/client";
 import type { ContractAddress, Invocation, SHA256Hash } from "@groundhogchain/protocol";
-import { deriveEntrypointID } from "@groundhogchain/protocol/utils";
 
 const DEFAULT_RPC_URL = process.env.GROUNDHOG_RPC_URL ?? "http://localhost:9545";
-const DEFAULT_SPEC_PATH =
-  "/home/chambaz/Work/groundhog-test/token/target/groundhog/token.spec.json";
 const DEFAULT_DECIMALS = 6;
+const HOG_DECIMALS = 7;
+const HOG_ADDRESS = addressFromHex("0x0000000000000000000000000000000000000000000000000000000000000001");
 const WALLET_GAS_LIMIT = gasAmount(BigInt(10_000_000));
 const CALL_GAS_LIMIT = gasAmount(BigInt(500_000));
 const WALLET_DO_ACTION_ENTRYPOINT_HEX = "0x19846d750fad81d6";
@@ -38,8 +39,8 @@ const WALLET_DO_ACTION_ENTRYPOINT_HEX = "0x19846d750fad81d6";
 async function main() {
   const options = parseArgs(process.argv.slice(2));
 
-  if (!options.contract) {
-    throw new Error("Missing required --contract 0x... argument");
+  if (!options.hog && !options.contract) {
+    throw new Error("Missing required --contract 0x... argument, or use --hog");
   }
 
   const transport = new HttpTransport(DEFAULT_RPC_URL);
@@ -49,21 +50,10 @@ async function main() {
   const from = resolveDevAccount(accounts, options.from);
   const to = resolveDevAccount(accounts, options.to);
   const amount = parseTokenAmount(options.amount, options.decimals);
-  const spec = await loadSpec(options.specPath);
-  const iface = spec.interfaces[0];
-  if (!iface) throw new Error("Spec does not contain any interfaces");
-
-  const entrypoint = await deriveEntrypointID(
-    iface.name,
-    iface.version,
-    "transfer",
-  );
-
-  const innerInvocation = createInvocation({
-    invoked_address: addressFromHex(options.contract),
-    entrypoint,
-    gas_limit: CALL_GAS_LIMIT,
-    calldata: encodeTransferCalldata(to.address, amount),
+  const contractAddress = options.hog ? HOG_ADDRESS : addressFromHex(options.contract);
+  const innerInvocation = erc20Transfer(contractAddress, CALL_GAS_LIMIT, {
+    to: to.address,
+    amount,
   });
 
   const walletInvocation = wrapInWalletInvocation(innerInvocation, from.address);
@@ -75,6 +65,7 @@ async function main() {
       nonce:
         BigInt(Date.now()) * BigInt(1000) + BigInt(Math.floor(Math.random() * 1000)),
     },
+    contracts_to_deploy: [],
     auth_claim: {
       claim_type: AuthClaimType.kSourceAddressAuthData,
       source_address_claim: {
@@ -89,9 +80,9 @@ async function main() {
   const txHash = await client.sendTransaction(signedTx);
 
   const txHashHex = toHex(txHash);
-  process.stdout.write(`Submitted ERC20 transfer\n`);
+  process.stdout.write(`Submitted ${options.hog ? "HOG" : "ERC20"} transfer\n`);
   process.stdout.write(`RPC URL: ${DEFAULT_RPC_URL}\n`);
-  process.stdout.write(`Contract: ${options.contract.toLowerCase()}\n`);
+  process.stdout.write(`Contract: ${toHex(contractAddress)}\n`);
   process.stdout.write(`From: ${toHex(from.address)} (${options.from})\n`);
   process.stdout.write(`To: ${toHex(to.address)} (${options.to})\n`);
   process.stdout.write(`Amount: ${options.amount}\n`);
@@ -125,28 +116,15 @@ function wrapInWalletInvocation(
   };
 }
 
-async function loadSpec(specPath: string) {
-  const text = await readFile(specPath, "utf8");
-  return JSON.parse(text) as {
-    interfaces: Array<{ name: string; version: string }>;
-  };
-}
-
-function encodeTransferCalldata(to: ContractAddress, amount: bigint) {
-  const writer = new CxsWriter();
-  codec.ContractAddress.encode(writer, to);
-  Uint128Codec.encode(writer, amount);
-  return calldata(writer.finish());
-}
-
 function parseArgs(args: string[]) {
   const options = {
     contract: "",
+    hog: false,
     from: "dev-0",
     to: "dev-1",
     amount: "1",
     decimals: DEFAULT_DECIMALS,
-    specPath: DEFAULT_SPEC_PATH,
+    decimalsSet: false,
     wait: true,
   };
 
@@ -158,6 +136,9 @@ function parseArgs(args: string[]) {
       case "--contract":
         options.contract = value;
         index += 1;
+        break;
+      case "--hog":
+        options.hog = true;
         break;
       case "--from":
         options.from = value;
@@ -173,10 +154,7 @@ function parseArgs(args: string[]) {
         break;
       case "--decimals":
         options.decimals = parseDecimals(value);
-        index += 1;
-        break;
-      case "--spec":
-        options.specPath = value;
+        options.decimalsSet = true;
         index += 1;
         break;
       case "--no-wait":
@@ -187,7 +165,44 @@ function parseArgs(args: string[]) {
     }
   }
 
-  return options;
+  return options.hog && !options.decimalsSet ? { ...options, decimals: HOG_DECIMALS } : options;
+}
+
+const s = contractSpecString;
+const erc20TransferEntrypoint = contractEntrypointID(fromHex("3799fd1c3d9b098f"));
+const erc20TransferNamedCodecs = buildNamedCodecs([]);
+const erc20TransferSpec: ContractSpec = {
+  interfaces: [
+    {
+      name: s("ERC20"),
+      vers: s("0.1.0"),
+      throws: [],
+      methods: [
+        {
+          name: s("transfer"),
+          args: [
+            { name: s("to"), ty: { v: ContractTypeKind.Address } },
+            { name: s("amount"), ty: { v: ContractTypeKind.U128 } },
+          ],
+          return_type: { v: ContractTypeKind.Void },
+        },
+      ],
+    },
+  ],
+  type_defs: [],
+};
+
+function erc20Transfer(
+  contract: ContractAddress,
+  gasLimit: ReturnType<typeof gasAmount>,
+  args: { to: ContractAddress; amount: bigint },
+): Invocation {
+  return createInvocation({
+    invoked_address: contract,
+    entrypoint: erc20TransferEntrypoint,
+    gas_limit: gasLimit,
+    calldata: encodeCalldata(erc20TransferSpec, "ERC20", "transfer", [args.to, args.amount], erc20TransferNamedCodecs),
+  });
 }
 
 function parseTokenAmount(value: string, decimals: number) {
