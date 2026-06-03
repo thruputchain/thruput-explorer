@@ -7,6 +7,7 @@ import type { TransactionPageData } from "@/lib/groundhog/types";
 
 export function TransactionSummaryCard({ data }: { data: TransactionPageData }) {
   const freshness = formatFreshness(data.status.status === "committed" ? data.status.height : undefined, data.chainTipHeight);
+  const executionDetails = getExecutionDetails(data);
 
   return (
     <Card>
@@ -19,9 +20,15 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           <FieldRow label="Status">
             <StatusBadge status={data.status} />
           </FieldRow>
+          {data.receipt ? <FieldRow label="Execution">{data.receipt.execResult}</FieldRow> : null}
           <FieldRow label="Block height">
             {data.status.status === "committed" ? data.status.height : statusLabel(data.status.status)}
           </FieldRow>
+          {executionDetails.map((detail) => (
+            <FieldRow label={detail.label} key={detail.label}>
+              <span className="break-all font-mono">{detail.value}</span>
+            </FieldRow>
+          ))}
           <FieldRow label="Chain tip">{data.chainTipHeight ?? "Unavailable"}</FieldRow>
           <FieldRow label="Freshness">{freshness ?? "-"}</FieldRow>
           <FieldRow label="Receipt">{data.receipt ? "Available" : "Not available"}</FieldRow>
@@ -30,6 +37,26 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
       </CardContent>
     </Card>
   );
+}
+
+function getExecutionDetails(data: TransactionPageData) {
+  const details: Array<{ label: string; value: string }> = [];
+  const receipt = data.receipt;
+  if (!receipt) return details;
+
+  if (receipt.returnData && receipt.returnData !== "0x") {
+    details.push({ label: "Return data", value: receipt.returnData });
+  }
+
+  if (receipt.abortData) {
+    details.push({ label: "Abort data", value: receipt.abortData });
+  }
+
+  if (data.status.status === "invalid") {
+    details.push({ label: "Invalid reason", value: data.status.reason });
+  }
+
+  return details;
 }
 
 function statusLabel(status: TransactionPageData["status"]["status"]) {

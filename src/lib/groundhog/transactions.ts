@@ -1,4 +1,4 @@
-import type { GroundhogClient } from "@groundhogchain/client";
+import { HttpTransport, createGroundhogClient, hashFromHex, toHex0x } from "@groundhogchain/client";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -10,12 +10,6 @@ import type {
   RpcFailure,
   TransactionPageData,
 } from "./types";
-
-type GroundhogClientSdk = {
-  HttpTransport: new (url: string) => unknown;
-  createGroundhogClient: (transport: unknown) => GroundhogClient;
-  hashFromHex: (value: string) => Parameters<GroundhogClient["getTransactionStatus"]>[0];
-};
 
 export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
   const hash = normalizeTransactionHash(hashInput);
@@ -30,9 +24,8 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
   }
 
   try {
-    const sdk = await loadGroundhogClientSdk();
-    const client = createClient(sdk);
-    const txHash = sdk.hashFromHex(hash);
+    const client = createClient();
+    const txHash = hashFromHex(hash);
 
     const [status, receipt, chainTip, rawReceipt] = await Promise.all([
       client.getTransactionStatus(txHash),
@@ -65,7 +58,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
 
               return {
                 ...eventView,
-                decoded: decodeTokenEvent(eventView, contract),
+                decoded: decodeTokenEvent(event, contract),
               };
             }),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),
@@ -82,18 +75,8 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
   }
 }
 
-function createClient(sdk: GroundhogClientSdk) {
-  return sdk.createGroundhogClient(new sdk.HttpTransport(getGroundhogRpcUrl()));
-}
-
-async function loadGroundhogClientSdk() {
-  const packageName = "@groundhogchain/client";
-  // The SDK is installed from local file links, matching the Groundhog test dapps.
-  // Turbopack cannot statically resolve those symlinks here, so load it at runtime on the server.
-  const dynamicImport = new Function("specifier", "return import(specifier)") as (
-    specifier: string,
-  ) => Promise<GroundhogClientSdk>;
-  return dynamicImport(packageName);
+function createClient() {
+  return createGroundhogClient(new HttpTransport(getGroundhogRpcUrl()));
 }
 
 function toRpcFailure(error: unknown): RpcFailure {
@@ -104,7 +87,7 @@ function toRpcFailure(error: unknown): RpcFailure {
 }
 
 function toHex(value: Uint8Array) {
-  return `0x${Buffer.from(value).toString("hex")}`;
+  return toHex0x(value);
 }
 
 function formatExecResult(value: number) {

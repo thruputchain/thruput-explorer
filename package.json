@@ -2,8 +2,9 @@
   "name": "gh-explorer",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.4",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -36,5 +37,14 @@
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "overrides": {
+      "@groundhogchain/client": "file:../groundhog-client-ts",
+      "@groundhogchain/contract-spec": "file:../groundhog-protocol-ts/packages/contract-spec",
+      "@groundhogchain/gateway": "file:../groundhog-protocol-ts/packages/gateway",
+      "@groundhogchain/protocol": "file:../groundhog-protocol-ts/packages/protocol",
+      "@groundhogchain/xdr": "file:../groundhog-protocol-ts/packages/xdr"
+    }
   }
 }
