@@ -41,6 +41,11 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
 
 function getExecutionDetails(data: TransactionPageData) {
   const details: Array<{ label: string; value: string }> = [];
+
+  if (data.status.status === "invalid") {
+    details.push({ label: "Invalid reason", value: data.status.reason });
+  }
+
   const receipt = data.receipt;
   if (!receipt) return details;
 
@@ -50,10 +55,6 @@ function getExecutionDetails(data: TransactionPageData) {
 
   if (receipt.abortData) {
     details.push({ label: "Abort data", value: receipt.abortData });
-  }
-
-  if (data.status.status === "invalid") {
-    details.push({ label: "Invalid reason", value: data.status.reason });
   }
 
   return details;
