@@ -2,41 +2,44 @@ import { HttpTransport, createGroundhogClient, hashFromHex, toHex0x } from "@gro
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
-import { getContractInfo, getContractName } from "./contract-registry";
+import { getContractInfo } from "./contract-registry";
 import { stringifyJson } from "./format";
-import { getGroundhogRpcUrl, getRawTransactionReceipt } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import type {
   RpcFailure,
   TransactionPageData,
 } from "./types";
 
+const DEFAULT_RPC_URL = "http://localhost:9545";
+
 export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
   const hash = normalizeTransactionHash(hashInput);
+  const rpcUrl = process.env.GROUNDHOG_RPC_URL ?? DEFAULT_RPC_URL;
 
   if (!isTransactionHash(hash)) {
     return {
       hash,
-      rpcUrl: getGroundhogRpcUrl(),
+      rpcUrl,
       status: { status: "malformed", reason: "Malformed transaction hash" },
       receipt: null,
     };
   }
 
   try {
-    const client = createClient();
+    const transport = new HttpTransport(rpcUrl);
+    const client = createGroundhogClient(transport);
     const txHash = hashFromHex(hash);
 
     const [status, receipt, chainTip, rawReceipt] = await Promise.all([
       client.getTransactionStatus(txHash),
       client.getTransactionReceipt(txHash),
       client.getChainTip(),
-      getRawTransactionReceipt(hash).catch(() => undefined),
+      transport.request<unknown>("groundhog_getTransactionReceipt", [hash]).catch(() => undefined),
     ]);
 
     return {
       hash,
-      rpcUrl: getGroundhogRpcUrl(),
+      rpcUrl,
       status: status.status === "committed" ? { status: "committed", height: status.height.toString() } : status,
       chainTipHeight: chainTip.height.toString(),
       receipt: receipt
@@ -51,7 +54,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
               const contract = getContractInfo(contractAddress);
               const eventView = {
                 contractAddress,
-                contractName: getContractName(contractAddress),
+                contractName: contract?.name,
                 topics: event.topics.map(toHex),
                 data: toHex(event.data),
               };
@@ -68,15 +71,11 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
   } catch (error) {
     return {
       hash,
-      rpcUrl: getGroundhogRpcUrl(),
+      rpcUrl,
       status: { status: "unavailable", error: toRpcFailure(error) },
       receipt: null,
     };
   }
-}
-
-function createClient() {
-  return createGroundhogClient(new HttpTransport(getGroundhogRpcUrl()));
 }
 
 function toRpcFailure(error: unknown): RpcFailure {
