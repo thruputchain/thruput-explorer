@@ -29,24 +29,15 @@ export type EventView = {
   data?: string;
 };
 
-export type DecodedEventView =
-  | {
-      kind: "token-transfer";
-      name: string;
-      from: string;
-      to: string;
-      rawAmount: string;
-      amount: string;
-      symbol?: string;
-    }
-  | {
-      kind: "token-mint";
-      name: string;
-      to: string;
-      rawAmount: string;
-      amount: string;
-      symbol?: string;
-    };
+export type DecodedEventView = {
+  kind: "token-transfer" | "token-mint" | "token-burn";
+  name: string;
+  from?: string;
+  to?: string;
+  rawAmount: string;
+  amount: string;
+  symbol?: string;
+};
 
 export type TransactionPageData = {
   hash: string;

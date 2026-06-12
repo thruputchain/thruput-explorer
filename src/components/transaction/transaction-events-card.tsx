@@ -86,14 +86,18 @@ function DecodedEvent({
           {contractName ? <p className="text-sm font-medium">{contractName}</p> : null}
           <code className="break-all text-xs">{contractAddress}</code>
         </div>
-        {event.kind === "token-transfer" ? (
+        {event.from ? (
           <>
             <EventLabel>From</EventLabel>
             <code className="break-all text-xs">{event.from}</code>
           </>
         ) : null}
-        <EventLabel>To</EventLabel>
-        <code className="break-all text-xs">{event.to}</code>
+        {event.to ? (
+          <>
+            <EventLabel>To</EventLabel>
+            <code className="break-all text-xs">{event.to}</code>
+          </>
+        ) : null}
         <EventLabel>Amount</EventLabel>
         <p>
           {event.amount}
