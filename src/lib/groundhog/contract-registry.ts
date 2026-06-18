@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export type ContractRegistryEntry = {
-  name: string;
+  name?: string;
   token?: true;
 };
 
@@ -69,7 +69,7 @@ function isContractRegistryEntry(value: unknown): value is ContractRegistryEntry
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
 
   const entry = value as Record<string, unknown>;
-  return typeof entry.name === "string" && (entry.token === undefined || entry.token === true);
+  return (entry.name === undefined || typeof entry.name === "string") && (entry.token === undefined || entry.token === true);
 }
 
 function isContractAddress(address: string) {

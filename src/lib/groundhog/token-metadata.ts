@@ -11,6 +11,7 @@ export type TokenMetadata = {
 };
 
 const VIEW_GAS_LIMIT = gasAmount(BigInt(500_000));
+const MAX_DISPLAY_DECIMALS = 30;
 const namedCodecs = buildNamedCodecs(ERC20Spec.type_defs);
 const NATIVE_HOG_ADDRESS = "0x0000000000000000000000000000000000000000000000000000000000000001";
 const BUILT_IN_TOKEN_METADATA: Record<string, TokenMetadata> = {
@@ -31,8 +32,14 @@ export async function getTokenMetadata(client: GroundhogClient, address: string)
   return {
     name: name ?? fallback?.name,
     symbol: symbol ?? fallback?.symbol,
-    decimals: decimals == null ? fallback?.decimals : Number(decimals),
+    decimals: normalizeDecimals(decimals),
   };
+}
+
+function normalizeDecimals(value: bigint | null) {
+  if (value == null) return undefined;
+  if (value < BigInt(0) || value > BigInt(MAX_DISPLAY_DECIMALS)) return undefined;
+  return Number(value);
 }
 
 function normalizeAddress(address: string) {
