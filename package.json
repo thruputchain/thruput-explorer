@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bootstrap:local": "bash scripts/bootstrap-local-node.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
