@@ -38,6 +38,14 @@ The app reads `GROUNDHOG_RPC_URL` and defaults to `http://localhost:9545`:
 GROUNDHOG_RPC_URL=http://127.0.0.1:9545 pnpm dev
 ```
 
+To create repeatable local explorer fixtures after starting a fresh node, run:
+
+```bash
+pnpm bootstrap:local
+```
+
+The bootstrap script builds the local ERC20 fixture contract, deploys ALULA and USDC, initializes metadata, mints balances, creates HOG/ALULA/USDC transfers, updates `contract-registry.local.mjs`, and prints transaction URLs.
+
 Local deployed contract addresses change when you restart a dev node and redeploy. Add labels and token hints in `contract-registry.local.mjs`, which is gitignored:
 
 ```js
