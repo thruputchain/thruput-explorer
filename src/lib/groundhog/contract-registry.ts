@@ -30,6 +30,12 @@ export function getContractInfo(registry: ContractRegistry, address: string) {
   return registry[normalizeContractAddress(address)];
 }
 
+export function getTokenContracts(registry: ContractRegistry) {
+  return Object.entries(registry)
+    .filter(([, entry]) => entry.token)
+    .map(([address, entry]) => ({ address, entry }));
+}
+
 async function loadLocalContractRegistry() {
   try {
     const path = join(process.cwd(), LOCAL_CONTRACT_REGISTRY_FILE);

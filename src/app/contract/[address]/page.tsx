@@ -148,7 +148,9 @@ function ContractEventRow({ event }: { event: ContractEventView }) {
 
 function AddressValue({ value }: { value?: string }) {
   return value ? (
-    <code title={value}>{shortenHex(value)}</code>
+    <Link className="font-mono underline underline-offset-4" href={`/wallet/${value}`} title={value}>
+      {shortenHex(value)}
+    </Link>
   ) : (
     <span className="text-muted-foreground">-</span>
   );
