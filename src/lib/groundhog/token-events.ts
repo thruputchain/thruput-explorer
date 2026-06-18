@@ -1,16 +1,21 @@
 import { toHex0x, type EmittedEvent } from "@groundhogchain/client";
-import { erc20 } from "@groundhogchain/client/contracts";
+import { decodeERC20Event } from "@groundhogchain/client/contracts";
 import { contractAddress } from "@groundhogchain/protocol";
 
 import type { ContractRegistryEntry } from "./contract-registry";
+import type { TokenMetadata } from "./token-metadata";
 import type { DecodedEventView } from "./types";
 
-export function decodeTokenEvent(event: EmittedEvent, contract?: ContractRegistryEntry): DecodedEventView | undefined {
+export function decodeTokenEvent(
+  event: EmittedEvent,
+  contract?: ContractRegistryEntry,
+  metadata?: TokenMetadata,
+): DecodedEventView | undefined {
   if (!contract?.token) return undefined;
 
-  let decoded: ReturnType<typeof erc20.decodeEvent>;
+  let decoded: ReturnType<typeof decodeERC20Event>;
   try {
-    decoded = erc20.decodeEvent(event);
+    decoded = decodeERC20Event(event);
   } catch {
     return undefined;
   }
@@ -20,8 +25,8 @@ export function decodeTokenEvent(event: EmittedEvent, contract?: ContractRegistr
   const from = toHex0x(contractAddress(decoded.topics.from));
   const to = toHex0x(contractAddress(decoded.topics.to));
   const rawAmount = decoded.fields.amount.toString();
-  const amount = formatTokenAmount(decoded.fields.amount, contract.token.decimals);
-  const symbol = contract.token.symbol;
+  const amount = formatTokenAmount(decoded.fields.amount, metadata?.decimals);
+  const symbol = metadata?.symbol;
 
   if (from === ZERO_CONTRACT_ADDRESS) {
     return {
