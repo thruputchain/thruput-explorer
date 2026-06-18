@@ -62,8 +62,10 @@ export function decodeTokenEvent(
 }
 
 const ZERO_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const MAX_DISPLAY_DECIMALS = 30;
 
 function formatTokenAmount(rawAmount: bigint, decimals = 0) {
+  if (decimals > MAX_DISPLAY_DECIMALS) return rawAmount.toString();
   if (decimals <= 0) return rawAmount.toString();
 
   const raw = rawAmount.toString().padStart(decimals + 1, "0");
