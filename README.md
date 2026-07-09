@@ -44,26 +44,20 @@ To create repeatable local explorer fixtures after starting a fresh node, run:
 pnpm bootstrap:local
 ```
 
-The bootstrap script builds the local ERC20 fixture contract, deploys ALULA and USDC, initializes metadata, mints balances, creates HOG/ALULA/USDC transfers, updates `contract-registry.local.mjs`, and prints transaction URLs.
+The bootstrap script builds the local ERC20 and Ticketmaster fixture contracts, deploys ALULA, USDC, and Ticketmaster, initializes metadata, mints balances, creates sample token/Ticketmaster transactions, updates `.env.local`, and prints transaction URLs.
 
-Local deployed contract addresses change when you restart a dev node and redeploy. Add labels and token hints in `contract-registry.local.mjs`, which is gitignored:
+Local deployed contract addresses change when you restart a dev node and redeploy. The explorer reads these optional `.env.local` values:
 
-```js
-export default {
-  "0xfbbd3a47d7ff9a44e3642ce3a04a70b4bd6f9897752ac09a16a8f09e923ffb4c": {
-    name: "Test Token",
-    token: true,
-  },
-  "0xd27a4224e4efa74caf2d424e41399a2e1f809b0f1a5d2e695b17e0b6e8ff2f78": {
-    name: "Ticketmaster",
-  },
-};
+```bash
+GROUNDHOG_ALULA_ADDRESS=0x...
+GROUNDHOG_USDC_ADDRESS=0x...
+GROUNDHOG_TICKETMASTER_ADDRESS=0x...
 ```
 
-The file is optional. Missing, empty, malformed, or invalid entries are ignored. `token: true` tells the explorer to decode standard ERC20 events and fetch ERC20 metadata with SDK view calls. Native HOG is the only built-in token hint because its address is stable.
+The file is optional. Restart the dev server after `pnpm bootstrap:local` updates it. Missing, empty, malformed, or invalid entries are ignored. ALULA and USDC are treated as standard ERC20 tokens. Ticketmaster uses the checked-in generated binding for event decoding. Native HOG is the only built-in token hint because its address is stable.
 
 ## Event Decoding
 
-The explorer uses SDK receipt/status APIs for transaction data, SDK-generated ERC20 event decoders for token transfers, and SDK contract helpers for ERC20 metadata view calls.
+The explorer uses SDK receipt/status APIs for transaction data, SDK-generated ERC20 event decoders for token transfers, a checked-in generated Ticketmaster binding for Ticketmaster events, and SDK contract helpers for ERC20 metadata view calls.
 
 Metadata return decoding is temporarily app-side: the explorer reads `ERC20Spec` and decodes `client.view(...).output.returnData` with SDK codec helpers because generated bindings do not yet expose method return decoders. Native HOG metadata views currently fault, so HOG uses a built-in `HOG`/7-decimal fallback after on-chain metadata fails.
