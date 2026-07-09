@@ -3,6 +3,7 @@ import { HttpTransport, createGroundhogClient, hashFromHex, toHex0x } from "@gro
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 import { getContractInfo, loadContractRegistry } from "./contract-registry";
+import { decodeGeneratedEvent } from "./contract-events";
 import { stringifyJson } from "./format";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
@@ -75,7 +76,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
               return {
                 ...eventView,
                 contractName: metadataByAddress.get(contractAddress)?.name ?? eventView.contractName,
-                decoded: decodeTokenEvent(event, contract, metadataByAddress.get(contractAddress)),
+                decoded: decodeTokenEvent(event, contract, metadataByAddress.get(contractAddress)) ?? decodeGeneratedEvent(event, contract),
               };
             }),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),

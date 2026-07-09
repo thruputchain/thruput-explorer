@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { EventView } from "@/lib/groundhog/types";
@@ -40,9 +42,8 @@ function EventItem({ event, index }: { event: EventView; index: number }) {
         <p className="text-sm font-medium">Event #{index + 1}</p>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
           <EventLabel>Contract</EventLabel>
-          <div className="flex flex-col gap-1">
-            {event.contractName ? <p className="text-sm font-medium">{event.contractName}</p> : null}
-            <code className="break-all text-xs">{event.contractAddress}</code>
+        <div className="flex flex-col gap-1">
+            <ContractAddressLink address={event.contractAddress} name={event.contractName} />
           </div>
         </div>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
@@ -83,31 +84,94 @@ function DecodedEvent({
       <div className="grid gap-3 text-sm sm:grid-cols-[140px_1fr] sm:gap-4">
         <EventLabel>Contract</EventLabel>
         <div className="flex flex-col gap-1">
-          {contractName ? <p className="text-sm font-medium">{contractName}</p> : null}
-          <code className="break-all text-xs">{contractAddress}</code>
+          <ContractAddressLink address={contractAddress} name={contractName} />
         </div>
-        {event.from ? (
+        {event.kind === "contract-event" ? <GenericEvent event={event} /> : null}
+        {event.kind !== "contract-event" && event.from ? (
           <>
             <EventLabel>From</EventLabel>
-            <code className="break-all text-xs">{event.from}</code>
+            <WalletAddressLink address={event.from} />
           </>
         ) : null}
-        {event.to ? (
+        {event.kind !== "contract-event" && event.to ? (
           <>
             <EventLabel>To</EventLabel>
-            <code className="break-all text-xs">{event.to}</code>
+            <WalletAddressLink address={event.to} />
           </>
         ) : null}
-        <EventLabel>Amount</EventLabel>
-        <p>
-          {event.amount}
-          {event.symbol ? ` ${event.symbol}` : ""}
-        </p>
-        <EventLabel>Raw amount</EventLabel>
-        <code className="break-all text-xs">{event.rawAmount}</code>
+        {event.kind !== "contract-event" ? (
+          <>
+            <EventLabel>Amount</EventLabel>
+            <p>
+              {event.amount}
+              {event.symbol ? ` ${event.symbol}` : ""}
+            </p>
+            <EventLabel>Raw amount</EventLabel>
+            <code className="break-all text-xs">{event.rawAmount}</code>
+          </>
+        ) : null}
       </div>
     </div>
   );
+}
+
+function GenericEvent({ event }: { event: Extract<NonNullable<EventView["decoded"]>, { kind: "contract-event" }> }) {
+  const rows = [...event.topics, ...event.fields];
+  return rows.map((row) => (
+    <div className="contents" key={`${row.name}-${row.value}`}>
+      <EventLabel>{row.name}</EventLabel>
+      <DecodedValue name={row.name} value={row.value} />
+    </div>
+  ));
+}
+
+function ContractAddressLink({ address, name }: { address: string; name?: string }) {
+  return (
+    <Link className="break-all underline-offset-4 hover:underline" href={`/contract/${address}`}>
+      {name ? <p className="text-sm font-medium">{name}</p> : null}
+      <code className="break-all text-xs">{address}</code>
+    </Link>
+  );
+}
+
+function DecodedValue({ name, value }: { name: string; value: string }) {
+  if (isWalletField(name) && isContractAddress(value)) {
+    return (
+      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/wallet/${value}`}>
+        {value}
+      </Link>
+    );
+  }
+
+  if (isContractField(name) && isContractAddress(value)) {
+    return (
+      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/contract/${value}`}>
+        {value}
+      </Link>
+    );
+  }
+
+  return <code className="break-all text-xs">{value}</code>;
+}
+
+function WalletAddressLink({ address }: { address: string }) {
+  return (
+    <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/wallet/${address}`}>
+      {address}
+    </Link>
+  );
+}
+
+function isWalletField(name: string) {
+  return ["from", "organizer", "owner", "receiver", "sender", "to"].includes(name.toLowerCase());
+}
+
+function isContractField(name: string) {
+  return ["contract", "contract_address"].includes(name.toLowerCase());
+}
+
+function isContractAddress(value: string) {
+  return /^0x[0-9a-fA-F]{64}$/.test(value);
 }
 
 function EventLabel({ children }: { children: string }) {

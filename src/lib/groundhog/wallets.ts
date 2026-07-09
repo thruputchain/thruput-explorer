@@ -4,6 +4,7 @@ import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
 import { getContractInfo, getTokenContracts, loadContractRegistry } from "./contract-registry";
+import { getNativeBalance, type NativeBalanceView } from "./native-balance";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
 import type { DecodedEventView, RpcFailure } from "./types";
@@ -28,6 +29,7 @@ export type WalletPageData =
       status: "ok";
       address: string;
       rpcUrl: string;
+      nativeBalance?: NativeBalanceView;
       tokenCount: number;
       transfers: WalletTransferView[];
     };
@@ -59,10 +61,11 @@ export async function loadWalletPageData(addressInput: string): Promise<WalletPa
     const walletAddress = addressFromHex(address);
 
     if (contractAddresses.length === 0) {
-      return { status: "ok", address, rpcUrl, tokenCount: 0, transfers: [] };
+      return { status: "ok", address, rpcUrl, nativeBalance: await getNativeBalance(client, address), tokenCount: 0, transfers: [] };
     }
 
-    const [metadataByAddress, outgoing, incoming] = await Promise.all([
+    const [nativeBalance, metadataByAddress, outgoing, incoming] = await Promise.all([
+      getNativeBalance(client, address),
       loadTokenMetadata(client, tokenContracts.map((token) => token.address)),
       client.getEvents({
         filters: [{ contractAddresses, topics: { topic0: [ERC20TransferEvent.signature], topic1: [walletAddress] } }],
@@ -104,6 +107,7 @@ export async function loadWalletPageData(addressInput: string): Promise<WalletPa
       status: "ok",
       address,
       rpcUrl,
+      nativeBalance,
       tokenCount: tokenContracts.length,
       transfers,
     };
@@ -128,6 +132,7 @@ async function loadTokenMetadata(client: ReturnType<typeof createGroundhogClient
 }
 
 function getDirection(decoded: DecodedEventView | undefined, walletAddress: string): WalletTransferView["direction"] {
+  if (decoded?.kind === "contract-event") return "in";
   if (decoded?.from === walletAddress && decoded.to === walletAddress) return "self";
   if (decoded?.from === walletAddress) return "out";
   return "in";
