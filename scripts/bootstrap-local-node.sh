@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
+shopt -s inherit_errexit
+trap 'printf "Bootstrap failed at line %s\n" "$LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXPLORER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORK_DIR="$(cd "$EXPLORER_DIR/.." && pwd)"
+GROUNDHOG_CLI="${GROUNDHOG_CLI:-$WORK_DIR/groundhog-rpc/target/debug/groundhog}"
 ERC20_PROJECT_DIR="${ERC20_PROJECT_DIR:-$WORK_DIR/groundhog-test/erc20-current}"
+TICKETMASTER_PROJECT_DIR="${TICKETMASTER_PROJECT_DIR:-$WORK_DIR/groundhog-test/ticketmaster}"
 LOCAL_NODE_STATE="${LOCAL_NODE_STATE:-$HOME/.local/share/groundhog/hog-devnode/.groundhog/local-node.json}"
 RPC_URL="${GROUNDHOG_RPC_URL:-http://localhost:9545}"
 HOG_ADDRESS="0x0000000000000000000000000000000000000000000000000000000000000001"
-ERC20_METADATA_INITIALIZE="0x17ea0e631f7c989f"
-ERC20_TRANSFER="0x3799fd1c3d9b098f"
 
 if [[ -z "${GROUNDHOG_RUNTIME_MANIFEST:-}" ]]; then
   if [[ -f "$LOCAL_NODE_STATE" ]]; then
@@ -46,16 +48,53 @@ if [[ ! -d "$ERC20_PROJECT_DIR" ]]; then
   exit 1
 fi
 
-json_field() {
+if [[ ! -d "$TICKETMASTER_PROJECT_DIR" ]]; then
+  printf 'Missing Ticketmaster fixture project: %s\n' "$TICKETMASTER_PROJECT_DIR" >&2
+  exit 1
+fi
+
+if [[ ! -x "$GROUNDHOG_CLI" ]]; then
+  printf 'Groundhog CLI not found or not executable: %s\n' "$GROUNDHOG_CLI" >&2
+  printf 'Build it with: cd %s/groundhog-rpc && cargo build -p groundhog-cli\n' "$WORK_DIR" >&2
+  exit 1
+fi
+
+require_ok_json() {
+  local json="$1"
+  local label="$2"
+
+  JSON_INPUT="$json" LABEL="$label" node --input-type=module <<'NODE'
+const value = JSON.parse(process.env.JSON_INPUT);
+if (value.ok !== true) {
+  console.error(`${process.env.LABEL} failed:`);
+  console.error(JSON.stringify(value, null, 2));
+  process.exit(1);
+}
+const status = value.data?.status?.result;
+if (status && status !== "ok") {
+  console.error(`${process.env.LABEL} did not commit successfully:`);
+  console.error(JSON.stringify(value.data, null, 2));
+  process.exit(1);
+}
+NODE
+}
+
+required_json_field() {
   local json="$1"
   local path="$2"
-  JSON_INPUT="$json" FIELD_PATH="$path" node --input-type=module <<'NODE'
+  local label="$3"
+
+  JSON_INPUT="$json" FIELD_PATH="$path" LABEL="$label" node --input-type=module <<'NODE'
 const value = JSON.parse(process.env.JSON_INPUT);
 let current = value;
 for (const segment of process.env.FIELD_PATH.split(".")) {
   current = current?.[segment];
 }
-if (current == null) process.exit(1);
+if (current == null || current === "") {
+  console.error(`${process.env.LABEL} missing required field: ${process.env.FIELD_PATH}`);
+  console.error(JSON.stringify(value, null, 2));
+  process.exit(1);
+}
 process.stdout.write(String(current));
 NODE
 }
@@ -71,7 +110,7 @@ process.stdout.write(account.walletAddress);
 NODE
 }
 
-metadata_calldata() {
+erc20_metadata_initialize_call() {
   local contract="$1"
   local admin="$2"
   local name="$3"
@@ -94,11 +133,34 @@ const invocation = ERC20Metadata.initialize(
   },
 );
 
-process.stdout.write(toHex0x(invocation.calldata));
+process.stdout.write(`${toHex0x(invocation.entrypoint)}\t${toHex0x(invocation.calldata)}`);
 NODE
 }
 
-transfer_calldata() {
+erc20_mint_call() {
+  local contract="$1"
+  local receiver="$2"
+  local amount="$3"
+  CONTRACT_ADDRESS="$contract" RECEIVER_ADDRESS="$receiver" RAW_AMOUNT="$amount" \
+    node --input-type=module <<'NODE'
+import { addressFromHex, toHex0x } from "@groundhogchain/client";
+import { ERC20 } from "@groundhogchain/client/contracts";
+import { gasAmount } from "@groundhogchain/protocol";
+
+const invocation = ERC20.mint(
+  addressFromHex(process.env.CONTRACT_ADDRESS),
+  gasAmount(BigInt(500_000)),
+  {
+    receiver: addressFromHex(process.env.RECEIVER_ADDRESS),
+    amount: BigInt(process.env.RAW_AMOUNT),
+  },
+);
+
+process.stdout.write(`${toHex0x(invocation.entrypoint)}\t${toHex0x(invocation.calldata)}`);
+NODE
+}
+
+erc20_transfer_call() {
   local contract="$1"
   local receiver="$2"
   local amount="$3"
@@ -117,29 +179,34 @@ const invocation = ERC20.transfer(
   },
 );
 
-process.stdout.write(toHex0x(invocation.calldata));
+process.stdout.write(`${toHex0x(invocation.entrypoint)}\t${toHex0x(invocation.calldata)}`);
 NODE
 }
 
-write_registry() {
-  ALULA_ADDRESS="$1" USDC_ADDRESS="$2" node --input-type=module <<'NODE'
-import { writeFileSync } from "node:fs";
+write_env_file() {
+  ALULA_ADDRESS="$1" USDC_ADDRESS="$2" TICKETMASTER_ADDRESS="$3" node --input-type=module <<'NODE'
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-const registry = `const registry = {
-  "${process.env.ALULA_ADDRESS}": {
-    name: "ALULA",
-    token: true,
-  },
-  "${process.env.USDC_ADDRESS}": {
-    name: "USDC",
-    token: true,
-  },
-};
+const path = ".env.local";
+const updates = new Map([
+  ["GROUNDHOG_ALULA_ADDRESS", process.env.ALULA_ADDRESS],
+  ["GROUNDHOG_USDC_ADDRESS", process.env.USDC_ADDRESS],
+  ["GROUNDHOG_TICKETMASTER_ADDRESS", process.env.TICKETMASTER_ADDRESS],
+]);
+const lines = existsSync(path) ? readFileSync(path, "utf8").split(/\r?\n/) : [];
+const seen = new Set();
+const next = lines.map((line) => {
+  const match = line.match(/^([A-Z0-9_]+)=/);
+  if (!match || !updates.has(match[1])) return line;
+  seen.add(match[1]);
+  return `${match[1]}=${updates.get(match[1])}`;
+});
 
-export default registry;
-`;
+for (const [key, value] of updates) {
+  if (!seen.has(key)) next.push(`${key}=${value}`);
+}
 
-writeFileSync("contract-registry.local.mjs", registry);
+writeFileSync(path, `${next.filter((line, index) => line !== "" || index < next.length - 1).join("\n")}\n`);
 NODE
 }
 
@@ -147,45 +214,89 @@ run_groundhog() {
   (cd "$ERC20_PROJECT_DIR" && "$@")
 }
 
+run_groundhog_in() {
+  local project_dir="$1"
+  shift
+  (cd "$project_dir" && "$@")
+}
+
 deploy_token() {
   local symbol="$1"
   local name="$2"
   local decimals="$3"
-  local deploy_json address init_calldata init_json
+  local deploy_json address init_call init_entrypoint init_calldata init_json deploy_tx init_tx
 
-  deploy_json="$(run_groundhog groundhog deploy --target wasm --json)"
-  address="$(json_field "$deploy_json" data.address)"
-  init_calldata="$(metadata_calldata "$address" "$DEV0" "$name" "$symbol" "$decimals")"
-  init_json="$(run_groundhog groundhog call "$address" "$ERC20_METADATA_INITIALIZE" "$init_calldata" --json)"
+  deploy_json="$(run_groundhog "$GROUNDHOG_CLI" deploy --target wasm --json)" || return 1
+  require_ok_json "$deploy_json" "deploy $symbol" || return 1
+  address="$(required_json_field "$deploy_json" data.address "deploy $symbol")" || return 1
+  init_call="$(erc20_metadata_initialize_call "$address" "$DEV0" "$name" "$symbol" "$decimals")" || return 1
+  init_entrypoint="$(printf '%s' "$init_call" | cut -f1)"
+  init_calldata="$(printf '%s' "$init_call" | cut -f2)"
+  init_json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$init_entrypoint" "$init_calldata" --json)" || return 1
+  require_ok_json "$init_json" "initialize $symbol" || return 1
+  deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy $symbol")" || return 1
+  init_tx="$(required_json_field "$init_json" data.tx_hash "initialize $symbol")" || return 1
 
-  printf '%s\t%s\t%s\t%s\n' "$symbol" "$address" "$(json_field "$deploy_json" data.tx_hash)" "$(json_field "$init_json" data.tx_hash)"
+  printf '%s\t%s\t%s\t%s\n' "$symbol" "$address" "$deploy_tx" "$init_tx"
 }
 
 mint_token() {
   local address="$1"
   local receiver="$2"
   local amount="$3"
-  local json
-  json="$(run_groundhog groundhog call "$address" mint "$receiver" "$amount" --json)"
-  json_field "$json" data.tx_hash
+  local call entrypoint calldata json
+  call="$(erc20_mint_call "$address" "$receiver" "$amount")" || return 1
+  entrypoint="$(printf '%s' "$call" | cut -f1)"
+  calldata="$(printf '%s' "$call" | cut -f2)"
+  json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json)" || return 1
+  require_ok_json "$json" "mint $address" || return 1
+  required_json_field "$json" data.tx_hash "mint $address" || return 1
 }
 
 transfer_token() {
   local address="$1"
   local receiver="$2"
   local amount="$3"
-  local json
-  json="$(run_groundhog groundhog call "$address" transfer "$receiver" "$amount" --json)"
-  json_field "$json" data.tx_hash
+  local call entrypoint calldata json
+  call="$(erc20_transfer_call "$address" "$receiver" "$amount")" || return 1
+  entrypoint="$(printf '%s' "$call" | cut -f1)"
+  calldata="$(printf '%s' "$call" | cut -f2)"
+  json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json)" || return 1
+  require_ok_json "$json" "transfer $address" || return 1
+  required_json_field "$json" data.tx_hash "transfer $address" || return 1
 }
 
 transfer_hog() {
   local receiver="$1"
   local amount="$2"
-  local calldata json
-  calldata="$(transfer_calldata "$HOG_ADDRESS" "$receiver" "$amount")"
-  json="$(run_groundhog groundhog call "$HOG_ADDRESS" "$ERC20_TRANSFER" "$calldata" --json)"
-  json_field "$json" data.tx_hash
+  local call entrypoint calldata json
+  call="$(erc20_transfer_call "$HOG_ADDRESS" "$receiver" "$amount")" || return 1
+  entrypoint="$(printf '%s' "$call" | cut -f1)"
+  calldata="$(printf '%s' "$call" | cut -f2)"
+  json="$(run_groundhog "$GROUNDHOG_CLI" call "$HOG_ADDRESS" "$entrypoint" "$calldata" --json)" || return 1
+  require_ok_json "$json" "transfer HOG" || return 1
+  required_json_field "$json" data.tx_hash "transfer HOG" || return 1
+}
+
+deploy_ticketmaster() {
+  local deploy_json address deploy_tx
+
+  deploy_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" deploy --target wasm --json)" || return 1
+  require_ok_json "$deploy_json" "deploy Ticketmaster" || return 1
+  address="$(required_json_field "$deploy_json" data.address "deploy Ticketmaster")" || return 1
+  deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy Ticketmaster")" || return 1
+
+  printf '%s\t%s\n' "$address" "$deploy_tx"
+}
+
+call_ticketmaster() {
+  local address="$1"
+  local label="$2"
+  shift 2
+  local json
+  json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" call "$address" "$@" --json)" || return 1
+  require_ok_json "$json" "$label" || return 1
+  required_json_field "$json" data.tx_hash "$label" || return 1
 }
 
 DEV0="$(manifest_wallet 0)"
@@ -195,14 +306,22 @@ DEV2="$(manifest_wallet 2)"
 printf 'Bootstrapping local Groundhog explorer fixtures\n'
 printf 'Runtime manifest: %s\n' "$GROUNDHOG_RUNTIME_MANIFEST"
 printf 'RPC URL: %s\n' "$RPC_URL"
+printf 'Groundhog CLI: %s\n' "$GROUNDHOG_CLI"
 printf 'ERC20 project: %s\n\n' "$ERC20_PROJECT_DIR"
+printf 'Ticketmaster project: %s\n\n' "$TICKETMASTER_PROJECT_DIR"
 
 printf 'Building ERC20 fixture...\n'
-run_groundhog groundhog build --target wasm --bindings ts --json >/dev/null
+build_json="$(run_groundhog "$GROUNDHOG_CLI" build --target wasm --bindings ts --json)"
+require_ok_json "$build_json" "build ERC20 fixture"
+
+printf 'Building Ticketmaster fixture...\n'
+ticketmaster_build_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" build --target wasm --bindings ts --json)"
+require_ok_json "$ticketmaster_build_json" "build Ticketmaster fixture"
 
 printf 'Deploying and initializing tokens...\n'
 ALULA_DEPLOY="$(deploy_token ALULA ALULA 6)"
 USDC_DEPLOY="$(deploy_token USDC USDC 6)"
+TICKETMASTER_DEPLOY="$(deploy_ticketmaster)"
 
 ALULA_ADDRESS="$(printf '%s' "$ALULA_DEPLOY" | cut -f2)"
 ALULA_DEPLOY_TX="$(printf '%s' "$ALULA_DEPLOY" | cut -f3)"
@@ -210,6 +329,8 @@ ALULA_INIT_TX="$(printf '%s' "$ALULA_DEPLOY" | cut -f4)"
 USDC_ADDRESS="$(printf '%s' "$USDC_DEPLOY" | cut -f2)"
 USDC_DEPLOY_TX="$(printf '%s' "$USDC_DEPLOY" | cut -f3)"
 USDC_INIT_TX="$(printf '%s' "$USDC_DEPLOY" | cut -f4)"
+TICKETMASTER_ADDRESS="$(printf '%s' "$TICKETMASTER_DEPLOY" | cut -f1)"
+TICKETMASTER_DEPLOY_TX="$(printf '%s' "$TICKETMASTER_DEPLOY" | cut -f2)"
 
 printf 'Minting token balances...\n'
 ALULA_MINT_TX="$(mint_token "$ALULA_ADDRESS" "$DEV0" 1000000000000)"
@@ -223,8 +344,14 @@ ALULA_TRANSFER_2_TX="$(transfer_token "$ALULA_ADDRESS" "$DEV2" 250000000)"
 USDC_TRANSFER_1_TX="$(transfer_token "$USDC_ADDRESS" "$DEV1" 500250000)"
 USDC_TRANSFER_2_TX="$(transfer_token "$USDC_ADDRESS" "$DEV2" 42000000)"
 
-printf 'Updating local explorer registry...\n'
-(cd "$EXPLORER_DIR" && write_registry "$ALULA_ADDRESS" "$USDC_ADDRESS")
+printf 'Creating Ticketmaster transactions...\n'
+TICKET_EVENT_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "create Ticketmaster event" create_event 1 3 1000000 1000100)"
+TICKET_MINT_1_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "mint ticket 1" mint 1 "$DEV0" 1)"
+TICKET_MINT_2_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "mint ticket 2" mint 1 "$DEV1" 2)"
+TICKET_TRANSFER_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "transfer ticket 1" transfer 1 1 "$DEV2")"
+
+printf 'Updating local explorer environment...\n'
+(cd "$EXPLORER_DIR" && write_env_file "$ALULA_ADDRESS" "$USDC_ADDRESS" "$TICKETMASTER_ADDRESS")
 
 cat <<EOF
 
@@ -244,6 +371,8 @@ Contracts:
     deploy tx:     $USDC_DEPLOY_TX
     initialize tx: $USDC_INIT_TX
     mint tx:       $USDC_MINT_TX
+  Ticketmaster: $TICKETMASTER_ADDRESS
+    deploy tx:     $TICKETMASTER_DEPLOY_TX
 
 Transfers:
   HOG   dev-0 -> dev-1  1 HOG          $HOG_TRANSFER_1_TX
@@ -253,6 +382,12 @@ Transfers:
   USDC  dev-0 -> dev-1  500.25         $USDC_TRANSFER_1_TX
   USDC  dev-0 -> dev-2  42             $USDC_TRANSFER_2_TX
 
+Ticketmaster:
+  create event 1                    $TICKET_EVENT_TX
+  mint event 1 ticket 1 to dev-0    $TICKET_MINT_1_TX
+  mint event 1 ticket 2 to dev-1    $TICKET_MINT_2_TX
+  transfer ticket 1 dev-0 -> dev-2  $TICKET_TRANSFER_TX
+
 Explorer URLs:
   http://localhost:3000/tx/$HOG_TRANSFER_1_TX
   http://localhost:3000/tx/$HOG_TRANSFER_2_TX
@@ -260,7 +395,12 @@ Explorer URLs:
   http://localhost:3000/tx/$ALULA_TRANSFER_2_TX
   http://localhost:3000/tx/$USDC_TRANSFER_1_TX
   http://localhost:3000/tx/$USDC_TRANSFER_2_TX
+  http://localhost:3000/tx/$TICKET_EVENT_TX
+  http://localhost:3000/tx/$TICKET_MINT_1_TX
+  http://localhost:3000/tx/$TICKET_MINT_2_TX
+  http://localhost:3000/tx/$TICKET_TRANSFER_TX
+  http://localhost:3000/contract/$TICKETMASTER_ADDRESS
 
 Updated:
-  $EXPLORER_DIR/contract-registry.local.mjs
+  $EXPLORER_DIR/.env.local
 EOF
