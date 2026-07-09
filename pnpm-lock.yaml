@@ -21,6 +21,9 @@ importers:
       '@groundhogchain/client':
         specifier: file:../groundhog-client-ts
         version: file:../groundhog-client-ts
+      '@groundhogchain/contract-spec':
+        specifier: file:../groundhog-protocol-ts/packages/contract-spec
+        version: file:../groundhog-protocol-ts/packages/contract-spec
       '@groundhogchain/gateway':
         specifier: file:../groundhog-protocol-ts/packages/gateway
         version: file:../groundhog-protocol-ts/packages/gateway

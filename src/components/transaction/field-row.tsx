@@ -12,7 +12,7 @@ export function FieldRow({
       <dt className="font-mono text-xs uppercase text-muted-foreground">
         {label}
       </dt>
-      <dd className="min-w-0 font-sans text-base text-foreground">{children}</dd>
+      <dd className="min-w-0 font-sans text-sm text-foreground">{children}</dd>
     </div>
   );
 }

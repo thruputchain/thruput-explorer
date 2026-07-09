@@ -1,16 +1,10 @@
-import { stat } from "node:fs/promises";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-
 export type ContractRegistryEntry = {
   name?: string;
   token?: true;
+  kind?: "ticketmaster";
 };
 
 export type ContractRegistry = Record<string, ContractRegistryEntry>;
-
-const LOCAL_CONTRACT_REGISTRY_FILE = "contract-registry.local.mjs";
-const nativeImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
 
 const BUILT_IN_CONTRACT_REGISTRY: ContractRegistry = {
   "0x0000000000000000000000000000000000000000000000000000000000000001": {
@@ -22,7 +16,7 @@ const BUILT_IN_CONTRACT_REGISTRY: ContractRegistry = {
 export async function loadContractRegistry(): Promise<ContractRegistry> {
   return {
     ...BUILT_IN_CONTRACT_REGISTRY,
-    ...(await loadLocalContractRegistry()),
+    ...loadEnvContractRegistry(),
   };
 }
 
@@ -36,40 +30,19 @@ export function getTokenContracts(registry: ContractRegistry) {
     .map(([address, entry]) => ({ address, entry }));
 }
 
-async function loadLocalContractRegistry() {
-  try {
-    const path = join(process.cwd(), LOCAL_CONTRACT_REGISTRY_FILE);
-    const file = pathToFileURL(path);
-    const metadata = await stat(path);
-    file.search = `?mtime=${metadata.mtimeMs}`;
-
-    const localRegistryModule = (await nativeImport(file.href)) as { default?: unknown; registry?: unknown };
-    return parseContractRegistry(localRegistryModule.default ?? localRegistryModule.registry);
-  } catch {
-    return {};
-  }
+function loadEnvContractRegistry() {
+  return Object.fromEntries(
+    [
+      envContract(process.env.GROUNDHOG_ALULA_ADDRESS, { name: "ALULA", token: true }),
+      envContract(process.env.GROUNDHOG_USDC_ADDRESS, { name: "USDC", token: true }),
+      envContract(process.env.GROUNDHOG_TICKETMASTER_ADDRESS, { name: "Ticketmaster", kind: "ticketmaster" }),
+    ].filter((entry): entry is [string, ContractRegistryEntry] => entry !== undefined),
+  );
 }
 
-function parseContractRegistry(value: unknown) {
-  try {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-
-    return Object.fromEntries(
-      Object.entries(value).flatMap(([address, entry]) => {
-        if (!isContractAddress(address) || !isContractRegistryEntry(entry)) return [];
-        return [[normalizeContractAddress(address), entry]];
-      }),
-    );
-  } catch {
-    return {};
-  }
-}
-
-function isContractRegistryEntry(value: unknown): value is ContractRegistryEntry {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-
-  const entry = value as Record<string, unknown>;
-  return (entry.name === undefined || typeof entry.name === "string") && (entry.token === undefined || entry.token === true);
+function envContract(address: string | undefined, entry: ContractRegistryEntry): [string, ContractRegistryEntry] | undefined {
+  if (!address || !isContractAddress(address)) return undefined;
+  return [normalizeContractAddress(address), entry];
 }
 
 function isContractAddress(address: string) {

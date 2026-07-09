@@ -74,6 +74,10 @@ function WalletSummaryCard({ data }: { data: Extract<Awaited<ReturnType<typeof l
       <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_1fr]">
         <SummaryLabel>Address</SummaryLabel>
         <code className="break-all text-xs">{data.address}</code>
+        <SummaryLabel>Native balance</SummaryLabel>
+        <p>{data.nativeBalance ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}` : "Not available"}</p>
+        <SummaryLabel>Raw native balance</SummaryLabel>
+        <code className="break-all text-xs">{data.nativeBalance?.rawBalance ?? "Not available"}</code>
         <SummaryLabel>Known tokens</SummaryLabel>
         <p>{data.tokenCount}</p>
         <SummaryLabel>Transfers shown</SummaryLabel>
@@ -123,7 +127,7 @@ function WalletTransfersCard({ transfers }: { transfers: WalletTransferView[] })
 }
 
 function WalletTransferRow({ transfer }: { transfer: WalletTransferView }) {
-  const amount = transfer.decoded ? `${transfer.decoded.amount}${transfer.decoded.symbol ? ` ${transfer.decoded.symbol}` : ""}` : "Raw event";
+  const amount = transfer.decoded?.kind === "contract-event" ? "Raw event" : transfer.decoded ? `${transfer.decoded.amount}${transfer.decoded.symbol ? ` ${transfer.decoded.symbol}` : ""}` : "Raw event";
 
   return (
     <TableRow>
@@ -140,10 +144,10 @@ function WalletTransferRow({ transfer }: { transfer: WalletTransferView }) {
         </Link>
       </TableCell>
       <TableCell>
-        <AddressLink value={transfer.decoded?.from} />
+        <AddressLink value={transfer.decoded?.kind === "contract-event" ? undefined : transfer.decoded?.from} />
       </TableCell>
       <TableCell>
-        <AddressLink value={transfer.decoded?.to} />
+        <AddressLink value={transfer.decoded?.kind === "contract-event" ? undefined : transfer.decoded?.to} />
       </TableCell>
       <TableCell className="text-right">{amount}</TableCell>
     </TableRow>

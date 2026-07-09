@@ -56,7 +56,7 @@ export default async function ContractPage({
         {data.status === "ok" ? (
           <>
             <ContractSummaryCard data={data} />
-            <ContractEventsCard events={data.events} />
+            <ContractEventsCard events={data.events} token={data.token} />
           </>
         ) : null}
       </div>
@@ -74,18 +74,26 @@ function ContractSummaryCard({ data }: { data: Extract<Awaited<ReturnType<typeof
       <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_1fr]">
         <SummaryLabel>Address</SummaryLabel>
         <code className="break-all text-xs">{data.address}</code>
-        <SummaryLabel>Name</SummaryLabel>
-        <p>{data.metadata?.name ?? "Not available"}</p>
-        <SummaryLabel>Symbol</SummaryLabel>
-        <p>{data.metadata?.symbol ?? "Not available"}</p>
-        <SummaryLabel>Decimals</SummaryLabel>
-        <p>{data.metadata?.decimals ?? "Not available"}</p>
+        <SummaryLabel>Native balance</SummaryLabel>
+        <p>{data.nativeBalance ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}` : "Not available"}</p>
+        <SummaryLabel>Raw native balance</SummaryLabel>
+        <code className="break-all text-xs">{data.nativeBalance?.rawBalance ?? "Not available"}</code>
+        {data.token ? (
+          <>
+            <SummaryLabel>Name</SummaryLabel>
+            <p>{data.metadata?.name ?? "Not available"}</p>
+            <SummaryLabel>Symbol</SummaryLabel>
+            <p>{data.metadata?.symbol ?? "Not available"}</p>
+            <SummaryLabel>Decimals</SummaryLabel>
+            <p>{data.metadata?.decimals ?? "Not available"}</p>
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
-function ContractEventsCard({ events }: { events: ContractEventView[] }) {
+function ContractEventsCard({ events, token }: { events: ContractEventView[]; token: boolean }) {
   return (
     <Card>
       <CardHeader>
@@ -101,21 +109,7 @@ function ContractEventsCard({ events }: { events: ContractEventView[] }) {
           <p className="text-sm text-muted-foreground">Events will appear here when the contract emits them.</p>
         ) : (
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tx</TableHead>
-                <TableHead>Block</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.map((event) => (
-                <ContractEventRow key={`${event.txHash}-${event.sequenceNumber}`} event={event} />
-              ))}
-            </TableBody>
+            {token ? <TokenEventTable events={events} /> : <GenericEventTable events={events} />}
           </Table>
         )}
       </CardContent>
@@ -123,8 +117,50 @@ function ContractEventsCard({ events }: { events: ContractEventView[] }) {
   );
 }
 
-function ContractEventRow({ event }: { event: ContractEventView }) {
-  const amount = event.decoded ? `${event.decoded.amount}${event.decoded.symbol ? ` ${event.decoded.symbol}` : ""}` : "Raw event";
+function TokenEventTable({ events }: { events: ContractEventView[] }) {
+  return (
+    <>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Tx</TableHead>
+          <TableHead>Block</TableHead>
+          <TableHead>Event</TableHead>
+          <TableHead>From</TableHead>
+          <TableHead>To</TableHead>
+          <TableHead className="text-right">Amount</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {events.map((event) => (
+          <TokenEventRow key={`${event.txHash}-${event.sequenceNumber}`} event={event} />
+        ))}
+      </TableBody>
+    </>
+  );
+}
+
+function GenericEventTable({ events }: { events: ContractEventView[] }) {
+  return (
+    <>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Tx</TableHead>
+          <TableHead>Block</TableHead>
+          <TableHead>Event</TableHead>
+          <TableHead>Fields</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {events.map((event) => (
+          <GenericEventRow key={`${event.txHash}-${event.sequenceNumber}`} event={event} />
+        ))}
+      </TableBody>
+    </>
+  );
+}
+
+function TokenEventRow({ event }: { event: ContractEventView }) {
+  const amount = event.decoded?.kind !== "contract-event" && event.decoded ? `${event.decoded.amount}${event.decoded.symbol ? ` ${event.decoded.symbol}` : ""}` : "Raw event";
 
   return (
     <TableRow>
@@ -136,17 +172,48 @@ function ContractEventRow({ event }: { event: ContractEventView }) {
       <TableCell>{event.blockHeight}</TableCell>
       <TableCell>{event.decoded?.name ?? "Raw"}</TableCell>
       <TableCell>
-        <AddressValue value={event.decoded?.from} />
+        <WalletValue value={event.decoded?.kind === "contract-event" ? undefined : event.decoded?.from} />
       </TableCell>
       <TableCell>
-        <AddressValue value={event.decoded?.to} />
+        <WalletValue value={event.decoded?.kind === "contract-event" ? undefined : event.decoded?.to} />
       </TableCell>
       <TableCell className="text-right">{amount}</TableCell>
     </TableRow>
   );
 }
 
-function AddressValue({ value }: { value?: string }) {
+function GenericEventRow({ event }: { event: ContractEventView }) {
+  const decoded = event.decoded?.kind === "contract-event" ? event.decoded : undefined;
+  const fields = decoded ? [...decoded.topics, ...decoded.fields] : [];
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Link className="font-mono underline underline-offset-4" href={`/tx/${event.txHash}`} title={event.txHash}>
+          {shortenHex(event.txHash)}
+        </Link>
+      </TableCell>
+      <TableCell>{event.blockHeight}</TableCell>
+      <TableCell>{event.decoded?.name ?? "Raw"}</TableCell>
+      <TableCell>
+        {fields.length > 0 ? (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            {fields.map((field) => (
+              <span key={`${field.name}-${field.value}`}>
+                <span className="text-muted-foreground">{field.name}=</span>
+                <DecodedFieldValue name={field.name} value={field.value} />
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">Raw event</span>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function WalletValue({ value }: { value?: string }) {
   return value ? (
     <Link className="font-mono underline underline-offset-4" href={`/wallet/${value}`} title={value}>
       {shortenHex(value)}
@@ -156,8 +223,44 @@ function AddressValue({ value }: { value?: string }) {
   );
 }
 
+function DecodedFieldValue({ name, value }: { name: string; value: string }) {
+  if (isWalletField(name) && isContractAddress(value)) {
+    return (
+      <Link className="font-mono underline underline-offset-4" href={`/wallet/${value}`} title={value}>
+        {shortenHex(value)}
+      </Link>
+    );
+  }
+
+  if (isContractField(name) && isContractAddress(value)) {
+    return (
+      <Link className="font-mono underline underline-offset-4" href={`/contract/${value}`} title={value}>
+        {shortenHex(value)}
+      </Link>
+    );
+  }
+
+  return <span className="font-mono">{shortenValue(value)}</span>;
+}
+
 function shortenHex(value: string) {
   return value.length <= 18 ? value : `${value.slice(0, 8)}…${value.slice(-6)}`;
+}
+
+function shortenValue(value: string) {
+  return isContractAddress(value) ? shortenHex(value) : value;
+}
+
+function isWalletField(name: string) {
+  return ["from", "organizer", "owner", "receiver", "sender", "to"].includes(name.toLowerCase());
+}
+
+function isContractField(name: string) {
+  return ["contract", "contract_address"].includes(name.toLowerCase());
+}
+
+function isContractAddress(value: string) {
+  return /^0x[0-9a-fA-F]{64}$/.test(value);
 }
 
 function SummaryLabel({ children }: { children: string }) {
