@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-export function CopyButton({ value }: { value: string }) {
+export function CopyButton({ value, label = "Copy value" }: { value: string; label?: string }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [isPending, setIsPending] = useState(false);
 
@@ -23,7 +23,7 @@ export function CopyButton({ value }: { value: string }) {
   }
 
   return (
-    <Button type="button" variant="ghost" onClick={copy} disabled={isPending} aria-label={status === "failed" ? "Copy failed" : "Copy transaction hash"}>
+    <Button type="button" variant="ghost" onClick={copy} disabled={isPending} aria-label={status === "failed" ? `${label} failed` : label} title={label}>
       {status === "copied" ? (
         <CheckIcon data-icon="inline-start" />
       ) : (
