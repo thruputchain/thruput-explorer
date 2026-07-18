@@ -4,13 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@groundhogchain/client': file:../groundhog-client-ts
-  '@groundhogchain/contract-spec': file:../groundhog-protocol-ts/packages/contract-spec
-  '@groundhogchain/gateway': file:../groundhog-protocol-ts/packages/gateway
-  '@groundhogchain/protocol': file:../groundhog-protocol-ts/packages/protocol
-  '@groundhogchain/xdr': file:../groundhog-protocol-ts/packages/xdr
-
 importers:
 
   .:
@@ -19,20 +12,20 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(@types/react@19.2.15)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@groundhogchain/client':
-        specifier: file:../groundhog-client-ts
-        version: file:../groundhog-client-ts
+        specifier: ^0.1.4
+        version: 0.1.4
       '@groundhogchain/contract-spec':
-        specifier: file:../groundhog-protocol-ts/packages/contract-spec
-        version: file:../groundhog-protocol-ts/packages/contract-spec
+        specifier: 0.3.3
+        version: 0.3.3
       '@groundhogchain/gateway':
-        specifier: file:../groundhog-protocol-ts/packages/gateway
-        version: file:../groundhog-protocol-ts/packages/gateway
+        specifier: 0.3.3
+        version: 0.3.3
       '@groundhogchain/protocol':
-        specifier: file:../groundhog-protocol-ts/packages/protocol
-        version: file:../groundhog-protocol-ts/packages/protocol
+        specifier: 0.3.3
+        version: 0.3.3
       '@groundhogchain/xdr':
-        specifier: file:../groundhog-protocol-ts/packages/xdr
-        version: file:../groundhog-protocol-ts/packages/xdr
+        specifier: 0.3.3
+        version: 0.3.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -324,20 +317,20 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@groundhogchain/client@file:../groundhog-client-ts':
-    resolution: {directory: ../groundhog-client-ts, type: directory}
+  '@groundhogchain/client@0.1.4':
+    resolution: {integrity: sha512-x1EogIPqql2L8BYYuM3QzaTfbj+98e2SIs/lNu7ZHCbj4Ey/eaZt8P2oIwMgNILT/3BV1hADosmJ+cfNHf38DQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/client/0.1.4/ce92c3409351497a5f50329a47cf712ca168700e}
 
-  '@groundhogchain/contract-spec@file:../groundhog-protocol-ts/packages/contract-spec':
-    resolution: {directory: ../groundhog-protocol-ts/packages/contract-spec, type: directory}
+  '@groundhogchain/contract-spec@0.3.3':
+    resolution: {integrity: sha512-Myc1SuEv+hQU+PBcgx2BIAfAyTMj4eNvsFk31Bb/gEL6x3TdBYjsyJb3/wciE5bpFHSJXusaKIQPbxFGjqrjJQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/contract-spec/0.3.3/1bf49e352309e633b5e9fea40d7337799f514614}
 
-  '@groundhogchain/gateway@file:../groundhog-protocol-ts/packages/gateway':
-    resolution: {directory: ../groundhog-protocol-ts/packages/gateway, type: directory}
+  '@groundhogchain/gateway@0.3.3':
+    resolution: {integrity: sha512-7iOaJM5ZPgm3vHpTzBM5ztySYGoFKTjoVQh9KDvVvRJOQHnJGBbA/NQeBSidG7xKb0oRLodDK0zNHrjEc3w/YQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/gateway/0.3.3/1292cd6277c2badb3ff06b6f2016cdad7576d4ec}
 
-  '@groundhogchain/protocol@file:../groundhog-protocol-ts/packages/protocol':
-    resolution: {directory: ../groundhog-protocol-ts/packages/protocol, type: directory}
+  '@groundhogchain/protocol@0.3.3':
+    resolution: {integrity: sha512-9Q2uj6CVpYBMKVUS6rmOz/kGb1rPkF48AZjoG8shaHB+uBy9iR7s0Iu19GRtNvo3WJOsfirS6UISfP2X9sIrpA==, tarball: https://npm.pkg.github.com/download/@groundhogchain/protocol/0.3.3/a050655fff08ceb6d4745b7a3b6169cc270ea5d8}
 
-  '@groundhogchain/xdr@file:../groundhog-protocol-ts/packages/xdr':
-    resolution: {directory: ../groundhog-protocol-ts/packages/xdr, type: directory}
+  '@groundhogchain/xdr@0.3.3':
+    resolution: {integrity: sha512-7RxS+IKpsuKsO6Sqs1yHhqitDs3fXQE4Hy3dZ32wpF7rsIBz0CkNArjdfWubDhu4mPkmj6jlTNgs4LXvvOjeoA==, tarball: https://npm.pkg.github.com/download/@groundhogchain/xdr/0.3.3/5263b53ab6fc7ad6759553fe49233c899ff30e81}
 
   '@hono/node-server@1.19.14':
     resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
@@ -3391,28 +3384,28 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@groundhogchain/client@file:../groundhog-client-ts':
+  '@groundhogchain/client@0.1.4':
     dependencies:
-      '@groundhogchain/contract-spec': file:../groundhog-protocol-ts/packages/contract-spec
-      '@groundhogchain/gateway': file:../groundhog-protocol-ts/packages/gateway
-      '@groundhogchain/protocol': file:../groundhog-protocol-ts/packages/protocol
+      '@groundhogchain/contract-spec': 0.3.3
+      '@groundhogchain/gateway': 0.3.3
+      '@groundhogchain/protocol': 0.3.3
       '@noble/ed25519': 3.1.0
       '@noble/hashes': 2.2.0
 
-  '@groundhogchain/contract-spec@file:../groundhog-protocol-ts/packages/contract-spec':
+  '@groundhogchain/contract-spec@0.3.3':
     dependencies:
-      '@groundhogchain/xdr': file:../groundhog-protocol-ts/packages/xdr
+      '@groundhogchain/xdr': 0.3.3
 
-  '@groundhogchain/gateway@file:../groundhog-protocol-ts/packages/gateway':
+  '@groundhogchain/gateway@0.3.3':
     dependencies:
-      '@groundhogchain/protocol': file:../groundhog-protocol-ts/packages/protocol
-      '@groundhogchain/xdr': file:../groundhog-protocol-ts/packages/xdr
+      '@groundhogchain/protocol': 0.3.3
+      '@groundhogchain/xdr': 0.3.3
 
-  '@groundhogchain/protocol@file:../groundhog-protocol-ts/packages/protocol':
+  '@groundhogchain/protocol@0.3.3':
     dependencies:
-      '@groundhogchain/xdr': file:../groundhog-protocol-ts/packages/xdr
+      '@groundhogchain/xdr': 0.3.3
 
-  '@groundhogchain/xdr@file:../groundhog-protocol-ts/packages/xdr': {}
+  '@groundhogchain/xdr@0.3.3': {}
 
   '@hono/node-server@1.19.14(hono@4.12.23)':
     dependencies:
