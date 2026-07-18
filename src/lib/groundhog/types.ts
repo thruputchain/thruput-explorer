@@ -1,6 +1,7 @@
 export type RpcFailure = {
   message: string;
   code?: number;
+  method?: string;
 };
 
 export type TransactionStatusView = TransactionStatus | { status: "malformed"; reason: string } | { status: "unavailable"; error: RpcFailure };
@@ -19,6 +20,8 @@ export type TransactionStatus =
   | { status: "pending" }
   | { status: "committed"; height: string }
   | { status: "invalid"; reason: string }
+  | { status: "recentFailure"; attemptHeight: string; conflict: { address: string; key: string; code: string } }
+  | { status: "other" }
   | { status: "unknown" };
 
 export type EventView = {

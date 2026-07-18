@@ -12,20 +12,20 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(@types/react@19.2.15)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@groundhogchain/client':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.5
+        version: 0.1.5
       '@groundhogchain/contract-spec':
-        specifier: 0.3.3
-        version: 0.3.3
+        specifier: 0.4.2
+        version: 0.4.2
       '@groundhogchain/gateway':
-        specifier: 0.3.3
-        version: 0.3.3
+        specifier: 0.4.2
+        version: 0.4.2
       '@groundhogchain/protocol':
-        specifier: 0.3.3
-        version: 0.3.3
+        specifier: 0.4.2
+        version: 0.4.2
       '@groundhogchain/xdr':
-        specifier: 0.3.3
-        version: 0.3.3
+        specifier: 0.4.2
+        version: 0.4.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -317,20 +317,20 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@groundhogchain/client@0.1.4':
-    resolution: {integrity: sha512-x1EogIPqql2L8BYYuM3QzaTfbj+98e2SIs/lNu7ZHCbj4Ey/eaZt8P2oIwMgNILT/3BV1hADosmJ+cfNHf38DQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/client/0.1.4/ce92c3409351497a5f50329a47cf712ca168700e}
+  '@groundhogchain/client@0.1.5':
+    resolution: {integrity: sha512-fYTHTNYTHvTCl4I0i/zSA3VuO4Oc1IneY75K+rlFREkao4qL10zdSnQ1FaAJb33PyI/UdJMlqvEKdelqtgHcUQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/client/0.1.5/7a53f076c091eb29038b6d76ea006bf2405a9aad}
 
-  '@groundhogchain/contract-spec@0.3.3':
-    resolution: {integrity: sha512-Myc1SuEv+hQU+PBcgx2BIAfAyTMj4eNvsFk31Bb/gEL6x3TdBYjsyJb3/wciE5bpFHSJXusaKIQPbxFGjqrjJQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/contract-spec/0.3.3/1bf49e352309e633b5e9fea40d7337799f514614}
+  '@groundhogchain/contract-spec@0.4.2':
+    resolution: {integrity: sha512-PYrxER2ZJa+kiisYXoxm5MFuYGhw6shNndZsfmIsEsbtfQclopO2AtYj3fn/063drxAJ8sn1VHVXl4TbgIsROQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/contract-spec/0.4.2/fcb208185953daa02db1a7cfa1f6f8e713fe36c6}
 
-  '@groundhogchain/gateway@0.3.3':
-    resolution: {integrity: sha512-7iOaJM5ZPgm3vHpTzBM5ztySYGoFKTjoVQh9KDvVvRJOQHnJGBbA/NQeBSidG7xKb0oRLodDK0zNHrjEc3w/YQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/gateway/0.3.3/1292cd6277c2badb3ff06b6f2016cdad7576d4ec}
+  '@groundhogchain/gateway@0.4.2':
+    resolution: {integrity: sha512-GVr3PcVA1amgZKN2d9K+u6v0HqEqyykeEaUm9gzhZf+H6lS7IHtj86DS6o2hn7jkbKgjtaq+w1j7EMiyCOYv2g==, tarball: https://npm.pkg.github.com/download/@groundhogchain/gateway/0.4.2/4a0bafe20fa4089c3a65c605bb3fabe20683bf2f}
 
-  '@groundhogchain/protocol@0.3.3':
-    resolution: {integrity: sha512-9Q2uj6CVpYBMKVUS6rmOz/kGb1rPkF48AZjoG8shaHB+uBy9iR7s0Iu19GRtNvo3WJOsfirS6UISfP2X9sIrpA==, tarball: https://npm.pkg.github.com/download/@groundhogchain/protocol/0.3.3/a050655fff08ceb6d4745b7a3b6169cc270ea5d8}
+  '@groundhogchain/protocol@0.4.2':
+    resolution: {integrity: sha512-t28/qoBHqRMJ3G4a4ZHiWHws/zRgyNylQNSywLMKF/sABwRKPaeKi3Zm3KgZAelwniegzYw53QXDz6LUNIQi4Q==, tarball: https://npm.pkg.github.com/download/@groundhogchain/protocol/0.4.2/13fa3ae1bf121a5186475586a87ccf6f3e9c65f5}
 
-  '@groundhogchain/xdr@0.3.3':
-    resolution: {integrity: sha512-7RxS+IKpsuKsO6Sqs1yHhqitDs3fXQE4Hy3dZ32wpF7rsIBz0CkNArjdfWubDhu4mPkmj6jlTNgs4LXvvOjeoA==, tarball: https://npm.pkg.github.com/download/@groundhogchain/xdr/0.3.3/5263b53ab6fc7ad6759553fe49233c899ff30e81}
+  '@groundhogchain/xdr@0.4.2':
+    resolution: {integrity: sha512-pjCdRI+NZR4qDfYXKtImRLc/uUbMC5c3mGRNdm0nPaPspv9K65XyIvvsbhr1yoh6CAAfzppqHObIy1mNO4UQ9A==, tarball: https://npm.pkg.github.com/download/@groundhogchain/xdr/0.4.2/840112c2d9ce8720cadf6abc0edb4ea6cc51f151}
 
   '@hono/node-server@1.19.14':
     resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
@@ -3384,28 +3384,29 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@groundhogchain/client@0.1.4':
+  '@groundhogchain/client@0.1.5':
     dependencies:
-      '@groundhogchain/contract-spec': 0.3.3
-      '@groundhogchain/gateway': 0.3.3
-      '@groundhogchain/protocol': 0.3.3
+      '@groundhogchain/contract-spec': 0.4.2
+      '@groundhogchain/gateway': 0.4.2
+      '@groundhogchain/protocol': 0.4.2
       '@noble/ed25519': 3.1.0
       '@noble/hashes': 2.2.0
 
-  '@groundhogchain/contract-spec@0.3.3':
+  '@groundhogchain/contract-spec@0.4.2':
     dependencies:
-      '@groundhogchain/xdr': 0.3.3
+      '@groundhogchain/protocol': 0.4.2
+      '@groundhogchain/xdr': 0.4.2
 
-  '@groundhogchain/gateway@0.3.3':
+  '@groundhogchain/gateway@0.4.2':
     dependencies:
-      '@groundhogchain/protocol': 0.3.3
-      '@groundhogchain/xdr': 0.3.3
+      '@groundhogchain/protocol': 0.4.2
+      '@groundhogchain/xdr': 0.4.2
 
-  '@groundhogchain/protocol@0.3.3':
+  '@groundhogchain/protocol@0.4.2':
     dependencies:
-      '@groundhogchain/xdr': 0.3.3
+      '@groundhogchain/xdr': 0.4.2
 
-  '@groundhogchain/xdr@0.3.3': {}
+  '@groundhogchain/xdr@0.4.2': {}
 
   '@hono/node-server@1.19.14(hono@4.12.23)':
     dependencies:

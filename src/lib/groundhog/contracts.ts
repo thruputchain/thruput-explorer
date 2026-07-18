@@ -1,15 +1,16 @@
-import { HttpTransport, addressFromHex, createGroundhogClient, toHex0x } from "@groundhogchain/client";
+import { addressFromHex, toHex0x } from "@groundhogchain/client";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
+import { createExplorerGroundhogClient } from "./client";
 import { getContractInfo, loadContractRegistry } from "./contract-registry";
 import { decodeGeneratedEvent } from "./contract-events";
 import { getNativeBalance, type NativeBalanceView } from "./native-balance";
+import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
 import type { DecodedEventView, RpcFailure } from "./types";
 
-const DEFAULT_RPC_URL = "http://localhost:9545";
 const CONTRACT_EVENT_LIMIT = 25;
 
 export type ContractPageData =
@@ -51,15 +52,13 @@ export type ContractEventView = {
 
 export async function loadContractPageData(addressInput: string): Promise<ContractPageData> {
   const address = normalizeContractAddress(addressInput);
-  const rpcUrl = process.env.GROUNDHOG_RPC_URL ?? DEFAULT_RPC_URL;
+  const { rpcUrl, client } = createExplorerGroundhogClient();
 
   if (!isContractAddress(address)) {
     return { status: "malformed", address, rpcUrl, reason: "Malformed contract address" };
   }
 
   try {
-    const transport = new HttpTransport(rpcUrl);
-    const client = createGroundhogClient(transport);
     const contractAddress = addressFromHex(address);
     const registry = await loadContractRegistry();
     const contract = getContractInfo(registry, address);
@@ -109,11 +108,4 @@ export async function loadContractPageData(addressInput: string): Promise<Contra
       error: toRpcFailure(error),
     };
   }
-}
-
-function toRpcFailure(error: unknown): RpcFailure {
-  if (error instanceof Error && "code" in error && typeof error.code === "number") {
-    return { message: error.message, code: error.code };
-  }
-  return { message: error instanceof Error ? error.message : "Unable to reach Groundhog RPC" };
 }

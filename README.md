@@ -1,22 +1,22 @@
 # Groundhog Transaction Explorer
 
-Local transaction explorer for a running Groundhog node. The app focuses on transaction lookup, public receipt/status data, and decoded token transfer events while the Groundhog TypeScript SDK and event-codegen story are still evolving.
+Transaction explorer for Groundhog local nodes and Devnet. The app focuses on transaction lookup, public receipt/status data, decoded token transfer events, and useful placeholders for RPC surfaces that are still evolving.
 
 ## Prerequisites
 
 - Node.js 20+
 - pnpm 10.33.4+
-- A local Groundhog node listening on `http://localhost:9545`
-- Local Groundhog TypeScript packages checked out in the same parent directory:
+- GitHub Packages read access for `@groundhogchain/*` packages
+- For local development, a Groundhog node listening on `http://localhost:9545`
 
-```txt
-parent-directory/
-  gh-explorer/
-  groundhog-client-ts/
-  groundhog-protocol-ts/
+Configure GitHub Packages auth in your local npm config:
+
+```ini
+@groundhogchain:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
 ```
 
-The package dependencies intentionally use local `file:` links while SDK changes are being tested before publication.
+The token needs `read:packages`. In Netlify, add the token as `NPM_TOKEN` and create an `.npmrc` during install, or configure the equivalent GitHub Packages auth in the build environment.
 
 ## Install
 
@@ -32,11 +32,19 @@ pnpm dev
 
 Open `http://localhost:3000` and search for a `0x`-prefixed 32-byte transaction hash.
 
-The app reads `GROUNDHOG_RPC_URL` and defaults to `http://localhost:9545`:
+The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL` when set and otherwise defaults to `http://localhost:9545`:
 
 ```bash
 GROUNDHOG_RPC_URL=http://127.0.0.1:9545 pnpm dev
 ```
+
+For Netlify, set:
+
+```bash
+GROUNDHOG_RPC_URL=https://devnet.groundhog.network
+```
+
+Because RPC calls run server-side, `http://127.0.0.1:9545` on Netlify would point at the Netlify runtime, not a developer's laptop. Use the local default only when running the explorer locally.
 
 To create repeatable local explorer fixtures after starting a fresh node, run:
 

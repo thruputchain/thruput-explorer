@@ -1,15 +1,16 @@
-import { HttpTransport, addressFromHex, createGroundhogClient, toHex0x } from "@groundhogchain/client";
+import { addressFromHex, createGroundhogClient, toHex0x } from "@groundhogchain/client";
 import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
+import { createExplorerGroundhogClient } from "./client";
 import { getContractInfo, getTokenContracts, loadContractRegistry } from "./contract-registry";
 import { getNativeBalance, type NativeBalanceView } from "./native-balance";
+import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
 import type { DecodedEventView, RpcFailure } from "./types";
 
-const DEFAULT_RPC_URL = "http://localhost:9545";
 const WALLET_EVENT_LIMIT = 50;
 
 export type WalletPageData =
@@ -46,15 +47,13 @@ export type WalletTransferView = {
 
 export async function loadWalletPageData(addressInput: string): Promise<WalletPageData> {
   const address = normalizeContractAddress(addressInput);
-  const rpcUrl = process.env.GROUNDHOG_RPC_URL ?? DEFAULT_RPC_URL;
+  const { rpcUrl, client } = createExplorerGroundhogClient();
 
   if (!isContractAddress(address)) {
     return { status: "malformed", address, rpcUrl, reason: "Malformed wallet address" };
   }
 
   try {
-    const transport = new HttpTransport(rpcUrl);
-    const client = createGroundhogClient(transport);
     const registry = await loadContractRegistry();
     const tokenContracts = getTokenContracts(registry);
     const contractAddresses = tokenContracts.map((token) => addressFromHex(token.address));
@@ -140,11 +139,4 @@ function getDirection(decoded: DecodedEventView | undefined, walletAddress: stri
 
 function uniqueTransfer(value: WalletTransferView, index: number, transfers: WalletTransferView[]) {
   return transfers.findIndex((candidate) => candidate.txHash === value.txHash && candidate.sequenceNumber === value.sequenceNumber) === index;
-}
-
-function toRpcFailure(error: unknown): RpcFailure {
-  if (error instanceof Error && "code" in error && typeof error.code === "number") {
-    return { message: error.message, code: error.code };
-  }
-  return { message: error instanceof Error ? error.message : "Unable to reach Groundhog RPC" };
 }

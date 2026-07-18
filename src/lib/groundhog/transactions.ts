@@ -1,22 +1,19 @@
-import { HttpTransport, createGroundhogClient, hashFromHex, toHex0x } from "@groundhogchain/client";
+import { hashFromHex, toHex0x, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
+import { createExplorerGroundhogClient } from "./client";
 import { getContractInfo, loadContractRegistry } from "./contract-registry";
 import { decodeGeneratedEvent } from "./contract-events";
 import { stringifyJson } from "./format";
+import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
-import type {
-  RpcFailure,
-  TransactionPageData,
-} from "./types";
-
-const DEFAULT_RPC_URL = "http://localhost:9545";
+import type { TransactionPageData } from "./types";
 
 export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
   const hash = normalizeTransactionHash(hashInput);
-  const rpcUrl = process.env.GROUNDHOG_RPC_URL ?? DEFAULT_RPC_URL;
+  const { rpcUrl, transport, client } = createExplorerGroundhogClient();
 
   if (!isTransactionHash(hash)) {
     return {
@@ -28,8 +25,6 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
   }
 
   try {
-    const transport = new HttpTransport(rpcUrl);
-    const client = createGroundhogClient(transport);
     const txHash = hashFromHex(hash);
 
     const [status, receipt, chainTip, rawReceipt] = await Promise.all([
@@ -54,7 +49,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
     return {
       hash,
       rpcUrl,
-      status: status.status === "committed" ? { status: "committed", height: status.height.toString() } : status,
+      status: formatTransactionStatus(status),
       chainTipHeight: chainTip.height.toString(),
       receipt: receipt
         ? {
@@ -93,11 +88,21 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
   }
 }
 
-function toRpcFailure(error: unknown): RpcFailure {
-  if (error instanceof Error && "code" in error && typeof error.code === "number") {
-    return { message: error.message, code: error.code };
+function formatTransactionStatus(status: SdkTransactionStatus) {
+  if (status.status === "committed") return { status: "committed" as const, height: status.height.toString() };
+  if (status.status === "recentFailure") {
+    return {
+      status: "recentFailure" as const,
+      attemptHeight: status.attemptHeight.toString(),
+      conflict: {
+        address: toHex(status.conflict.address),
+        key: toHex(status.conflict.key),
+        code: status.conflict.code,
+      },
+    };
   }
-  return { message: error instanceof Error ? error.message : "Unable to reach Groundhog RPC" };
+
+  return status;
 }
 
 function toHex(value: Uint8Array) {

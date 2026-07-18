@@ -46,6 +46,13 @@ function getExecutionDetails(data: TransactionPageData) {
     details.push({ label: "Invalid reason", value: data.status.reason });
   }
 
+  if (data.status.status === "recentFailure") {
+    details.push({ label: "Attempt height", value: data.status.attemptHeight });
+    details.push({ label: "Conflict address", value: data.status.conflict.address });
+    details.push({ label: "Conflict key", value: data.status.conflict.key });
+    details.push({ label: "Conflict code", value: data.status.conflict.code });
+  }
+
   const receipt = data.receipt;
   if (!receipt) return details;
 
@@ -70,6 +77,10 @@ function statusLabel(status: TransactionPageData["status"]["status"]) {
       return "Malformed";
     case "unavailable":
       return "Unavailable";
+    case "recentFailure":
+      return "Recent failure";
+    case "other":
+      return "Other";
     case "unknown":
       return "Unknown";
     case "committed":
