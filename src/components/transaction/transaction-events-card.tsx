@@ -127,7 +127,7 @@ function GenericEvent({ event }: { event: Extract<NonNullable<EventView["decoded
 
 function ContractAddressLink({ address, name }: { address: string; name?: string }) {
   return (
-    <Link className="break-all underline-offset-4 hover:underline" href={`/contract/${address}`}>
+    <Link className="break-all underline-offset-4 hover:underline" href={`/address/${address}`}>
       {name ? <p className="text-sm font-medium">{name}</p> : null}
       <code className="break-all text-xs">{address}</code>
     </Link>
@@ -137,7 +137,7 @@ function ContractAddressLink({ address, name }: { address: string; name?: string
 function DecodedValue({ name, value }: { name: string; value: string }) {
   if (isWalletField(name) && isContractAddress(value)) {
     return (
-      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/wallet/${value}`}>
+      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${value}`}>
         {value}
       </Link>
     );
@@ -145,7 +145,7 @@ function DecodedValue({ name, value }: { name: string; value: string }) {
 
   if (isContractField(name) && isContractAddress(value)) {
     return (
-      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/contract/${value}`}>
+      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${value}`}>
         {value}
       </Link>
     );
@@ -156,7 +156,7 @@ function DecodedValue({ name, value }: { name: string; value: string }) {
 
 function WalletAddressLink({ address }: { address: string }) {
   return (
-    <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/wallet/${address}`}>
+    <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${address}`}>
       {address}
     </Link>
   );

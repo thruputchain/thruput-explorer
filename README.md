@@ -54,15 +54,13 @@ pnpm bootstrap:local
 
 The bootstrap script builds the local ERC20 and Ticketmaster fixture contracts, deploys ALULA, USDC, and Ticketmaster, initializes metadata, mints balances, creates sample token/Ticketmaster transactions, updates `.env.local`, and prints transaction URLs.
 
-Local deployed contract addresses change when you restart a dev node and redeploy. The explorer reads these optional `.env.local` values:
+Local deployed contract addresses change when you restart a dev node and redeploy. The explorer reads this optional `.env.local` value for generated custom event decoding:
 
 ```bash
-GROUNDHOG_ALULA_ADDRESS=0x...
-GROUNDHOG_USDC_ADDRESS=0x...
 GROUNDHOG_TICKETMASTER_ADDRESS=0x...
 ```
 
-The file is optional. Restart the dev server after `pnpm bootstrap:local` updates it. Missing, empty, malformed, or invalid entries are ignored. ALULA and USDC are treated as standard ERC20 tokens. Ticketmaster uses the checked-in generated binding for event decoding. Native HOG is the only built-in token hint because its address is stable.
+The file is optional. Restart the dev server after `pnpm bootstrap:local` updates it. Missing, empty, malformed, or invalid entries are ignored. ERC20 token contracts are detected through metadata view calls and standard ERC20 event signatures. Ticketmaster uses the checked-in generated binding for event decoding. Native HOG is the only built-in token metadata hint because its address is stable.
 
 ## Event Decoding
 
