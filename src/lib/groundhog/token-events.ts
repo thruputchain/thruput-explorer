@@ -2,17 +2,13 @@ import { toHex0x, type EmittedEvent } from "@groundhogchain/client";
 import { decodeERC20Event } from "@groundhogchain/client/contracts";
 import { contractAddress } from "@groundhogchain/protocol";
 
-import type { ContractRegistryEntry } from "./contract-registry";
 import type { TokenMetadata } from "./token-metadata";
 import type { DecodedEventView } from "./types";
 
 export function decodeTokenEvent(
   event: EmittedEvent,
-  contract?: ContractRegistryEntry,
   metadata?: TokenMetadata,
 ): DecodedEventView | undefined {
-  if (!contract?.token) return undefined;
-
   let decoded: ReturnType<typeof decodeERC20Event>;
   try {
     decoded = decodeERC20Event(event);

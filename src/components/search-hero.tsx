@@ -15,23 +15,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
+type SearchResponse =
+  | { status: "ok"; href: string }
+  | { status: "malformed" | "unavailable"; message: string };
+
 export function SearchHero() {
   const router = useRouter();
   const [hash, setHash] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalized = normalizeTransactionHash(hash);
 
     if (!isTransactionHash(normalized)) {
-      setError("Enter a 0x-prefixed 32-byte transaction hash.");
+      setError("Enter a 0x-prefixed 32-byte transaction hash or address.");
       return;
     }
 
     setError(null);
-    startTransition(() => router.push(`/tx/${normalized}`));
+    const response = await fetch("/api/search", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query: normalized }),
+    });
+    const result = (await response.json()) as SearchResponse;
+
+    if (result.status !== "ok") {
+      setError(result.message);
+      return;
+    }
+
+    startTransition(() => router.push(result.href));
   }
 
   return (
@@ -49,8 +65,8 @@ export function SearchHero() {
         <CardHeader className="sr-only">
           <CardTitle>Transaction search</CardTitle>
           <CardDescription>
-            Search for a transaction by its hash to view details, events, and
-            more.
+            Search for a transaction hash or address to view details, events,
+            and more.
           </CardDescription>
         </CardHeader>
         <CardContent>

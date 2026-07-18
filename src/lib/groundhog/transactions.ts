@@ -38,11 +38,9 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
     const metadataByAddress = new Map<string, TokenMetadata | undefined>();
     if (receipt) {
       await Promise.all(
-        Array.from(new Set(receipt.events.map((event) => toHex(event.contractAddress))))
-          .filter((contractAddress) => getContractInfo(contractRegistry, contractAddress)?.token)
-          .map(async (contractAddress) => {
-            metadataByAddress.set(contractAddress, await getTokenMetadata(client, contractAddress));
-          }),
+        Array.from(new Set(receipt.events.map((event) => toHex(event.contractAddress)))).map(async (contractAddress) => {
+          metadataByAddress.set(contractAddress, await getTokenMetadata(client, contractAddress));
+        }),
       );
     }
 
@@ -71,7 +69,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
               return {
                 ...eventView,
                 contractName: metadataByAddress.get(contractAddress)?.name ?? eventView.contractName,
-                decoded: decodeTokenEvent(event, contract, metadataByAddress.get(contractAddress)) ?? decodeGeneratedEvent(event, contract),
+                decoded: decodeTokenEvent(event, metadataByAddress.get(contractAddress)) ?? decodeGeneratedEvent(event, contract),
               };
             }),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),

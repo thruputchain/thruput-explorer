@@ -203,14 +203,12 @@ NODE
 }
 
 write_env_file() {
-  ALULA_ADDRESS="$1" USDC_ADDRESS="$2" TICKETMASTER_ADDRESS="$3" EXPLORER_ENV_FILE="$EXPLORER_ENV_FILE" \
+  TICKETMASTER_ADDRESS="$1" EXPLORER_ENV_FILE="$EXPLORER_ENV_FILE" \
     node --input-type=module <<'NODE'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const path = process.env.EXPLORER_ENV_FILE;
 const updates = new Map([
-  ["GROUNDHOG_ALULA_ADDRESS", process.env.ALULA_ADDRESS],
-  ["GROUNDHOG_USDC_ADDRESS", process.env.USDC_ADDRESS],
   ["GROUNDHOG_TICKETMASTER_ADDRESS", process.env.TICKETMASTER_ADDRESS],
 ]);
 const lines = existsSync(path) ? readFileSync(path, "utf8").split(/\r?\n/) : [];
@@ -373,7 +371,7 @@ TICKET_MINT_2_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "mint ticket 2" mi
 TICKET_TRANSFER_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "transfer ticket 1" transfer 1 1 "$DEV2")"
 
 printf 'Updating local explorer environment...\n'
-write_env_file "$ALULA_ADDRESS" "$USDC_ADDRESS" "$TICKETMASTER_ADDRESS"
+write_env_file "$TICKETMASTER_ADDRESS"
 
 cat <<EOF
 
@@ -421,7 +419,7 @@ Explorer URLs:
   http://localhost:3000/tx/$TICKET_MINT_1_TX
   http://localhost:3000/tx/$TICKET_MINT_2_TX
   http://localhost:3000/tx/$TICKET_TRANSFER_TX
-  http://localhost:3000/contract/$TICKETMASTER_ADDRESS
+  http://localhost:3000/address/$TICKETMASTER_ADDRESS
 
 Updated:
   $EXPLORER_ENV_FILE
