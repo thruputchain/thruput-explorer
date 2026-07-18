@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
-    "@groundhogchain/client": "file:../groundhog-client-ts",
-    "@groundhogchain/contract-spec": "file:../groundhog-protocol-ts/packages/contract-spec",
-    "@groundhogchain/gateway": "file:../groundhog-protocol-ts/packages/gateway",
-    "@groundhogchain/protocol": "file:../groundhog-protocol-ts/packages/protocol",
-    "@groundhogchain/xdr": "file:../groundhog-protocol-ts/packages/xdr",
+    "@groundhogchain/client": "^0.1.4",
+    "@groundhogchain/contract-spec": "0.3.3",
+    "@groundhogchain/gateway": "0.3.3",
+    "@groundhogchain/protocol": "0.3.3",
+    "@groundhogchain/xdr": "0.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
@@ -36,14 +36,5 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "@groundhogchain/client": "file:../groundhog-client-ts",
-      "@groundhogchain/contract-spec": "file:../groundhog-protocol-ts/packages/contract-spec",
-      "@groundhogchain/gateway": "file:../groundhog-protocol-ts/packages/gateway",
-      "@groundhogchain/protocol": "file:../groundhog-protocol-ts/packages/protocol",
-      "@groundhogchain/xdr": "file:../groundhog-protocol-ts/packages/xdr"
-    }
   }
 }

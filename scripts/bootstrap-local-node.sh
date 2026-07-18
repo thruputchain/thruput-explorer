@@ -4,12 +4,25 @@ shopt -s inherit_errexit
 trap 'printf "Bootstrap failed at line %s\n" "$LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXPLORER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-WORK_DIR="$(cd "$EXPLORER_DIR/.." && pwd)"
+
+# Local filesystem configuration. Override these from the environment when your
+# repositories or fixture projects live somewhere else.
+EXPLORER_DIR="${GROUNDHOG_EXPLORER_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+WORK_DIR="${GROUNDHOG_WORK_DIR:-$(cd "$EXPLORER_DIR/.." && pwd)}"
+GROUNDHOG_TEST_DIR="${GROUNDHOG_TEST_DIR:-$WORK_DIR/groundhog-test}"
 GROUNDHOG_CLI="${GROUNDHOG_CLI:-$WORK_DIR/groundhog-rpc/target/debug/groundhog}"
-ERC20_PROJECT_DIR="${ERC20_PROJECT_DIR:-$WORK_DIR/groundhog-test/erc20-current}"
-TICKETMASTER_PROJECT_DIR="${TICKETMASTER_PROJECT_DIR:-$WORK_DIR/groundhog-test/ticketmaster}"
+ERC20_PROJECT_DIR="${ERC20_PROJECT_DIR:-$GROUNDHOG_TEST_DIR/erc20-current}"
+TICKETMASTER_PROJECT_DIR="${TICKETMASTER_PROJECT_DIR:-$GROUNDHOG_TEST_DIR/ticketmaster}"
+EXPLORER_ENV_FILE="${EXPLORER_ENV_FILE:-$EXPLORER_DIR/.env.local}"
 LOCAL_NODE_STATE="${LOCAL_NODE_STATE:-$HOME/.local/share/groundhog/hog-devnode/.groundhog/local-node.json}"
+TMP_RUNTIME_MANIFEST_GLOB="${TMP_RUNTIME_MANIFEST_GLOB:-/tmp/ramdb_*/runtime-manifest.json}"
+
+DEFAULT_GROUNDHOG_CLIENT_CONTRACTS_MODULE="@groundhogchain/client/contracts"
+if [[ -f "$WORK_DIR/groundhog-client-ts/dist/contracts.js" ]]; then
+  DEFAULT_GROUNDHOG_CLIENT_CONTRACTS_MODULE="$WORK_DIR/groundhog-client-ts/dist/contracts.js"
+fi
+GROUNDHOG_CLIENT_CONTRACTS_MODULE="${GROUNDHOG_CLIENT_CONTRACTS_MODULE:-$DEFAULT_GROUNDHOG_CLIENT_CONTRACTS_MODULE}"
+
 RPC_URL="${GROUNDHOG_RPC_URL:-http://localhost:9545}"
 HOG_ADDRESS="0x0000000000000000000000000000000000000000000000000000000000000001"
 
@@ -23,14 +36,14 @@ NODE
 )"
   else
     shopt -s nullglob
-    manifests=(/tmp/ramdb_*/runtime-manifest.json)
+    manifests=($TMP_RUNTIME_MANIFEST_GLOB)
     shopt -u nullglob
     if [[ ${#manifests[@]} -eq 1 ]]; then
       GROUNDHOG_RUNTIME_MANIFEST="${manifests[0]}"
     else
       printf 'Missing GROUNDHOG_RUNTIME_MANIFEST. Start a local node or export the manifest path printed by `groundhog node`.\n' >&2
       printf 'Checked local node state: %s\n' "$LOCAL_NODE_STATE" >&2
-      printf 'Found %s /tmp/ramdb_*/runtime-manifest.json candidates.\n' "${#manifests[@]}" >&2
+      printf 'Found %s %s candidates.\n' "${#manifests[@]}" "$TMP_RUNTIME_MANIFEST_GLOB" >&2
       exit 1
     fi
   fi
@@ -117,10 +130,12 @@ erc20_metadata_initialize_call() {
   local symbol="$4"
   local decimals="$5"
   CONTRACT_ADDRESS="$contract" ADMIN_ADDRESS="$admin" TOKEN_NAME="$name" TOKEN_SYMBOL="$symbol" TOKEN_DECIMALS="$decimals" \
+    GROUNDHOG_CLIENT_CONTRACTS_MODULE="$GROUNDHOG_CLIENT_CONTRACTS_MODULE" \
     node --input-type=module <<'NODE'
 import { addressFromHex, toHex0x } from "@groundhogchain/client";
-import { ERC20Metadata } from "@groundhogchain/client/contracts";
 import { gasAmount } from "@groundhogchain/protocol";
+
+const { ERC20Metadata } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
 const invocation = ERC20Metadata.initialize(
   addressFromHex(process.env.CONTRACT_ADDRESS),
@@ -142,10 +157,12 @@ erc20_mint_call() {
   local receiver="$2"
   local amount="$3"
   CONTRACT_ADDRESS="$contract" RECEIVER_ADDRESS="$receiver" RAW_AMOUNT="$amount" \
+    GROUNDHOG_CLIENT_CONTRACTS_MODULE="$GROUNDHOG_CLIENT_CONTRACTS_MODULE" \
     node --input-type=module <<'NODE'
 import { addressFromHex, toHex0x } from "@groundhogchain/client";
-import { ERC20 } from "@groundhogchain/client/contracts";
 import { gasAmount } from "@groundhogchain/protocol";
+
+const { ERC20 } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
 const invocation = ERC20.mint(
   addressFromHex(process.env.CONTRACT_ADDRESS),
@@ -165,10 +182,12 @@ erc20_transfer_call() {
   local receiver="$2"
   local amount="$3"
   CONTRACT_ADDRESS="$contract" RECEIVER_ADDRESS="$receiver" RAW_AMOUNT="$amount" \
+    GROUNDHOG_CLIENT_CONTRACTS_MODULE="$GROUNDHOG_CLIENT_CONTRACTS_MODULE" \
     node --input-type=module <<'NODE'
 import { addressFromHex, toHex0x } from "@groundhogchain/client";
-import { ERC20 } from "@groundhogchain/client/contracts";
 import { gasAmount } from "@groundhogchain/protocol";
+
+const { ERC20 } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
 const invocation = ERC20.transfer(
   addressFromHex(process.env.CONTRACT_ADDRESS),
@@ -184,10 +203,11 @@ NODE
 }
 
 write_env_file() {
-  ALULA_ADDRESS="$1" USDC_ADDRESS="$2" TICKETMASTER_ADDRESS="$3" node --input-type=module <<'NODE'
+  ALULA_ADDRESS="$1" USDC_ADDRESS="$2" TICKETMASTER_ADDRESS="$3" EXPLORER_ENV_FILE="$EXPLORER_ENV_FILE" \
+    node --input-type=module <<'NODE'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-const path = ".env.local";
+const path = process.env.EXPLORER_ENV_FILE;
 const updates = new Map([
   ["GROUNDHOG_ALULA_ADDRESS", process.env.ALULA_ADDRESS],
   ["GROUNDHOG_USDC_ADDRESS", process.env.USDC_ADDRESS],
@@ -307,8 +327,10 @@ printf 'Bootstrapping local Groundhog explorer fixtures\n'
 printf 'Runtime manifest: %s\n' "$GROUNDHOG_RUNTIME_MANIFEST"
 printf 'RPC URL: %s\n' "$RPC_URL"
 printf 'Groundhog CLI: %s\n' "$GROUNDHOG_CLI"
+printf 'Contracts module: %s\n' "$GROUNDHOG_CLIENT_CONTRACTS_MODULE"
 printf 'ERC20 project: %s\n\n' "$ERC20_PROJECT_DIR"
 printf 'Ticketmaster project: %s\n\n' "$TICKETMASTER_PROJECT_DIR"
+printf 'Explorer env file: %s\n\n' "$EXPLORER_ENV_FILE"
 
 printf 'Building ERC20 fixture...\n'
 build_json="$(run_groundhog "$GROUNDHOG_CLI" build --target wasm --bindings ts --json)"
@@ -351,7 +373,7 @@ TICKET_MINT_2_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "mint ticket 2" mi
 TICKET_TRANSFER_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "transfer ticket 1" transfer 1 1 "$DEV2")"
 
 printf 'Updating local explorer environment...\n'
-(cd "$EXPLORER_DIR" && write_env_file "$ALULA_ADDRESS" "$USDC_ADDRESS" "$TICKETMASTER_ADDRESS")
+write_env_file "$ALULA_ADDRESS" "$USDC_ADDRESS" "$TICKETMASTER_ADDRESS"
 
 cat <<EOF
 
@@ -402,5 +424,5 @@ Explorer URLs:
   http://localhost:3000/contract/$TICKETMASTER_ADDRESS
 
 Updated:
-  $EXPLORER_DIR/.env.local
+  $EXPLORER_ENV_FILE
 EOF

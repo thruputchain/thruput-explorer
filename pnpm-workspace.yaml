@@ -1,0 +1,2 @@
+overrides:
+  '@groundhogchain/client': link:../groundhog-client-ts
