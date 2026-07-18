@@ -1,5 +1,6 @@
 import { AlertCircleIcon } from "lucide-react";
 
+import { RpcAlert } from "@/components/rpc-alert";
 import { TransactionEventsCard } from "@/components/transaction/transaction-events-card";
 import { TransactionHeader } from "@/components/transaction/transaction-header";
 import { TransactionRawReceiptCard } from "@/components/transaction/transaction-raw-receipt-card";
@@ -22,11 +23,7 @@ export default async function TransactionPage({
       <TransactionHeader data={data} />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-8">
         {data.status.status === "unavailable" ? (
-          <Alert variant="destructive">
-            <AlertCircleIcon />
-            <AlertTitle>Groundhog RPC unavailable</AlertTitle>
-            <AlertDescription>{data.status.error.message}</AlertDescription>
-          </Alert>
+          <RpcAlert title="Groundhog RPC unavailable" description="The transaction page could not load from the configured RPC endpoint." error={data.status.error} />
         ) : null}
 
         {data.status.status === "unknown" ? (

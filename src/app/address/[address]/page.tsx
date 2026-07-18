@@ -1,13 +1,14 @@
 import { AlertCircleIcon } from "lucide-react";
 import Link from "next/link";
 
-import { CopyButton } from "@/components/copy-button";
+import { PageHeader } from "@/components/page-header";
+import { RpcAlert } from "@/components/rpc-alert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { loadAddressPageData, type AddressEventView, type AddressTransactionRefView } from "@/lib/groundhog/addresses";
-import type { DecodedEventView } from "@/lib/groundhog/types";
+import type { DecodedEventView, RpcFailure } from "@/lib/groundhog/types";
 
 type TokenDecodedEventView = Exclude<DecodedEventView, { kind: "contract-event" }>;
 
@@ -23,21 +24,13 @@ export default async function AddressPage({
 
   return (
     <main className="min-h-screen bg-background px-4 pt-4">
-      <div className="border-b bg-card">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-mono text-xs uppercase text-muted-foreground">Address</p>
-            {data.status === "ok" ? data.badges.map((badge) => <Badge key={badge} variant="secondary">{badge}</Badge>) : null}
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight">{data.status === "ok" && data.label ? data.label : "Address"}</h1>
-              <code className="break-all text-sm text-muted-foreground">{data.address}</code>
-            </div>
-            <CopyButton value={data.address} />
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Address"
+        title={data.status === "ok" && data.label ? data.label : "Address"}
+        value={data.address}
+        badges={data.status === "ok" ? data.badges : []}
+        copyLabel="Copy address"
+      />
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-8">
         {data.status === "malformed" ? (
@@ -48,11 +41,15 @@ export default async function AddressPage({
           </Alert>
         ) : null}
 
+        {data.status === "unavailable" ? (
+          <RpcAlert title="Groundhog RPC unavailable" description="The address page could not load from the configured RPC endpoint." error={data.error} />
+        ) : null}
+
         {data.status === "ok" ? (
           <>
             <AddressSummaryCard data={data} />
-            <RootTransactionsCard transactions={data.rootTransactions} unavailable={data.rootTransactionsUnavailable} />
-            <ContractEventsCard events={data.contractEvents} unavailable={data.contractEventsUnavailable} token={Boolean(data.metadata)} />
+            <RootTransactionsCard transactions={data.rootTransactions} error={data.rootTransactionsError} />
+            <ContractEventsCard events={data.contractEvents} error={data.contractEventsError} token={Boolean(data.metadata)} />
           </>
         ) : null}
       </div>
@@ -93,21 +90,23 @@ function AddressSummaryCard({ data }: { data: Extract<Awaited<ReturnType<typeof 
   );
 }
 
-function RootTransactionsCard({ transactions, unavailable }: { transactions: AddressTransactionRefView[]; unavailable: boolean }) {
+function RootTransactionsCard({ transactions, error }: { transactions: AddressTransactionRefView[]; error?: RpcFailure }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Transaction History</CardTitle>
         <CardDescription>
-          {unavailable
-            ? "This RPC does not currently provide address transaction history."
+          {error
+            ? "This RPC could not provide address transaction history."
             : transactions.length === 0
               ? "No transactions found for this address."
               : `${transactions.length} recent transaction${transactions.length === 1 ? "" : "s"} for this address.`}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {transactions.length === 0 ? (
+        {error ? (
+          <RpcAlert title="Transaction history unavailable" description="The rest of the address page can still render with partial data." error={error} />
+        ) : transactions.length === 0 ? (
           <p className="text-sm text-muted-foreground">Transactions will appear here when the RPC has indexed activity for this address.</p>
         ) : (
           <Table>
@@ -136,7 +135,7 @@ function RootTransactionsCard({ transactions, unavailable }: { transactions: Add
   );
 }
 
-function ContractEventsCard({ events, unavailable, token }: { events: AddressEventView[]; unavailable: boolean; token: boolean }) {
+function ContractEventsCard({ events, error, token }: { events: AddressEventView[]; error?: RpcFailure; token: boolean }) {
   const visibleEvents = token ? events.filter(isTokenTransferEvent) : events;
 
   return (
@@ -144,8 +143,8 @@ function ContractEventsCard({ events, unavailable, token }: { events: AddressEve
       <CardHeader>
         <CardTitle>{token ? "Token Transfer History" : "Contract Events"}</CardTitle>
         <CardDescription>
-          {unavailable
-            ? "This RPC does not currently provide event history for this address."
+          {error
+            ? "This RPC could not provide event history for this address."
             : visibleEvents.length === 0
               ? token
                 ? "No ERC20 transfer events found for this token contract."
@@ -156,7 +155,9 @@ function ContractEventsCard({ events, unavailable, token }: { events: AddressEve
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {visibleEvents.length === 0 ? (
+        {error ? (
+          <RpcAlert title="Event history unavailable" description="Event decoding will appear here when the RPC returns emitted events for this address." error={error} />
+        ) : visibleEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {token ? "Transfers, mints, and burns appear here when this token emits ERC20 Transfer events." : "Events appear here when this address is the emitting contract."}
           </p>
