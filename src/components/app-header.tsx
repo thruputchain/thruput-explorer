@@ -1,9 +1,8 @@
 import Image from "next/image";
-import { SunMoonIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-export function AppHeader({ onToggleTheme }: { onToggleTheme?: () => void }) {
+export function AppHeader() {
   return (
     <header className="flex items-center justify-between py-4">
       <h1 className="flex items-center gap-3 text-2xl font-bold">
@@ -16,9 +15,7 @@ export function AppHeader({ onToggleTheme }: { onToggleTheme?: () => void }) {
         />
         Groundhog
       </h1>
-      <Button variant="outline" size="icon" onClick={onToggleTheme}>
-        <SunMoonIcon className="h-6 w-6" />
-      </Button>
+      <ThemeToggle />
     </header>
   );
 }
