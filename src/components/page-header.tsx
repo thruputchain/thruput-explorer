@@ -23,7 +23,7 @@ export function PageHeader({
 }) {
   return (
     <header className="border-b bg-card">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 py-5">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 py-5 px-4 md:px-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-mono text-xs uppercase text-muted-foreground">
             {eyebrow}
@@ -34,24 +34,23 @@ export function PageHeader({
             </Badge>
           ))}
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex flex-col items-start md:items-center md:flex-row gap-4">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             <code className="break-all text-sm text-muted-foreground">
               {value}
             </code>
-          </div>
-          <div className="flex flex-wrap gap-2">
             <CopyButton value={value} label={copyLabel} />
-            <Button
-              render={<Link href={backHref} />}
-              nativeButton={false}
-              variant="secondary"
-              size="sm"
-            >
-              {backLabel}
-            </Button>
           </div>
+          <Button
+            render={<Link href={backHref} />}
+            nativeButton={false}
+            variant="secondary"
+            size="sm"
+            className="md:ml-auto"
+          >
+            {backLabel}
+          </Button>
         </div>
       </div>
     </header>
