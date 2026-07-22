@@ -5,13 +5,6 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -64,7 +57,7 @@ export function SearchHero() {
             aria-invalid={error ? true : undefined}
             value={hash}
             onChange={(event) => setHash(event.target.value)}
-            placeholder="Search for transactions, blocks, contracts, or addresses..."
+            placeholder="Search for transactions, contracts, or addresses..."
           />
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
