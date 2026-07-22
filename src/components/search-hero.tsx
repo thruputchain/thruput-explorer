@@ -51,44 +51,28 @@ export function SearchHero() {
   }
 
   return (
-    <section className="flex flex-col justify-center gap-8 pt-16 mx-auto max-w-2xl">
-      <div className="flex flex-col gap-3 justify-center text-center">
-        <p className="text-sm font-medium tracking-[0.3em] text-muted-foreground uppercase">
-          Groundhog Devnet Explorer
-        </p>
-        <h1 className="text-4xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
-          Search for transactions, wallets, and contracts.
+    <section className="flex flex-col gap-4 pt-8 max-w-2xl">
+      <div className="flex flex-col gap-3 justify-center">
+        <h1 className="text-2xl leading-none font-semibold tracking-tight text-balance sm:text-3xl">
+          Groundhog Explorer
         </h1>
       </div>
 
-      <Card>
-        <CardHeader className="sr-only">
-          <CardTitle>Transaction search</CardTitle>
-          <CardDescription>
-            Search for a transaction hash or address to view details, events,
-            and more.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submit}>
-            <div className="flex flex-1 flex-col gap-2">
-              <Input
-                aria-invalid={error ? true : undefined}
-                value={hash}
-                onChange={(event) => setHash(event.target.value)}
-                placeholder="0x0000"
-              />
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
-            </div>
-            <Button type="submit" disabled={isPending}>
-              <SearchIcon data-icon="inline-start" />
-              Search
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submit}>
+        <div className="flex flex-1 flex-col gap-2">
+          <Input
+            aria-invalid={error ? true : undefined}
+            value={hash}
+            onChange={(event) => setHash(event.target.value)}
+            placeholder="Search for transactions, blocks, contracts, or addresses..."
+          />
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+        <Button type="submit" disabled={isPending}>
+          <SearchIcon data-icon="inline-start" />
+          Search
+        </Button>
+      </form>
     </section>
   );
 }
