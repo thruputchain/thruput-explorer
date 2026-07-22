@@ -42,7 +42,7 @@ function EventItem({ event, index }: { event: EventView; index: number }) {
         <p className="text-sm font-medium">Event #{index + 1}</p>
         <div className="grid gap-1 sm:grid-cols-[140px_1fr] sm:gap-4">
           <EventLabel>Contract</EventLabel>
-        <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <ContractAddressLink address={event.contractAddress} name={event.contractName} />
           </div>
         </div>
@@ -86,43 +86,28 @@ function DecodedEvent({
         <div className="flex flex-col gap-1">
           <ContractAddressLink address={contractAddress} name={contractName} />
         </div>
-        {event.kind === "contract-event" ? <GenericEvent event={event} /> : null}
-        {event.kind !== "contract-event" && event.from ? (
+        {event.from ? (
           <>
             <EventLabel>From</EventLabel>
             <WalletAddressLink address={event.from} />
           </>
         ) : null}
-        {event.kind !== "contract-event" && event.to ? (
+        {event.to ? (
           <>
             <EventLabel>To</EventLabel>
             <WalletAddressLink address={event.to} />
           </>
         ) : null}
-        {event.kind !== "contract-event" ? (
-          <>
-            <EventLabel>Amount</EventLabel>
-            <p>
-              {event.amount}
-              {event.symbol ? ` ${event.symbol}` : ""}
-            </p>
-            <EventLabel>Raw amount</EventLabel>
-            <code className="break-all text-xs">{event.rawAmount}</code>
-          </>
-        ) : null}
+        <EventLabel>Amount</EventLabel>
+        <p>
+          {event.amount}
+          {event.symbol ? ` ${event.symbol}` : ""}
+        </p>
+        <EventLabel>Raw amount</EventLabel>
+        <code className="break-all text-xs">{event.rawAmount}</code>
       </div>
     </div>
   );
-}
-
-function GenericEvent({ event }: { event: Extract<NonNullable<EventView["decoded"]>, { kind: "contract-event" }> }) {
-  const rows = [...event.topics, ...event.fields];
-  return rows.map((row) => (
-    <div className="contents" key={`${row.name}-${row.value}`}>
-      <EventLabel>{row.name}</EventLabel>
-      <DecodedValue name={row.name} value={row.value} />
-    </div>
-  ));
 }
 
 function ContractAddressLink({ address, name }: { address: string; name?: string }) {
@@ -134,44 +119,12 @@ function ContractAddressLink({ address, name }: { address: string; name?: string
   );
 }
 
-function DecodedValue({ name, value }: { name: string; value: string }) {
-  if (isWalletField(name) && isContractAddress(value)) {
-    return (
-      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${value}`}>
-        {value}
-      </Link>
-    );
-  }
-
-  if (isContractField(name) && isContractAddress(value)) {
-    return (
-      <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${value}`}>
-        {value}
-      </Link>
-    );
-  }
-
-  return <code className="break-all text-xs">{value}</code>;
-}
-
 function WalletAddressLink({ address }: { address: string }) {
   return (
     <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${address}`}>
       {address}
     </Link>
   );
-}
-
-function isWalletField(name: string) {
-  return ["from", "organizer", "owner", "receiver", "sender", "to"].includes(name.toLowerCase());
-}
-
-function isContractField(name: string) {
-  return ["contract", "contract_address"].includes(name.toLowerCase());
-}
-
-function isContractAddress(value: string) {
-  return /^0x[0-9a-fA-F]{64}$/.test(value);
 }
 
 function EventLabel({ children }: { children: string }) {
