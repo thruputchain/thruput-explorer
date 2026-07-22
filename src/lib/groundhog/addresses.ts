@@ -34,8 +34,9 @@ export type AddressPageData =
       badges: string[];
       metadata?: TokenMetadata;
       nativeBalance?: NativeBalanceView;
-      rootTransactions: AddressTransactionRefView[];
-      rootTransactionsError?: RpcFailure;
+      transactions: AddressTransactionRefView[];
+      transactionsError?: RpcFailure;
+      transactionHistoryPartial: boolean;
       hogTransfers: AddressEventView[];
       hogTransfersError?: RpcFailure;
       contractEvents: AddressEventView[];
@@ -116,11 +117,12 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
       badges,
       metadata,
       nativeBalance,
-      rootTransactions: rootTransactionsResult.refs.map((ref) => ({
-        txHash: toHex0x(ref.txHash),
-        height: ref.height.toString(),
-      })),
-      rootTransactionsError: rootTransactionsResult.error,
+      transactions: mergeTransactionHistory(rootTransactionsResult.refs, hogTransfersResult.events),
+      transactionsError:
+        rootTransactionsResult.error && hogTransfersResult.error
+          ? rootTransactionsResult.error
+          : undefined,
+      transactionHistoryPartial: Boolean(rootTransactionsResult.error || hogTransfersResult.error),
       hogTransfers: hogTransfersResult.events.map((entry) => formatAddressEvent(entry, nativeTokenMetadata)),
       hogTransfersError: hogTransfersResult.error,
       contractEvents: contractEventsResult.events.map((entry) =>
@@ -131,6 +133,31 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
   } catch (error) {
     return { status: "unavailable", address, rpcUrl, error: toRpcFailure(error) };
   }
+}
+
+function mergeTransactionHistory(
+  rootTransactions: Array<{ txHash: Uint8Array; height: bigint }>,
+  hogTransfers: IdentifiedEvent[],
+): AddressTransactionRefView[] {
+  const transactions = new Map<string, AddressTransactionRefView>();
+
+  for (const transaction of rootTransactions) {
+    const txHash = toHex0x(transaction.txHash);
+    transactions.set(txHash, { txHash, height: transaction.height.toString() });
+  }
+
+  for (const transfer of hogTransfers) {
+    const txHash = toHex0x(transfer.txHash);
+    transactions.set(txHash, { txHash, height: transfer.blockHeight.toString() });
+  }
+
+  return Array.from(transactions.values())
+    .sort((a, b) => {
+      const aHeight = BigInt(a.height);
+      const bHeight = BigInt(b.height);
+      return aHeight === bHeight ? 0 : aHeight > bHeight ? -1 : 1;
+    })
+    .slice(0, ADDRESS_TX_LIMIT);
 }
 
 function formatAddressEvent(

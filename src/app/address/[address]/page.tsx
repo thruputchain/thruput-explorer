@@ -108,9 +108,10 @@ function AddressActivityTabs({
         <TabsTrigger value="transfers">HOG Transfers</TabsTrigger>
       </TabsList>
       <TabsContent value="transactions">
-        <RootTransactionsCard
-          transactions={data.rootTransactions}
-          error={data.rootTransactionsError}
+        <TransactionHistoryCard
+          transactions={data.transactions}
+          error={data.transactionsError}
+          partial={data.transactionHistoryPartial}
         />
       </TabsContent>
       <TabsContent value="transfers">
@@ -152,14 +153,6 @@ function AddressSummaryCard({
         <code className="break-all text-xs">
           {data.nativeBalance?.rawBalance ?? "Not available"}
         </code>
-        <SummaryLabel>Context</SummaryLabel>
-        <div className="flex flex-wrap gap-2">
-          {data.badges.map((badge) => (
-            <Badge key={badge} variant="outline">
-              {badge}
-            </Badge>
-          ))}
-        </div>
         {data.metadata ? (
           <>
             <SummaryLabel>Token name</SummaryLabel>
@@ -177,12 +170,14 @@ function AddressSummaryCard({
   );
 }
 
-function RootTransactionsCard({
+function TransactionHistoryCard({
   transactions,
   error,
+  partial,
 }: {
   transactions: AddressTransactionRefView[];
   error?: RpcFailure;
+  partial: boolean;
 }) {
   return (
     <Card>
@@ -193,7 +188,7 @@ function RootTransactionsCard({
             ? "This RPC could not provide address transaction history."
             : transactions.length === 0
               ? "No transactions found for this address."
-              : `${transactions.length} recent transaction${transactions.length === 1 ? "" : "s"} for this address.`}
+              : `${transactions.length} recent transaction${transactions.length === 1 ? "" : "s"} for this address.${partial ? " Some activity sources are unavailable." : ""}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -212,7 +207,7 @@ function RootTransactionsCard({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tx</TableHead>
+                <TableHead>Transaction</TableHead>
                 <TableHead>Block</TableHead>
               </TableRow>
             </TableHeader>
@@ -342,9 +337,8 @@ function TokenEventTable({ events }: { events: AddressEventView[] }) {
     <>
       <TableHeader>
         <TableRow>
-          <TableHead>Tx</TableHead>
+          <TableHead>Transaction</TableHead>
           <TableHead>Block</TableHead>
-          <TableHead>Event</TableHead>
           <TableHead>From</TableHead>
           <TableHead>To</TableHead>
           <TableHead className="text-right">Amount</TableHead>
@@ -403,7 +397,6 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
         </Link>
       </TableCell>
       <TableCell>{event.blockHeight}</TableCell>
-      <TableCell>{event.decoded?.name ?? "Raw"}</TableCell>
       <TableCell>
         <AddressLink value={decoded?.from} />
       </TableCell>
@@ -430,11 +423,15 @@ function RawEventRow({ event }: { event: AddressEventView }) {
       <TableCell>{event.blockHeight}</TableCell>
       <TableCell>
         <code className="font-mono text-xs" title={event.topics.join(", ")}>
-          {event.topics.length > 0 ? event.topics.map(shortenHex).join(", ") : "-"}
+          {event.topics.length > 0
+            ? event.topics.map(shortenHex).join(", ")
+            : "-"}
         </code>
       </TableCell>
       <TableCell>
-        <code className="font-mono text-xs" title={event.data}>{shortenHex(event.data)}</code>
+        <code className="font-mono text-xs" title={event.data}>
+          {shortenHex(event.data)}
+        </code>
       </TableCell>
     </TableRow>
   );
@@ -456,7 +453,9 @@ function AddressLink({ value }: { value?: string }) {
 
 function isTokenTransferEvent(
   event: AddressEventView,
-): event is AddressEventView & { decoded: NonNullable<AddressEventView["decoded"]> } {
+): event is AddressEventView & {
+  decoded: NonNullable<AddressEventView["decoded"]>;
+} {
   return (
     event.decoded?.kind === "token-transfer" ||
     event.decoded?.kind === "token-mint" ||
