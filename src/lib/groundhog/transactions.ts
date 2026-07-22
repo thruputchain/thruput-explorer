@@ -3,8 +3,6 @@ import { hashFromHex, toHex0x, type TransactionStatus as SdkTransactionStatus } 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 import { createExplorerGroundhogClient } from "./client";
-import { getContractInfo, loadContractRegistry } from "./contract-registry";
-import { decodeGeneratedEvent } from "./contract-events";
 import { stringifyJson } from "./format";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
@@ -33,8 +31,6 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
       client.getChainTip(),
       transport.request<unknown>("groundhog_getTransactionReceipt", [hash]).catch(() => undefined),
     ]);
-    const contractRegistry = await loadContractRegistry();
-
     const metadataByAddress = new Map<string, TokenMetadata | undefined>();
     if (receipt) {
       await Promise.all(
@@ -58,18 +54,13 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
             abortData: receipt.abortData ? toHex(receipt.abortData) : null,
             events: receipt.events.map((event) => {
               const contractAddress = toHex(event.contractAddress);
-              const contract = getContractInfo(contractRegistry, contractAddress);
-              const eventView = {
-                contractAddress,
-                contractName: contract?.name,
-                topics: event.topics.map(toHex),
-                data: toHex(event.data),
-              };
 
               return {
-                ...eventView,
-                contractName: metadataByAddress.get(contractAddress)?.name ?? eventView.contractName,
-                decoded: decodeTokenEvent(event, metadataByAddress.get(contractAddress)) ?? decodeGeneratedEvent(event, contract),
+                contractAddress,
+                contractName: metadataByAddress.get(contractAddress)?.name,
+                topics: event.topics.map(toHex),
+                data: toHex(event.data),
+                decoded: decodeTokenEvent(event, metadataByAddress.get(contractAddress)),
               };
             }),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),

@@ -13,7 +13,6 @@ GROUNDHOG_TEST_DIR="${GROUNDHOG_TEST_DIR:-$WORK_DIR/groundhog-test}"
 GROUNDHOG_CLI="${GROUNDHOG_CLI:-$WORK_DIR/groundhog-rpc/target/debug/groundhog}"
 ERC20_PROJECT_DIR="${ERC20_PROJECT_DIR:-$GROUNDHOG_TEST_DIR/erc20-current}"
 TICKETMASTER_PROJECT_DIR="${TICKETMASTER_PROJECT_DIR:-$GROUNDHOG_TEST_DIR/ticketmaster}"
-EXPLORER_ENV_FILE="${EXPLORER_ENV_FILE:-$EXPLORER_DIR/.env.local}"
 LOCAL_NODE_STATE="${LOCAL_NODE_STATE:-$HOME/.local/share/groundhog/hog-devnode/.groundhog/local-node.json}"
 TMP_RUNTIME_MANIFEST_GLOB="${TMP_RUNTIME_MANIFEST_GLOB:-/tmp/ramdb_*/runtime-manifest.json}"
 
@@ -202,32 +201,6 @@ process.stdout.write(`${toHex0x(invocation.entrypoint)}\t${toHex0x(invocation.ca
 NODE
 }
 
-write_env_file() {
-  TICKETMASTER_ADDRESS="$1" EXPLORER_ENV_FILE="$EXPLORER_ENV_FILE" \
-    node --input-type=module <<'NODE'
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-
-const path = process.env.EXPLORER_ENV_FILE;
-const updates = new Map([
-  ["GROUNDHOG_TICKETMASTER_ADDRESS", process.env.TICKETMASTER_ADDRESS],
-]);
-const lines = existsSync(path) ? readFileSync(path, "utf8").split(/\r?\n/) : [];
-const seen = new Set();
-const next = lines.map((line) => {
-  const match = line.match(/^([A-Z0-9_]+)=/);
-  if (!match || !updates.has(match[1])) return line;
-  seen.add(match[1]);
-  return `${match[1]}=${updates.get(match[1])}`;
-});
-
-for (const [key, value] of updates) {
-  if (!seen.has(key)) next.push(`${key}=${value}`);
-}
-
-writeFileSync(path, `${next.filter((line, index) => line !== "" || index < next.length - 1).join("\n")}\n`);
-NODE
-}
-
 run_groundhog() {
   (cd "$ERC20_PROJECT_DIR" && "$@")
 }
@@ -328,14 +301,13 @@ printf 'Groundhog CLI: %s\n' "$GROUNDHOG_CLI"
 printf 'Contracts module: %s\n' "$GROUNDHOG_CLIENT_CONTRACTS_MODULE"
 printf 'ERC20 project: %s\n\n' "$ERC20_PROJECT_DIR"
 printf 'Ticketmaster project: %s\n\n' "$TICKETMASTER_PROJECT_DIR"
-printf 'Explorer env file: %s\n\n' "$EXPLORER_ENV_FILE"
 
 printf 'Building ERC20 fixture...\n'
 build_json="$(run_groundhog "$GROUNDHOG_CLI" build --target wasm --bindings ts --json)"
 require_ok_json "$build_json" "build ERC20 fixture"
 
 printf 'Building Ticketmaster fixture...\n'
-ticketmaster_build_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" build --target wasm --bindings ts --json)"
+ticketmaster_build_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" build --target wasm --json)"
 require_ok_json "$ticketmaster_build_json" "build Ticketmaster fixture"
 
 printf 'Deploying and initializing tokens...\n'
@@ -369,9 +341,6 @@ TICKET_EVENT_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "create Ticketmaste
 TICKET_MINT_1_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "mint ticket 1" mint 1 "$DEV0" 1)"
 TICKET_MINT_2_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "mint ticket 2" mint 1 "$DEV1" 2)"
 TICKET_TRANSFER_TX="$(call_ticketmaster "$TICKETMASTER_ADDRESS" "transfer ticket 1" transfer 1 1 "$DEV2")"
-
-printf 'Updating local explorer environment...\n'
-write_env_file "$TICKETMASTER_ADDRESS"
 
 cat <<EOF
 
@@ -420,7 +389,4 @@ Explorer URLs:
   http://localhost:3000/tx/$TICKET_MINT_2_TX
   http://localhost:3000/tx/$TICKET_TRANSFER_TX
   http://localhost:3000/address/$TICKETMASTER_ADDRESS
-
-Updated:
-  $EXPLORER_ENV_FILE
 EOF

@@ -26,12 +26,7 @@ import {
   type AddressEventView,
   type AddressTransactionRefView,
 } from "@/lib/groundhog/addresses";
-import type { DecodedEventView, RpcFailure } from "@/lib/groundhog/types";
-
-type TokenDecodedEventView = Exclude<
-  DecodedEventView,
-  { kind: "contract-event" }
->;
+import type { RpcFailure } from "@/lib/groundhog/types";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +77,7 @@ export default async function AddressPage({
             ) : (
               <>
                 <AddressActivityTabs data={data} />
-                {data.registryEntry || data.contractEvents.length > 0 ? (
+                {data.contractEvents.length > 0 ? (
                   <ContractEventsCard
                     events={data.contractEvents}
                     error={data.contractEventsError}
@@ -319,7 +314,7 @@ function ContractEventsCard({
         {error ? (
           <RpcAlert
             title="Event history unavailable"
-            description="Event decoding will appear here when the RPC returns emitted events for this address."
+            description="Raw events will appear here when the RPC returns emitted events for this address."
             error={error}
           />
         ) : visibleEvents.length === 0 ? (
@@ -333,7 +328,7 @@ function ContractEventsCard({
             {token ? (
               <TokenEventTable events={visibleEvents} />
             ) : (
-              <GenericEventTable events={visibleEvents} />
+              <RawEventTable events={visibleEvents} />
             )}
           </Table>
         )}
@@ -367,20 +362,20 @@ function TokenEventTable({ events }: { events: AddressEventView[] }) {
   );
 }
 
-function GenericEventTable({ events }: { events: AddressEventView[] }) {
+function RawEventTable({ events }: { events: AddressEventView[] }) {
   return (
     <>
       <TableHeader>
         <TableRow>
           <TableHead>Tx</TableHead>
           <TableHead>Block</TableHead>
-          <TableHead>Event</TableHead>
-          <TableHead>Fields</TableHead>
+          <TableHead>Topics</TableHead>
+          <TableHead>Data</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {events.map((event) => (
-          <ContractEventRow
+          <RawEventRow
             key={`${event.txHash}-${event.sequenceNumber}`}
             event={event}
           />
@@ -420,11 +415,7 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
   );
 }
 
-function ContractEventRow({ event }: { event: AddressEventView }) {
-  const decoded =
-    event.decoded?.kind === "contract-event" ? event.decoded : undefined;
-  const fields = decoded ? [...decoded.topics, ...decoded.fields] : [];
-
+function RawEventRow({ event }: { event: AddressEventView }) {
   return (
     <TableRow>
       <TableCell>
@@ -437,20 +428,13 @@ function ContractEventRow({ event }: { event: AddressEventView }) {
         </Link>
       </TableCell>
       <TableCell>{event.blockHeight}</TableCell>
-      <TableCell>{event.decoded?.name ?? "Raw"}</TableCell>
       <TableCell>
-        {fields.length > 0 ? (
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            {fields.map((field) => (
-              <span key={`${field.name}-${field.value}`}>
-                <span className="text-muted-foreground">{field.name}=</span>
-                <DecodedFieldValue value={field.value} />
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span className="text-muted-foreground">Raw event</span>
-        )}
+        <code className="font-mono text-xs" title={event.topics.join(", ")}>
+          {event.topics.length > 0 ? event.topics.map(shortenHex).join(", ") : "-"}
+        </code>
+      </TableCell>
+      <TableCell>
+        <code className="font-mono text-xs" title={event.data}>{shortenHex(event.data)}</code>
       </TableCell>
     </TableRow>
   );
@@ -470,26 +454,14 @@ function AddressLink({ value }: { value?: string }) {
   );
 }
 
-function DecodedFieldValue({ value }: { value: string }) {
-  return isGroundhogAddress(value) ? (
-    <AddressLink value={value} />
-  ) : (
-    <span>{value}</span>
-  );
-}
-
 function isTokenTransferEvent(
   event: AddressEventView,
-): event is AddressEventView & { decoded: TokenDecodedEventView } {
+): event is AddressEventView & { decoded: NonNullable<AddressEventView["decoded"]> } {
   return (
     event.decoded?.kind === "token-transfer" ||
     event.decoded?.kind === "token-mint" ||
     event.decoded?.kind === "token-burn"
   );
-}
-
-function isGroundhogAddress(value: string) {
-  return /^0x[0-9a-fA-F]{64}$/.test(value);
 }
 
 function SummaryLabel({ children }: { children: string }) {

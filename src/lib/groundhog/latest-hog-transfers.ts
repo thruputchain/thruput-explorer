@@ -45,7 +45,7 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
       nativeTokenAddress: nativeToken.address,
       transfers: page.events.flatMap((entry) => {
         const decoded = decodeTokenEvent(entry.event, metadata);
-        if (!decoded || decoded.kind === "contract-event") return [];
+        if (!decoded) return [];
 
         return [{
           txHash: toHex0x(entry.txHash),
