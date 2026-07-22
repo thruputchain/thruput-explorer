@@ -16,7 +16,6 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Groundhog Transaction Explorer",
-  description: "Local transaction explorer for Groundhog developers",
 };
 
 export default function RootLayout({
