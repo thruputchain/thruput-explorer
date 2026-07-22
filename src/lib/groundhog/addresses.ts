@@ -1,9 +1,10 @@
-import { addressFromHex, toHex0x } from "@groundhogchain/client";
+import { addressFromHex, toHex0x, type IdentifiedEvent } from "@groundhogchain/client";
+import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
 import { createExplorerGroundhogClient } from "./client";
-import { getContractInfo, loadContractRegistry, type ContractRegistryEntry } from "./contract-registry";
+import { getContractInfo, loadContractRegistry, type ContractRegistry, type ContractRegistryEntry } from "./contract-registry";
 import { decodeGeneratedEvent } from "./contract-events";
 import { getNativeBalance, type NativeBalanceView } from "./native-balance";
 import { toRpcFailure } from "./rpc";
@@ -38,6 +39,8 @@ export type AddressPageData =
       nativeBalance?: NativeBalanceView;
       rootTransactions: AddressTransactionRefView[];
       rootTransactionsError?: RpcFailure;
+      hogTransfers: AddressEventView[];
+      hogTransfersError?: RpcFailure;
       contractEvents: AddressEventView[];
       contractEventsError?: RpcFailure;
     };
@@ -60,7 +63,7 @@ export type AddressEventView = {
 
 export async function loadAddressPageData(addressInput: string): Promise<AddressPageData> {
   const address = normalizeContractAddress(addressInput);
-  const { rpcUrl, client } = createExplorerGroundhogClient();
+  const { rpcUrl, client, nativeToken } = createExplorerGroundhogClient();
 
   if (!isContractAddress(address)) {
     return { status: "malformed", address, rpcUrl, reason: "Malformed address" };
@@ -70,14 +73,38 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
     const registry = await loadContractRegistry();
     const registryEntry = getContractInfo(registry, address);
     const contractAddress = addressFromHex(address);
+    const nativeTokenAddress = addressFromHex(nativeToken.address);
+    const nativeTokenMetadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals } satisfies TokenMetadata;
+    const hogTransfersRequest =
+      address === nativeToken.address
+        ? Promise.resolve({ events: [] as IdentifiedEvent[], error: undefined })
+        : client
+            .getEvents({
+              filters: [
+                {
+                  contractAddresses: [nativeTokenAddress],
+                  topics: { topic0: [ERC20TransferEvent.signature], topic1: [contractAddress] },
+                },
+                {
+                  contractAddresses: [nativeTokenAddress],
+                  topics: { topic0: [ERC20TransferEvent.signature], topic2: [contractAddress] },
+                },
+              ],
+              order: "descending",
+              anchor: "end",
+              limit: ADDRESS_EVENT_LIMIT,
+            })
+            .then((page) => ({ events: page.events, error: undefined }))
+            .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) }));
 
-    const [nativeBalance, metadata, rootTransactionsResult, contractEventsResult] = await Promise.all([
+    const [nativeBalance, metadata, rootTransactionsResult, hogTransfersResult, contractEventsResult] = await Promise.all([
       getNativeBalance(client, address),
       getTokenMetadata(client, address).catch(() => undefined),
       client
         .getTransactionsByAddress({ address: contractAddress, order: "descending", anchor: "end", limit: ADDRESS_TX_LIMIT })
         .then((page) => ({ refs: page.refs, error: undefined }))
         .catch((error: unknown) => ({ refs: [], error: toRpcFailure(error) })),
+      hogTransfersRequest,
       client
         .getEvents({ filters: [{ contractAddresses: [contractAddress] }], order: "descending", anchor: "end", limit: ADDRESS_EVENT_LIMIT })
         .then((page) => ({ events: page.events, error: undefined }))
@@ -100,27 +127,36 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
         height: ref.height.toString(),
       })),
       rootTransactionsError: rootTransactionsResult.error,
-      contractEvents: contractEventsResult.events.map((entry) => {
-        const eventContractAddress = toHex0x(entry.event.contractAddress);
-        const eventContract = getContractInfo(registry, eventContractAddress);
-        const eventMetadata = eventContractAddress === address ? metadata : undefined;
-
-        return {
-          txHash: toHex0x(entry.txHash),
-          blockHeight: entry.blockHeight.toString(),
-          sequenceNumber: entry.sequenceNumber,
-          contractAddress: eventContractAddress,
-          contractName: eventMetadata?.name ?? eventContract?.name,
-          decoded: decodeTokenEvent(entry.event, eventMetadata) ?? decodeGeneratedEvent(entry.event, eventContract),
-          topics: entry.event.topics.map(toHex0x),
-          data: toHex0x(entry.event.data),
-        };
-      }),
+      hogTransfers: hogTransfersResult.events.map((entry) => formatAddressEvent(entry, registry, nativeTokenMetadata)),
+      hogTransfersError: hogTransfersResult.error,
+      contractEvents: contractEventsResult.events.map((entry) =>
+        formatAddressEvent(entry, registry, toHex0x(entry.event.contractAddress) === address ? metadata : undefined),
+      ),
       contractEventsError: contractEventsResult.error,
     };
   } catch (error) {
     return { status: "unavailable", address, rpcUrl, error: toRpcFailure(error) };
   }
+}
+
+function formatAddressEvent(
+  entry: IdentifiedEvent,
+  registry: ContractRegistry,
+  metadata?: TokenMetadata,
+): AddressEventView {
+  const eventContractAddress = toHex0x(entry.event.contractAddress);
+  const eventContract = getContractInfo(registry, eventContractAddress);
+
+  return {
+    txHash: toHex0x(entry.txHash),
+    blockHeight: entry.blockHeight.toString(),
+    sequenceNumber: entry.sequenceNumber,
+    contractAddress: eventContractAddress,
+    contractName: metadata?.name ?? eventContract?.name,
+    decoded: decodeTokenEvent(entry.event, metadata) ?? decodeGeneratedEvent(entry.event, eventContract),
+    topics: entry.event.topics.map(toHex0x),
+    data: toHex0x(entry.event.data),
+  };
 }
 
 function buildBadges({

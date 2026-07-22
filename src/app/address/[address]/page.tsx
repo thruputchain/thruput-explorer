@@ -5,12 +5,33 @@ import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { loadAddressPageData, type AddressEventView, type AddressTransactionRefView } from "@/lib/groundhog/addresses";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  loadAddressPageData,
+  type AddressEventView,
+  type AddressTransactionRefView,
+} from "@/lib/groundhog/addresses";
 import type { DecodedEventView, RpcFailure } from "@/lib/groundhog/types";
 
-type TokenDecodedEventView = Exclude<DecodedEventView, { kind: "contract-event" }>;
+type TokenDecodedEventView = Exclude<
+  DecodedEventView,
+  { kind: "contract-event" }
+>;
 
 export const dynamic = "force-dynamic";
 
@@ -42,14 +63,34 @@ export default async function AddressPage({
         ) : null}
 
         {data.status === "unavailable" ? (
-          <RpcAlert title="Groundhog RPC unavailable" description="The address page could not load from the configured RPC endpoint." error={data.error} />
+          <RpcAlert
+            title="Groundhog RPC unavailable"
+            description="The address page could not load from the configured RPC endpoint."
+            error={data.error}
+          />
         ) : null}
 
         {data.status === "ok" ? (
           <>
             <AddressSummaryCard data={data} />
-            <RootTransactionsCard transactions={data.rootTransactions} error={data.rootTransactionsError} />
-            <ContractEventsCard events={data.contractEvents} error={data.contractEventsError} token={Boolean(data.metadata)} />
+            {data.metadata ? (
+              <ContractEventsCard
+                events={data.contractEvents}
+                error={data.contractEventsError}
+                token
+              />
+            ) : (
+              <>
+                <AddressActivityTabs data={data} />
+                {data.registryEntry || data.contractEvents.length > 0 ? (
+                  <ContractEventsCard
+                    events={data.contractEvents}
+                    error={data.contractEventsError}
+                    token={false}
+                  />
+                ) : null}
+              </>
+            )}
           </>
         ) : null}
       </div>
@@ -57,22 +98,73 @@ export default async function AddressPage({
   );
 }
 
-function AddressSummaryCard({ data }: { data: Extract<Awaited<ReturnType<typeof loadAddressPageData>>, { status: "ok" }> }) {
+function AddressActivityTabs({
+  data,
+}: {
+  data: Extract<
+    Awaited<ReturnType<typeof loadAddressPageData>>,
+    { status: "ok" }
+  >;
+}) {
+  return (
+    <Tabs defaultValue="transactions" className="w-full">
+      <TabsList variant="line">
+        <TabsTrigger value="transactions">Transactions</TabsTrigger>
+        <TabsTrigger value="transfers">HOG Transfers</TabsTrigger>
+      </TabsList>
+      <TabsContent value="transactions">
+        <RootTransactionsCard
+          transactions={data.rootTransactions}
+          error={data.rootTransactionsError}
+        />
+      </TabsContent>
+      <TabsContent value="transfers">
+        <HogTransfersCard
+          events={data.hogTransfers}
+          error={data.hogTransfersError}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function AddressSummaryCard({
+  data,
+}: {
+  data: Extract<
+    Awaited<ReturnType<typeof loadAddressPageData>>,
+    { status: "ok" }
+  >;
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Summary</CardTitle>
-        <CardDescription>Current public RPC view of this Groundhog address.</CardDescription>
+        <CardDescription>
+          Current public RPC view of this Groundhog address.
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_1fr]">
         <SummaryLabel>Address</SummaryLabel>
         <code className="break-all text-xs">{data.address}</code>
         <SummaryLabel>Native balance</SummaryLabel>
-        <p>{data.nativeBalance ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}` : "Not available"}</p>
+        <p>
+          {data.nativeBalance
+            ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}`
+            : "Not available"}
+        </p>
         <SummaryLabel>Raw native balance</SummaryLabel>
-        <code className="break-all text-xs">{data.nativeBalance?.rawBalance ?? "Not available"}</code>
+        <code className="break-all text-xs">
+          {data.nativeBalance?.rawBalance ?? "Not available"}
+        </code>
         <SummaryLabel>Context</SummaryLabel>
-        <div className="flex flex-wrap gap-2">{data.badges.map((badge) => <Badge key={badge} variant="outline">{badge}</Badge>)}</div>
+        <div className="flex flex-wrap gap-2">
+          {data.badges.map((badge) => (
+            <Badge key={badge} variant="outline">
+              {badge}
+            </Badge>
+          ))}
+        </div>
         {data.metadata ? (
           <>
             <SummaryLabel>Token name</SummaryLabel>
@@ -90,7 +182,13 @@ function AddressSummaryCard({ data }: { data: Extract<Awaited<ReturnType<typeof 
   );
 }
 
-function RootTransactionsCard({ transactions, error }: { transactions: AddressTransactionRefView[]; error?: RpcFailure }) {
+function RootTransactionsCard({
+  transactions,
+  error,
+}: {
+  transactions: AddressTransactionRefView[];
+  error?: RpcFailure;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -105,9 +203,16 @@ function RootTransactionsCard({ transactions, error }: { transactions: AddressTr
       </CardHeader>
       <CardContent>
         {error ? (
-          <RpcAlert title="Transaction history unavailable" description="The rest of the address page can still render with partial data." error={error} />
+          <RpcAlert
+            title="Transaction history unavailable"
+            description="The rest of the address page can still render with partial data."
+            error={error}
+          />
         ) : transactions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Transactions will appear here when the RPC has indexed activity for this address.</p>
+          <p className="text-sm text-muted-foreground">
+            Transactions will appear here when the RPC has indexed activity for
+            this address.
+          </p>
         ) : (
           <Table>
             <TableHeader>
@@ -120,7 +225,11 @@ function RootTransactionsCard({ transactions, error }: { transactions: AddressTr
               {transactions.map((transaction) => (
                 <TableRow key={transaction.txHash}>
                   <TableCell>
-                    <Link className="font-mono underline underline-offset-4" href={`/tx/${transaction.txHash}`} title={transaction.txHash}>
+                    <Link
+                      className="font-mono underline underline-offset-4"
+                      href={`/tx/${transaction.txHash}`}
+                      title={transaction.txHash}
+                    >
                       {shortenHex(transaction.txHash)}
                     </Link>
                   </TableCell>
@@ -135,13 +244,65 @@ function RootTransactionsCard({ transactions, error }: { transactions: AddressTr
   );
 }
 
-function ContractEventsCard({ events, error, token }: { events: AddressEventView[]; error?: RpcFailure; token: boolean }) {
+function HogTransfersCard({
+  events,
+  error,
+}: {
+  events: AddressEventView[];
+  error?: RpcFailure;
+}) {
+  const transfers = events.filter(isTokenTransferEvent);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>HOG Transfers</CardTitle>
+        <CardDescription>
+          {error
+            ? "This RPC could not provide HOG transfer history."
+            : transfers.length === 0
+              ? "No recent HOG transfers found for this address."
+              : `${transfers.length} recent HOG transfer${transfers.length === 1 ? "" : "s"} involving this address.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {error ? (
+          <RpcAlert
+            title="HOG transfers unavailable"
+            description="The rest of the address page can still render with partial data."
+            error={error}
+          />
+        ) : transfers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Recent sent and received HOG transfers will appear here.
+          </p>
+        ) : (
+          <Table>
+            <TokenEventTable events={transfers} />
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContractEventsCard({
+  events,
+  error,
+  token,
+}: {
+  events: AddressEventView[];
+  error?: RpcFailure;
+  token: boolean;
+}) {
   const visibleEvents = token ? events.filter(isTokenTransferEvent) : events;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{token ? "Token Transfer History" : "Contract Events"}</CardTitle>
+        <CardTitle>
+          {token ? "Token Transfer History" : "Contract Events"}
+        </CardTitle>
         <CardDescription>
           {error
             ? "This RPC could not provide event history for this address."
@@ -156,14 +317,24 @@ function ContractEventsCard({ events, error, token }: { events: AddressEventView
       </CardHeader>
       <CardContent>
         {error ? (
-          <RpcAlert title="Event history unavailable" description="Event decoding will appear here when the RPC returns emitted events for this address." error={error} />
+          <RpcAlert
+            title="Event history unavailable"
+            description="Event decoding will appear here when the RPC returns emitted events for this address."
+            error={error}
+          />
         ) : visibleEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            {token ? "Transfers, mints, and burns appear here when this token emits ERC20 Transfer events." : "Events appear here when this address is the emitting contract."}
+            {token
+              ? "Transfers, mints, and burns appear here when this token emits ERC20 Transfer events."
+              : "Events appear here when this address is the emitting contract."}
           </p>
         ) : (
           <Table>
-            {token ? <TokenEventTable events={visibleEvents} /> : <GenericEventTable events={visibleEvents} />}
+            {token ? (
+              <TokenEventTable events={visibleEvents} />
+            ) : (
+              <GenericEventTable events={visibleEvents} />
+            )}
           </Table>
         )}
       </CardContent>
@@ -186,7 +357,10 @@ function TokenEventTable({ events }: { events: AddressEventView[] }) {
       </TableHeader>
       <TableBody>
         {events.map((event) => (
-          <TokenEventRow key={`${event.txHash}-${event.sequenceNumber}`} event={event} />
+          <TokenEventRow
+            key={`${event.txHash}-${event.sequenceNumber}`}
+            event={event}
+          />
         ))}
       </TableBody>
     </>
@@ -206,7 +380,10 @@ function GenericEventTable({ events }: { events: AddressEventView[] }) {
       </TableHeader>
       <TableBody>
         {events.map((event) => (
-          <ContractEventRow key={`${event.txHash}-${event.sequenceNumber}`} event={event} />
+          <ContractEventRow
+            key={`${event.txHash}-${event.sequenceNumber}`}
+            event={event}
+          />
         ))}
       </TableBody>
     </>
@@ -215,32 +392,47 @@ function GenericEventTable({ events }: { events: AddressEventView[] }) {
 
 function TokenEventRow({ event }: { event: AddressEventView }) {
   const decoded = isTokenTransferEvent(event) ? event.decoded : undefined;
-  const amount = decoded ? `${decoded.amount}${decoded.symbol ? ` ${decoded.symbol}` : ""}` : "-";
+  const amount = decoded
+    ? `${decoded.amount}${decoded.symbol ? ` ${decoded.symbol}` : ""}`
+    : "-";
 
   return (
     <TableRow>
       <TableCell>
-        <Link className="font-mono underline underline-offset-4" href={`/tx/${event.txHash}`} title={event.txHash}>
+        <Link
+          className="font-mono underline underline-offset-4"
+          href={`/tx/${event.txHash}`}
+          title={event.txHash}
+        >
           {shortenHex(event.txHash)}
         </Link>
       </TableCell>
       <TableCell>{event.blockHeight}</TableCell>
       <TableCell>{event.decoded?.name ?? "Raw"}</TableCell>
-      <TableCell><AddressLink value={decoded?.from} /></TableCell>
-      <TableCell><AddressLink value={decoded?.to} /></TableCell>
+      <TableCell>
+        <AddressLink value={decoded?.from} />
+      </TableCell>
+      <TableCell>
+        <AddressLink value={decoded?.to} />
+      </TableCell>
       <TableCell className="text-right">{amount}</TableCell>
     </TableRow>
   );
 }
 
 function ContractEventRow({ event }: { event: AddressEventView }) {
-  const decoded = event.decoded?.kind === "contract-event" ? event.decoded : undefined;
+  const decoded =
+    event.decoded?.kind === "contract-event" ? event.decoded : undefined;
   const fields = decoded ? [...decoded.topics, ...decoded.fields] : [];
 
   return (
     <TableRow>
       <TableCell>
-        <Link className="font-mono underline underline-offset-4" href={`/tx/${event.txHash}`} title={event.txHash}>
+        <Link
+          className="font-mono underline underline-offset-4"
+          href={`/tx/${event.txHash}`}
+          title={event.txHash}
+        >
           {shortenHex(event.txHash)}
         </Link>
       </TableCell>
@@ -266,7 +458,11 @@ function ContractEventRow({ event }: { event: AddressEventView }) {
 
 function AddressLink({ value }: { value?: string }) {
   return value ? (
-    <Link className="font-mono underline underline-offset-4" href={`/address/${value}`} title={value}>
+    <Link
+      className="font-mono underline underline-offset-4"
+      href={`/address/${value}`}
+      title={value}
+    >
       {shortenHex(value)}
     </Link>
   ) : (
@@ -275,11 +471,21 @@ function AddressLink({ value }: { value?: string }) {
 }
 
 function DecodedFieldValue({ value }: { value: string }) {
-  return isGroundhogAddress(value) ? <AddressLink value={value} /> : <span>{value}</span>;
+  return isGroundhogAddress(value) ? (
+    <AddressLink value={value} />
+  ) : (
+    <span>{value}</span>
+  );
 }
 
-function isTokenTransferEvent(event: AddressEventView): event is AddressEventView & { decoded: TokenDecodedEventView } {
-  return event.decoded?.kind === "token-transfer" || event.decoded?.kind === "token-mint" || event.decoded?.kind === "token-burn";
+function isTokenTransferEvent(
+  event: AddressEventView,
+): event is AddressEventView & { decoded: TokenDecodedEventView } {
+  return (
+    event.decoded?.kind === "token-transfer" ||
+    event.decoded?.kind === "token-mint" ||
+    event.decoded?.kind === "token-burn"
+  );
 }
 
 function isGroundhogAddress(value: string) {
@@ -287,9 +493,15 @@ function isGroundhogAddress(value: string) {
 }
 
 function SummaryLabel({ children }: { children: string }) {
-  return <p className="font-mono text-xs uppercase text-muted-foreground">{children}</p>;
+  return (
+    <p className="font-mono text-xs uppercase text-muted-foreground">
+      {children}
+    </p>
+  );
 }
 
 function shortenHex(value: string) {
-  return value.length <= 18 ? value : `${value.slice(0, 8)}...${value.slice(-6)}`;
+  return value.length <= 18
+    ? value
+    : `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
