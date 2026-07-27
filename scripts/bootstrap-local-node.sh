@@ -55,6 +55,28 @@ if [[ ! -f "$GROUNDHOG_RUNTIME_MANIFEST" ]]; then
   exit 1
 fi
 
+BOOTSTRAP_CONFIG_HOME_CREATED=0
+if [[ -n "${GROUNDHOG_BOOTSTRAP_CONFIG_HOME:-}" ]]; then
+  XDG_CONFIG_HOME="$GROUNDHOG_BOOTSTRAP_CONFIG_HOME"
+else
+  XDG_CONFIG_HOME="$(mktemp -d "${TMPDIR:-/tmp}/groundhog-explorer-bootstrap.XXXXXX")"
+  BOOTSTRAP_CONFIG_HOME_CREATED=1
+fi
+export XDG_CONFIG_HOME
+
+cleanup_bootstrap_config() {
+  if (( BOOTSTRAP_CONFIG_HOME_CREATED == 1 )); then
+    rm -rf -- "$XDG_CONFIG_HOME"
+  fi
+}
+trap cleanup_bootstrap_config EXIT
+
+GROUNDHOG_NETWORK_ARGS=(
+  --profile local
+  --rpc-url "$RPC_URL"
+  --runtime-manifest "$GROUNDHOG_RUNTIME_MANIFEST"
+)
+
 if [[ ! -d "$ERC20_PROJECT_DIR" ]]; then
   printf 'Missing ERC20 fixture project: %s\n' "$ERC20_PROJECT_DIR" >&2
   exit 1
@@ -217,13 +239,13 @@ deploy_token() {
   local decimals="$3"
   local deploy_json address init_call init_entrypoint init_calldata init_json deploy_tx init_tx
 
-  deploy_json="$(run_groundhog "$GROUNDHOG_CLI" deploy --target wasm --json)" || return 1
+  deploy_json="$(run_groundhog "$GROUNDHOG_CLI" deploy --target wasm --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$deploy_json" "deploy $symbol" || return 1
   address="$(required_json_field "$deploy_json" data.address "deploy $symbol")" || return 1
   init_call="$(erc20_metadata_initialize_call "$address" "$DEV0" "$name" "$symbol" "$decimals")" || return 1
   init_entrypoint="$(printf '%s' "$init_call" | cut -f1)"
   init_calldata="$(printf '%s' "$init_call" | cut -f2)"
-  init_json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$init_entrypoint" "$init_calldata" --json)" || return 1
+  init_json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$init_entrypoint" "$init_calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$init_json" "initialize $symbol" || return 1
   deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy $symbol")" || return 1
   init_tx="$(required_json_field "$init_json" data.tx_hash "initialize $symbol")" || return 1
@@ -239,7 +261,7 @@ mint_token() {
   call="$(erc20_mint_call "$address" "$receiver" "$amount")" || return 1
   entrypoint="$(printf '%s' "$call" | cut -f1)"
   calldata="$(printf '%s' "$call" | cut -f2)"
-  json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json)" || return 1
+  json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "mint $address" || return 1
   required_json_field "$json" data.tx_hash "mint $address" || return 1
 }
@@ -252,7 +274,7 @@ transfer_token() {
   call="$(erc20_transfer_call "$address" "$receiver" "$amount")" || return 1
   entrypoint="$(printf '%s' "$call" | cut -f1)"
   calldata="$(printf '%s' "$call" | cut -f2)"
-  json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json)" || return 1
+  json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "transfer $address" || return 1
   required_json_field "$json" data.tx_hash "transfer $address" || return 1
 }
@@ -264,7 +286,7 @@ transfer_hog() {
   call="$(erc20_transfer_call "$HOG_ADDRESS" "$receiver" "$amount")" || return 1
   entrypoint="$(printf '%s' "$call" | cut -f1)"
   calldata="$(printf '%s' "$call" | cut -f2)"
-  json="$(run_groundhog "$GROUNDHOG_CLI" call "$HOG_ADDRESS" "$entrypoint" "$calldata" --json)" || return 1
+  json="$(run_groundhog "$GROUNDHOG_CLI" call "$HOG_ADDRESS" "$entrypoint" "$calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "transfer HOG" || return 1
   required_json_field "$json" data.tx_hash "transfer HOG" || return 1
 }
@@ -272,7 +294,7 @@ transfer_hog() {
 deploy_ticketmaster() {
   local deploy_json address deploy_tx
 
-  deploy_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" deploy --target wasm --json)" || return 1
+  deploy_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" deploy --target wasm --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$deploy_json" "deploy Ticketmaster" || return 1
   address="$(required_json_field "$deploy_json" data.address "deploy Ticketmaster")" || return 1
   deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy Ticketmaster")" || return 1
@@ -285,7 +307,7 @@ call_ticketmaster() {
   local label="$2"
   shift 2
   local json
-  json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" call "$address" "$@" --json)" || return 1
+  json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" call "$address" "$@" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "$label" || return 1
   required_json_field "$json" data.tx_hash "$label" || return 1
 }
