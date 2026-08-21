@@ -1,8 +1,7 @@
 import { addressFromHex, type GroundhogClient } from "@groundhogchain/client";
-import { buildNamedCodecs, resolveCodec, type ContractType } from "@groundhogchain/client/contract";
-import { ERC20Metadata, ERC20Spec } from "@groundhogchain/client/contracts";
-import { gasAmount, type Invocation } from "@groundhogchain/protocol";
-import { CxsReader } from "@groundhogchain/xdr";
+import { ERC20Metadata } from "@groundhogchain/client/contracts";
+
+import { NATIVE_HOG_ADDRESS } from "./client";
 
 export type TokenMetadata = {
   name?: string;
@@ -10,10 +9,7 @@ export type TokenMetadata = {
   decimals?: number;
 };
 
-const VIEW_GAS_LIMIT = gasAmount(BigInt(500_000));
 const MAX_DISPLAY_DECIMALS = 30;
-const namedCodecs = buildNamedCodecs(ERC20Spec.type_defs);
-const NATIVE_HOG_ADDRESS = "0x0000000000000000000000000000000000000000000000000000000000000001";
 const BUILT_IN_TOKEN_METADATA: Record<string, TokenMetadata> = {
   [NATIVE_HOG_ADDRESS]: { name: "HOG", symbol: "HOG", decimals: 7 },
 };
@@ -22,9 +18,9 @@ export async function getTokenMetadata(client: GroundhogClient, address: string)
   const fallback = BUILT_IN_TOKEN_METADATA[normalizeAddress(address)];
   const contract = addressFromHex(address);
   const [name, symbol, decimals] = await Promise.all([
-    viewMetadataValue<string>(client, ERC20Metadata.name(contract, VIEW_GAS_LIMIT), "name"),
-    viewMetadataValue<string>(client, ERC20Metadata.symbol(contract, VIEW_GAS_LIMIT), "symbol"),
-    viewMetadataValue<bigint>(client, ERC20Metadata.decimals(contract, VIEW_GAS_LIMIT), "decimals"),
+    viewMetadataValue(() => ERC20Metadata.name.view({ client, contract })),
+    viewMetadataValue(() => ERC20Metadata.symbol.view({ client, contract })),
+    viewMetadataValue(() => ERC20Metadata.decimals.view({ client, contract })),
   ]);
 
   if (name == null && symbol == null && decimals == null) return fallback;
@@ -46,36 +42,10 @@ function normalizeAddress(address: string) {
   return address.trim().toLowerCase();
 }
 
-async function viewMetadataValue<T>(
-  client: GroundhogClient,
-  invocation: Invocation,
-  method: "name" | "symbol" | "decimals",
-) {
+async function viewMetadataValue<T>(view: () => Promise<{ value: T }>): Promise<T | null> {
   try {
-    const response = await client.view({
-      contract: invocation.invoked_address,
-      entrypoint: invocation.entrypoint,
-      calldata: invocation.calldata,
-    });
-
-    if (response.output.result !== "return") return null;
-    return decodeMetadataReturn(response.output.returnData, method) as T | null;
+    return (await view()).value;
   } catch {
     return null;
   }
-}
-
-function decodeMetadataReturn(data: Uint8Array, method: "name" | "symbol" | "decimals") {
-  const returnType = getMetadataReturnType(method);
-  const reader = new CxsReader(data);
-  const value = resolveCodec(returnType, namedCodecs).decode(reader);
-  if (reader.remaining !== 0) throw new Error(`${method}: trailing bytes after return value`);
-  return value;
-}
-
-function getMetadataReturnType(methodName: "name" | "symbol" | "decimals"): ContractType {
-  const metadataInterface = ERC20Spec.interfaces.find((iface) => iface.name === "ERC20Metadata");
-  const method = metadataInterface?.methods.find((candidate) => candidate.name === methodName);
-  if (!method) throw new Error(`Missing ERC20Metadata.${methodName} in generated spec`);
-  return method.return_type;
 }

@@ -12,17 +12,11 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(@types/react@19.2.15)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@groundhogchain/client':
-        specifier: ^0.1.5
-        version: 0.1.5
-      '@groundhogchain/gateway':
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.3.0
+        version: 0.3.0
       '@groundhogchain/protocol':
-        specifier: 0.4.2
-        version: 0.4.2
-      '@groundhogchain/xdr':
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.7.1
+        version: 0.7.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -317,20 +311,29 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@groundhogchain/client@0.1.5':
-    resolution: {integrity: sha512-fYTHTNYTHvTCl4I0i/zSA3VuO4Oc1IneY75K+rlFREkao4qL10zdSnQ1FaAJb33PyI/UdJMlqvEKdelqtgHcUQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/client/0.1.5/7a53f076c091eb29038b6d76ea006bf2405a9aad}
+  '@groundhogchain/client@0.3.0':
+    resolution: {integrity: sha512-GOl3qgX1bratM5jI/U5o7b2kbtpeQe0zhgXLWKyUbrUqmVC8ScZHb6X+mbHl3DzeOqRcA6aoa2dlDQJVJTkjuw==, tarball: https://npm.pkg.github.com/download/@groundhogchain/client/0.3.0/e094bff8e6bd81f6655c1821f1d9791fa8301812}
+    engines: {node: '>=22.12.0'}
 
-  '@groundhogchain/contract-spec@0.4.2':
-    resolution: {integrity: sha512-PYrxER2ZJa+kiisYXoxm5MFuYGhw6shNndZsfmIsEsbtfQclopO2AtYj3fn/063drxAJ8sn1VHVXl4TbgIsROQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/contract-spec/0.4.2/fcb208185953daa02db1a7cfa1f6f8e713fe36c6}
+  '@groundhogchain/contract-spec@0.7.1':
+    resolution: {integrity: sha512-BvTviTaM85PR48YDFpV8ng1o9UH7hSviOR7OYROhIYswTAJIcSDR544ZBB1ZKGZ7E2/BB5E+jRaODKXNbhub0w==, tarball: https://npm.pkg.github.com/download/@groundhogchain/contract-spec/0.7.1/8d48218a1c8d4946aad44a2a31280c432897b5bd}
+    engines: {node: '>=22.12.0'}
 
-  '@groundhogchain/gateway@0.4.2':
-    resolution: {integrity: sha512-GVr3PcVA1amgZKN2d9K+u6v0HqEqyykeEaUm9gzhZf+H6lS7IHtj86DS6o2hn7jkbKgjtaq+w1j7EMiyCOYv2g==, tarball: https://npm.pkg.github.com/download/@groundhogchain/gateway/0.4.2/4a0bafe20fa4089c3a65c605bb3fabe20683bf2f}
+  '@groundhogchain/gateway@0.7.1':
+    resolution: {integrity: sha512-MRlmnP3zgEIh9CKyS4TqGhzGFyXH1FRvMfbrNv/G6VMNknTbPTpttsVsLoeqJyt+7Y+Vyxzw7Q47Wp1ru216Hw==, tarball: https://npm.pkg.github.com/download/@groundhogchain/gateway/0.7.1/05f568526376aee665724bf43c17967f18a6055b}
+    engines: {node: '>=22.12.0'}
 
-  '@groundhogchain/protocol@0.4.2':
-    resolution: {integrity: sha512-t28/qoBHqRMJ3G4a4ZHiWHws/zRgyNylQNSywLMKF/sABwRKPaeKi3Zm3KgZAelwniegzYw53QXDz6LUNIQi4Q==, tarball: https://npm.pkg.github.com/download/@groundhogchain/protocol/0.4.2/13fa3ae1bf121a5186475586a87ccf6f3e9c65f5}
+  '@groundhogchain/protocol@0.7.1':
+    resolution: {integrity: sha512-fAHyJ2fXBBhj9JAD0HDTk3zX5rzRZFTXBiFRj/XoO6zCh5rknWwo2RTUdX+QvMQ2GfT79IWQoUWvZ+F/UPpH9A==, tarball: https://npm.pkg.github.com/download/@groundhogchain/protocol/0.7.1/72ee241b659f0008e3115c8b5840d70cc765fcff}
+    engines: {node: '>=22.12.0'}
 
-  '@groundhogchain/xdr@0.4.2':
-    resolution: {integrity: sha512-pjCdRI+NZR4qDfYXKtImRLc/uUbMC5c3mGRNdm0nPaPspv9K65XyIvvsbhr1yoh6CAAfzppqHObIy1mNO4UQ9A==, tarball: https://npm.pkg.github.com/download/@groundhogchain/xdr/0.4.2/840112c2d9ce8720cadf6abc0edb4ea6cc51f151}
+  '@groundhogchain/rpc@0.7.1':
+    resolution: {integrity: sha512-Y3RV852qlGOyXZaxmPx7DFyMPIiPbwXIoidiB7V5P1NoBBRWVvgeQjkdBD/yHHQ0M43WZ5BvHz2Q0+djqG8B5A==, tarball: https://npm.pkg.github.com/download/@groundhogchain/rpc/0.7.1/a535429c60ea68b89ac52cd51f37db941a06d751}
+    engines: {node: '>=22.12.0'}
+
+  '@groundhogchain/xdr@0.7.1':
+    resolution: {integrity: sha512-XnaPy89IBoRYxT6XBZpVA++t7qCiwiFvlRoUCE/R1pRT1RcPk4tB8VwA77afq7SjxFML41F+siVafunZ9cc4LQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/xdr/0.7.1/289a5cfedae6ae102b795ae023165183705a1578}
+    engines: {node: '>=22.12.0'}
 
   '@hono/node-server@1.19.14':
     resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
@@ -2731,6 +2734,10 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
+  smol-toml@1.8.0:
+    resolution: {integrity: sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==}
+    engines: {node: '>= 18'}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -3390,29 +3397,38 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@groundhogchain/client@0.1.5':
+  '@groundhogchain/client@0.3.0':
     dependencies:
-      '@groundhogchain/contract-spec': 0.4.2
-      '@groundhogchain/gateway': 0.4.2
-      '@groundhogchain/protocol': 0.4.2
+      '@groundhogchain/contract-spec': 0.7.1
+      '@groundhogchain/gateway': 0.7.1
+      '@groundhogchain/protocol': 0.7.1
+      '@groundhogchain/xdr': 0.7.1
       '@noble/ed25519': 3.1.0
       '@noble/hashes': 2.2.0
+      smol-toml: 1.8.0
 
-  '@groundhogchain/contract-spec@0.4.2':
+  '@groundhogchain/contract-spec@0.7.1':
     dependencies:
-      '@groundhogchain/protocol': 0.4.2
-      '@groundhogchain/xdr': 0.4.2
+      '@groundhogchain/protocol': 0.7.1
+      '@groundhogchain/xdr': 0.7.1
 
-  '@groundhogchain/gateway@0.4.2':
+  '@groundhogchain/gateway@0.7.1':
     dependencies:
-      '@groundhogchain/protocol': 0.4.2
-      '@groundhogchain/xdr': 0.4.2
+      '@groundhogchain/protocol': 0.7.1
+      '@groundhogchain/rpc': 0.7.1
+      '@groundhogchain/xdr': 0.7.1
 
-  '@groundhogchain/protocol@0.4.2':
+  '@groundhogchain/protocol@0.7.1':
     dependencies:
-      '@groundhogchain/xdr': 0.4.2
+      '@groundhogchain/xdr': 0.7.1
+      '@noble/hashes': 2.2.0
 
-  '@groundhogchain/xdr@0.4.2': {}
+  '@groundhogchain/rpc@0.7.1':
+    dependencies:
+      '@groundhogchain/protocol': 0.7.1
+      '@groundhogchain/xdr': 0.7.1
+
+  '@groundhogchain/xdr@0.7.1': {}
 
   '@hono/node-server@1.19.14(hono@4.12.23)':
     dependencies:
@@ -5903,6 +5919,8 @@ snapshots:
   signal-exit@4.1.0: {}
 
   sisteransi@1.0.5: {}
+
+  smol-toml@1.8.0: {}
 
   source-map-js@1.2.1: {}
 

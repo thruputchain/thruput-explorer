@@ -1,6 +1,5 @@
 import { toHex0x, type EmittedEvent } from "@groundhogchain/client";
 import { decodeERC20Event } from "@groundhogchain/client/contracts";
-import { contractAddress } from "@groundhogchain/protocol";
 
 import type { TokenMetadata } from "./token-metadata";
 import type { DecodedEventView } from "./types";
@@ -18,8 +17,8 @@ export function decodeTokenEvent(
 
   if (decoded?.name !== "TransferEvent") return undefined;
 
-  const from = toHex0x(contractAddress(decoded.topics.from));
-  const to = toHex0x(contractAddress(decoded.topics.to));
+  const from = toHex0x(decoded.topics.from);
+  const to = toHex0x(decoded.topics.to);
   const rawAmount = decoded.fields.amount.toString();
   const amount = formatTokenAmount(decoded.fields.amount, metadata?.decimals);
   const symbol = metadata?.symbol;

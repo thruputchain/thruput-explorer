@@ -1,4 +1,5 @@
 import { hashFromHex, toHex0x, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
+import { ExecResult } from "@groundhogchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -100,21 +101,21 @@ function toHex(value: Uint8Array) {
 
 function formatExecResult(value: number) {
   switch (value) {
-    case 0:
+    case ExecResult.ExecResultOK:
       return "ok";
-    case 1:
+    case ExecResult.ExecResultTxDeterministicError:
       return "deterministicError";
-    case 2:
+    case ExecResult.ExecResultTxRootFrameReverted:
       return "reverted";
-    case 3:
+    case ExecResult.ExecResultTxNonDeterministicError:
       return "nonDeterministicError";
-    case 100:
+    case ExecResult.ExecResultFailedGasSponsorship:
       return "failedGasSponsorship";
-    case 200:
+    case ExecResult.ExecResultTxValidationFailure:
       return "validationFailure";
-    case 300:
+    case ExecResult.ExecResultSystemError:
       return "systemError";
-    case 400:
+    case ExecResult.ExecResultUnrecoverable:
       return "unrecoverable";
     default:
       return `unknown (${value})`;
