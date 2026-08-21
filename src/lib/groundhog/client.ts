@@ -1,7 +1,8 @@
-import { HttpTransport, createGroundhogClient, type GroundhogClient } from "@groundhogchain/client";
+import { HttpTransport, createGroundhogClient, toHex0x, type GroundhogClient } from "@groundhogchain/client";
+import { HOG_ADDRESS } from "@groundhogchain/protocol";
 
 const DEFAULT_RPC_URL = "http://localhost:9545";
-const NATIVE_HOG_ADDRESS = "0x0000000000000000000000000000000000000000000000000000000000000001";
+export const NATIVE_HOG_ADDRESS = toHex0x(HOG_ADDRESS);
 
 export type ExplorerRpcConfig = {
   rpcUrl: string;

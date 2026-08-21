@@ -77,14 +77,14 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
         : client
             .getEvents({
               filters: [
-                {
+                ERC20TransferEvent.filter({
                   contractAddresses: [nativeTokenAddress],
-                  topics: { topic0: [ERC20TransferEvent.signature], topic1: [contractAddress] },
-                },
-                {
+                  topics: { from: contractAddress },
+                }),
+                ERC20TransferEvent.filter({
                   contractAddresses: [nativeTokenAddress],
-                  topics: { topic0: [ERC20TransferEvent.signature], topic2: [contractAddress] },
-                },
+                  topics: { to: contractAddress },
+                }),
               ],
               order: "descending",
               anchor: "end",

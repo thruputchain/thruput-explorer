@@ -29,12 +29,7 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
 
   try {
     const page = await client.getEvents({
-      filters: [
-        {
-          contractAddresses: [addressFromHex(nativeToken.address)],
-          topics: { topic0: [ERC20TransferEvent.signature] },
-        },
-      ],
+      filters: [ERC20TransferEvent.filter({ contractAddresses: [addressFromHex(nativeToken.address)] })],
       order: "descending",
       anchor: "end",
       limit: LATEST_HOG_TRANSFER_LIMIT,

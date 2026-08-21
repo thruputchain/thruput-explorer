@@ -15,25 +15,56 @@ ERC20_PROJECT_DIR="${ERC20_PROJECT_DIR:-$GROUNDHOG_TEST_DIR/erc20-current}"
 TICKETMASTER_PROJECT_DIR="${TICKETMASTER_PROJECT_DIR:-$GROUNDHOG_TEST_DIR/ticketmaster}"
 LOCAL_NODE_STATE="${LOCAL_NODE_STATE:-$HOME/.local/share/groundhog/hog-devnode/.groundhog/local-node.json}"
 TMP_RUNTIME_MANIFEST_GLOB="${TMP_RUNTIME_MANIFEST_GLOB:-/tmp/ramdb_*/runtime-manifest.json}"
+GROUNDHOG_GLOBAL_CONFIG="${GROUNDHOG_GLOBAL_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/groundhog/config.toml}"
 
-DEFAULT_GROUNDHOG_CLIENT_CONTRACTS_MODULE="@groundhogchain/client/contracts"
-if [[ -f "$WORK_DIR/groundhog-client-ts/dist/contracts.js" ]]; then
-  DEFAULT_GROUNDHOG_CLIENT_CONTRACTS_MODULE="$WORK_DIR/groundhog-client-ts/dist/contracts.js"
-fi
-GROUNDHOG_CLIENT_CONTRACTS_MODULE="${GROUNDHOG_CLIENT_CONTRACTS_MODULE:-$DEFAULT_GROUNDHOG_CLIENT_CONTRACTS_MODULE}"
+GROUNDHOG_CLIENT_CONTRACTS_MODULE="${GROUNDHOG_CLIENT_CONTRACTS_MODULE:-@groundhogchain/client/contracts}"
 
 RPC_URL="${GROUNDHOG_RPC_URL:-http://localhost:9545}"
 HOG_ADDRESS="0x0000000000000000000000000000000000000000000000000000000000000001"
 
 if [[ -z "${GROUNDHOG_RUNTIME_MANIFEST:-}" ]]; then
-  if [[ -f "$LOCAL_NODE_STATE" ]]; then
+  if [[ -f "$GROUNDHOG_GLOBAL_CONFIG" ]]; then
+    if ! GROUNDHOG_RUNTIME_MANIFEST="$(GROUNDHOG_GLOBAL_CONFIG="$GROUNDHOG_GLOBAL_CONFIG" node --input-type=module <<'NODE'
+const fs = await import("node:fs");
+const config = fs.readFileSync(process.env.GROUNDHOG_GLOBAL_CONFIG, "utf8");
+let inLocalRuntimeState = false;
+for (const line of config.split(/\r?\n/)) {
+  const section = line.match(/^\s*\[([^\]]+)]\s*(?:#.*)?$/)?.[1];
+  if (section) {
+    inLocalRuntimeState = section === "local_runtime_state";
+    continue;
+  }
+  if (!inLocalRuntimeState) continue;
+  const value = line.match(/^\s*runtime_manifest\s*=\s*("(?:[^"\\]|\\.)*"|'[^']*')\s*(?:#.*)?$/)?.[1];
+  if (value) {
+    process.stdout.write(value.startsWith('"') ? JSON.parse(value) : value.slice(1, -1));
+    break;
+  }
+}
+NODE
+)"; then
+      GROUNDHOG_RUNTIME_MANIFEST=""
+    fi
+  fi
+
+  if [[ -n "${GROUNDHOG_RUNTIME_MANIFEST:-}" && ! -f "$GROUNDHOG_RUNTIME_MANIFEST" ]]; then
+    GROUNDHOG_RUNTIME_MANIFEST=""
+  fi
+
+  if [[ -z "${GROUNDHOG_RUNTIME_MANIFEST:-}" && -f "$LOCAL_NODE_STATE" ]]; then
     GROUNDHOG_RUNTIME_MANIFEST="$(GROUNDHOG_RUNTIME_MANIFEST="$LOCAL_NODE_STATE" node --input-type=module <<'NODE'
 const fs = await import("node:fs");
 const state = JSON.parse(fs.readFileSync(process.env.GROUNDHOG_RUNTIME_MANIFEST, "utf8"));
 process.stdout.write(state.runtimeManifest ?? "");
 NODE
 )"
-  else
+  fi
+
+  if [[ -n "${GROUNDHOG_RUNTIME_MANIFEST:-}" && ! -f "$GROUNDHOG_RUNTIME_MANIFEST" ]]; then
+    GROUNDHOG_RUNTIME_MANIFEST=""
+  fi
+
+  if [[ -z "${GROUNDHOG_RUNTIME_MANIFEST:-}" ]]; then
     shopt -s nullglob
     manifests=($TMP_RUNTIME_MANIFEST_GLOB)
     shopt -u nullglob
@@ -41,6 +72,7 @@ NODE
       GROUNDHOG_RUNTIME_MANIFEST="${manifests[0]}"
     else
       printf 'Missing GROUNDHOG_RUNTIME_MANIFEST. Start a local node or export the manifest path printed by `groundhog node`.\n' >&2
+      printf 'Checked global config: %s\n' "$GROUNDHOG_GLOBAL_CONFIG" >&2
       printf 'Checked local node state: %s\n' "$LOCAL_NODE_STATE" >&2
       printf 'Found %s %s candidates.\n' "${#manifests[@]}" "$TMP_RUNTIME_MANIFEST_GLOB" >&2
       exit 1
@@ -63,6 +95,17 @@ else
   BOOTSTRAP_CONFIG_HOME_CREATED=1
 fi
 export XDG_CONFIG_HOME
+
+if (( BOOTSTRAP_CONFIG_HOME_CREATED == 1 )); then
+  mkdir -p "$XDG_CONFIG_HOME/groundhog"
+  cat >"$XDG_CONFIG_HOME/groundhog/config.toml" <<'EOF'
+default_profile = "local"
+
+[profile.local]
+network = "local"
+default_key = "dev-0"
+EOF
+fi
 
 cleanup_bootstrap_config() {
   if (( BOOTSTRAP_CONFIG_HOME_CREATED == 1 )); then
@@ -158,7 +201,7 @@ import { gasAmount } from "@groundhogchain/protocol";
 
 const { ERC20Metadata } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
-const invocation = ERC20Metadata.initialize(
+const invocation = ERC20Metadata.initialize.invocation(
   addressFromHex(process.env.CONTRACT_ADDRESS),
   gasAmount(BigInt(500_000)),
   {
@@ -185,7 +228,7 @@ import { gasAmount } from "@groundhogchain/protocol";
 
 const { ERC20 } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
-const invocation = ERC20.mint(
+const invocation = ERC20.mint.invocation(
   addressFromHex(process.env.CONTRACT_ADDRESS),
   gasAmount(BigInt(500_000)),
   {
@@ -210,7 +253,7 @@ import { gasAmount } from "@groundhogchain/protocol";
 
 const { ERC20 } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
-const invocation = ERC20.transfer(
+const invocation = ERC20.transfer.invocation(
   addressFromHex(process.env.CONTRACT_ADDRESS),
   gasAmount(BigInt(500_000)),
   {
@@ -239,7 +282,7 @@ deploy_token() {
   local decimals="$3"
   local deploy_json address init_call init_entrypoint init_calldata init_json deploy_tx init_tx
 
-  deploy_json="$(run_groundhog "$GROUNDHOG_CLI" deploy --target wasm --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
+  deploy_json="$(run_groundhog_in "$EXPLORER_DIR" "$GROUNDHOG_CLI" deploy --artifact "$ERC20_ARTIFACT" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$deploy_json" "deploy $symbol" || return 1
   address="$(required_json_field "$deploy_json" data.address "deploy $symbol")" || return 1
   init_call="$(erc20_metadata_initialize_call "$address" "$DEV0" "$name" "$symbol" "$decimals")" || return 1
@@ -294,7 +337,7 @@ transfer_hog() {
 deploy_ticketmaster() {
   local deploy_json address deploy_tx
 
-  deploy_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" deploy --target wasm --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
+  deploy_json="$(run_groundhog_in "$EXPLORER_DIR" "$GROUNDHOG_CLI" deploy --artifact "$TICKETMASTER_ARTIFACT" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$deploy_json" "deploy Ticketmaster" || return 1
   address="$(required_json_field "$deploy_json" data.address "deploy Ticketmaster")" || return 1
   deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy Ticketmaster")" || return 1
@@ -325,12 +368,14 @@ printf 'ERC20 project: %s\n\n' "$ERC20_PROJECT_DIR"
 printf 'Ticketmaster project: %s\n\n' "$TICKETMASTER_PROJECT_DIR"
 
 printf 'Building ERC20 fixture...\n'
-build_json="$(run_groundhog "$GROUNDHOG_CLI" build --target wasm --bindings ts --json)"
+build_json="$(run_groundhog "$GROUNDHOG_CLI" build --bindings ts --json -- --locked)"
 require_ok_json "$build_json" "build ERC20 fixture"
+ERC20_ARTIFACT="$(required_json_field "$build_json" data.rv32 "build ERC20 fixture")"
 
 printf 'Building Ticketmaster fixture...\n'
-ticketmaster_build_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" build --target wasm --json)"
+ticketmaster_build_json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" build --json -- --locked)"
 require_ok_json "$ticketmaster_build_json" "build Ticketmaster fixture"
+TICKETMASTER_ARTIFACT="$(required_json_field "$ticketmaster_build_json" data.rv32 "build Ticketmaster fixture")"
 
 printf 'Deploying and initializing tokens...\n'
 ALULA_DEPLOY="$(deploy_token ALULA ALULA 6)"

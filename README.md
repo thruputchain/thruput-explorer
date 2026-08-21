@@ -4,7 +4,7 @@ Transaction explorer for Groundhog local nodes and Devnet. The app focuses on tr
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22.12+
 - pnpm 10.33.4+
 - GitHub Packages read access for `@groundhogchain/*` packages
 - For local development, a Groundhog node listening on `http://localhost:9545`
@@ -58,4 +58,4 @@ The bootstrap script builds the local ERC20 and Ticketmaster fixture contracts, 
 
 The explorer uses SDK receipt/status APIs for transaction data, SDK-generated ERC20 event decoders for token transfers, and SDK contract helpers for ERC20 metadata view calls. Events from other contracts are displayed as raw topics and data until the protocol exposes a canonical contract-spec discovery mechanism.
 
-Metadata return decoding is temporarily app-side: the explorer reads `ERC20Spec` and decodes `client.view(...).output.returnData` with SDK codec helpers because generated bindings do not yet expose method return decoders. Native HOG metadata views currently fault, so HOG uses a built-in `HOG`/7-decimal fallback after on-chain metadata fails.
+Token metadata uses the generated SDK contract views and return decoders. Native HOG metadata views currently fault, so HOG uses a built-in `HOG`/7-decimal fallback after on-chain metadata fails.
