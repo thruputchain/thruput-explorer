@@ -3,7 +3,7 @@ import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
-import { createExplorerGroundhogClient } from "./client";
+import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
 import { getNativeBalance, type NativeBalanceView } from "./native-balance";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
@@ -61,13 +61,14 @@ export type AddressEventView = {
 
 export async function loadAddressPageData(addressInput: string): Promise<AddressPageData> {
   const address = normalizeContractAddress(addressInput);
-  const { rpcUrl, client, nativeToken } = createExplorerGroundhogClient();
+  const { rpcUrl, nativeToken } = getExplorerRpcConfig();
 
   if (!isContractAddress(address)) {
     return { status: "malformed", address, rpcUrl, reason: "Malformed address" };
   }
 
   try {
+    const { client } = createExplorerGroundhogClient();
     const contractAddress = addressFromHex(address);
     const nativeTokenAddress = addressFromHex(nativeToken.address);
     const nativeTokenMetadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals } satisfies TokenMetadata;

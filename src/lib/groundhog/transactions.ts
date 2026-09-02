@@ -3,7 +3,7 @@ import { ExecResult } from "@groundhogchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
-import { createExplorerGroundhogClient } from "./client";
+import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
 import { stringifyJson } from "./format";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
@@ -12,7 +12,7 @@ import type { TransactionPageData } from "./types";
 
 export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
   const hash = normalizeTransactionHash(hashInput);
-  const { rpcUrl, transport, client } = createExplorerGroundhogClient();
+  const { rpcUrl } = getExplorerRpcConfig();
 
   if (!isTransactionHash(hash)) {
     return {
@@ -24,6 +24,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
   }
 
   try {
+    const { transport, client } = createExplorerGroundhogClient();
     const txHash = hashFromHex(hash);
 
     const [status, receipt, chainTip, rawReceipt] = await Promise.all([
