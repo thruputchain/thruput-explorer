@@ -1,5 +1,6 @@
 import { addressFromHex, toHex0x } from "@groundhogchain/client";
 import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
+import { unstable_cache } from "next/cache";
 
 import { createExplorerGroundhogClient } from "./client";
 import { toRpcFailure } from "./rpc";
@@ -7,6 +8,7 @@ import { decodeTokenEvent } from "./token-events";
 import type { RpcFailure } from "./types";
 
 const LATEST_HOG_TRANSFER_LIMIT = 6;
+const LATEST_HOG_TRANSFERS_REVALIDATE_SECONDS = 5;
 
 export type LatestHogTransferView = {
   txHash: string;
@@ -62,3 +64,12 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
     };
   }
 }
+
+/**
+ * The home page is `force-dynamic`, so the `revalidate` route segment config would be
+ * ignored and every anonymous hit would issue its own getEvents call. Cache the loader
+ * itself instead, so bursts of traffic share one RPC round trip per window.
+ */
+export const loadCachedLatestHogTransfers = unstable_cache(loadLatestHogTransfers, ["latest-hog-transfers"], {
+  revalidate: LATEST_HOG_TRANSFERS_REVALIDATE_SECONDS,
+});
