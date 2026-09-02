@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Badge } from "@/components/ui/badge";
 
 export function AppHeader() {
   return (
@@ -14,6 +15,7 @@ export function AppHeader() {
           className="w-10 rounded-md"
         />
         Groundhog
+        <Badge variant="secondary">Devnet</Badge>
       </h1>
       <ThemeToggle />
     </header>

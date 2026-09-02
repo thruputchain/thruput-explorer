@@ -46,6 +46,17 @@ GROUNDHOG_RPC_URL=https://devnet.groundhog.network
 
 Because RPC calls run server-side, `http://127.0.0.1:9545` on Netlify would point at the Netlify runtime, not a developer's laptop. Use the local default only when running the explorer locally.
 
+### Footer Links
+
+The footer always shows the devnet preview notice. Faucet and docs links are optional and each one renders only when its variable is set:
+
+```bash
+NEXT_PUBLIC_FAUCET_URL=https://faucet.example.groundhog.network
+NEXT_PUBLIC_DOCS_URL=https://docs.example.groundhog.network
+```
+
+`NEXT_PUBLIC_*` values are read when the app is built, so set them in the build environment (for example, Netlify's build settings) rather than only at runtime.
+
 To create repeatable local explorer fixtures after starting a fresh node, run:
 
 ```bash
