@@ -32,7 +32,6 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           <FieldRow label="Chain tip">{data.chainTipHeight ?? "Unavailable"}</FieldRow>
           <FieldRow label="Freshness">{freshness ?? "-"}</FieldRow>
           <FieldRow label="Receipt">{data.receipt ? "Available" : "Not available"}</FieldRow>
-          <FieldRow label="RPC URL"><span className="font-mono">{data.rpcUrl}</span></FieldRow>
         </dl>
       </CardContent>
     </Card>

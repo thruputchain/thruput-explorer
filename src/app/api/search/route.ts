@@ -8,6 +8,8 @@ import { isContractAddress, isTransactionHash, normalizeContractAddress, normali
 
 export const dynamic = "force-dynamic";
 
+const GENERIC_FAILURE_MESSAGE = "Search is temporarily unavailable. Please try again in a moment.";
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => undefined);
   const rawQuery = typeof body?.query === "string" ? body.query : "";
@@ -28,7 +30,14 @@ export async function POST(request: Request) {
       return Response.json({ status: "ok", href: `/tx/${query}` });
     }
   } catch (error) {
-    return Response.json({ status: "unavailable", message: toRpcFailure(error).message }, { status: 503 });
+    const failure = toRpcFailure(error);
+    const isProduction = process.env.NODE_ENV === "production";
+    if (isProduction) console.error("[explorer] search: transaction status lookup failed", failure);
+
+    return Response.json(
+      { status: "unavailable", message: isProduction ? GENERIC_FAILURE_MESSAGE : failure.message },
+      { status: 503 },
+    );
   }
 
   const address = normalizeContractAddress(query);

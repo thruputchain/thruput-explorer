@@ -163,8 +163,6 @@ function AddressSummaryCard({
             <p>{data.metadata.decimals}</p>
           </>
         ) : null}
-        <SummaryLabel>RPC URL</SummaryLabel>
-        <span className="break-all font-mono text-xs">{data.rpcUrl}</span>
       </CardContent>
     </Card>
   );
