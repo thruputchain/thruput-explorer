@@ -32,7 +32,7 @@ pnpm dev
 
 Open `http://localhost:3000` and search for a `0x`-prefixed 32-byte transaction hash.
 
-The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL` when set and otherwise defaults to `http://localhost:9545`:
+The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL` when set. In development it falls back to `http://localhost:9545`; in production (`next build` / `next start`) the variable is required and the explorer fails with a clear error instead of silently pointing at localhost:
 
 ```bash
 GROUNDHOG_RPC_URL=http://127.0.0.1:9545 pnpm dev
