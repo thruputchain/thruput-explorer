@@ -1,4 +1,4 @@
-import { hashFromHex, toHex0x, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
+import { hashFromHex, toHex0x, type EmittedEvent, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
 import { ExecResult } from "@groundhogchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
@@ -9,6 +9,8 @@ import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
 import type { TransactionPageData } from "./types";
+
+const METADATA_LOOKUP_LIMIT = 10;
 
 export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
   const hash = normalizeTransactionHash(hashInput);
@@ -35,7 +37,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
     const metadataByAddress = new Map<string, TokenMetadata | undefined>();
     if (receipt) {
       await Promise.all(
-        Array.from(new Set(receipt.events.map((event) => toHex(event.contractAddress)))).map(async (contractAddress) => {
+        collectTokenContractAddresses(receipt.events).map(async (contractAddress) => {
           metadataByAddress.set(contractAddress, await getTokenMetadata(client, contractAddress));
         }),
       );
@@ -76,6 +78,25 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
       receipt: null,
     };
   }
+}
+
+/**
+ * Each distinct contract costs three ERC20 metadata view calls, so an unbounded lookup
+ * lets a single receipt fan one anonymous page view out into hundreds of RPC requests.
+ * Only contracts that actually emit a decodable token event are worth looking up, and
+ * even those are capped. Events whose metadata is missing still render (without a symbol
+ * or scaled amount), so truncation degrades instead of breaking the page.
+ */
+function collectTokenContractAddresses(events: readonly EmittedEvent[]) {
+  const contractAddresses = new Set<string>();
+
+  for (const event of events) {
+    if (contractAddresses.size >= METADATA_LOOKUP_LIMIT) break;
+    if (!decodeTokenEvent(event)) continue;
+    contractAddresses.add(toHex(event.contractAddress));
+  }
+
+  return Array.from(contractAddresses);
 }
 
 function formatTransactionStatus(status: SdkTransactionStatus) {
