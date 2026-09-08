@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --test src/lib/groundhog/*.test.ts",
+    "test": "tsx --test src/*.test.ts src/lib/groundhog/*.test.ts",
+    "test:production": "node --test scripts/production.test.mjs",
     "bootstrap:local": "bash scripts/bootstrap-local-node.sh"
   },
   "dependencies": {

@@ -16,7 +16,7 @@ Configure GitHub Packages auth in your local npm config:
 //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
 ```
 
-The token needs `read:packages`. In Netlify, add the token as `NPM_TOKEN` and create an `.npmrc` during install, or configure the equivalent GitHub Packages auth in the build environment.
+The token needs `read:packages` and access to the Groundhog packages. Railway uses a separate install-only configuration described below; your local npm configuration is unchanged.
 
 ## Install
 
@@ -38,13 +38,41 @@ The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL`
 GROUNDHOG_RPC_URL=http://127.0.0.1:9545 pnpm dev
 ```
 
-For Netlify, set:
+Local development does not require Basic Auth when both `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are unset. Set both to test the browser login prompt locally. Production (`pnpm start`) requires both and denies access if either is missing.
 
-```bash
-GROUNDHOG_RPC_URL=https://devnet.groundhog.network
-```
+## Deploy To Railway
 
-Because RPC calls run server-side, `http://127.0.0.1:9545` on Netlify would point at the Netlify runtime, not a developer's laptop. Use the local default only when running the explorer locally.
+Create a service from `groundhogchain/explorer`, select the `main` branch, and use the repository root. Choose the **Railpack** builder. The checked-in `railpack.json` selects Node 22, installs dependencies with the pinned pnpm version, builds Next.js, and starts it on `0.0.0.0:$PORT`. Leave custom install, build, and start overrides unset.
+
+Add these four service variables before deploying:
+
+| Variable | Required value |
+| --- | --- |
+| `NODE_AUTH_TOKEN` | GitHub personal access token (classic) with `read:packages` and access to `@groundhogchain/*`. Authorize organization SSO if required. |
+| `GROUNDHOG_RPC_URL` | The full RPC endpoint reachable from Railway and compatible with client `0.7.0` / protocol `0.11.0`. Do not use `localhost`. |
+| `BASIC_AUTH_USER` | Your chosen nonempty login username, without a colon. |
+| `BASIC_AUTH_PASSWORD` | A strong, unique password. Use the password itself, not a bcrypt hash. |
+
+Store credentials as sealed Railway variables. Do not add `NEXT_PUBLIC_` prefixes, commit credentials, or put them in build/start commands. Unlike the Caddy-based documentation sites, Explorer uses `BASIC_AUTH_PASSWORD`, not `BASIC_AUTH_HASH`.
+
+The install step reads `NODE_AUTH_TOKEN` through `.npmrc.railway`; that file contains only an environment-variable reference. No token is written into the repository or generated npm configuration. Do not set `NPM_CONFIG_USERCONFIG` globally. GitHub Actions continues using its own job token and npm configuration.
+
+Railway supplies `PORT`, and Railpack sets `NODE_ENV=production`; leave those defaults in place. Under the service's deployment settings, set **Healthcheck Path** to `/health` and **Healthcheck Timeout** to `60` seconds. Use the default restart-on-failure policy. No volume, database, pre-deploy command, or bootstrap script is needed.
+
+All application routes, search requests, and static assets require Basic Auth. Only `/health` is public. It reports process liveness without contacting the RPC, so an RPC outage does not prevent deployment. A successful health check does not validate credentials or RPC connectivity: confirm authenticated access separately. Missing authentication configuration returns `503`; missing or incorrect browser credentials return `401` with a login challenge.
+
+Generate a Railway domain and verify it over HTTPS before changing DNS:
+
+1. Open `/health` without credentials; expect `200` and `ok`.
+2. Open `/` in a private browser window; expect a login prompt. Wrong credentials must not grant access.
+3. Log in and verify CSS/JavaScript load, the HOG feed renders, and search resolves a known transaction and address on the configured network.
+4. Attach the intended custom domain in Railway and apply its DNS records. Keep Netlify available until the new domain and TLS work, then disable Netlify deployments and remove its unused secrets.
+
+Use HTTPS for hosted access: Basic Auth encodes credentials but does not encrypt them. The application forwards RPC requests server-side; its local default would point inside the Railway container, not at your development node.
+
+Railway's legacy `railway.json`/`railway.toml` deployment files are deprecated for new services. Build and start settings live in `railpack.json`; the service connection, secrets, health check, and domains are configured in the Railway dashboard.
+
+## Local Fixtures
 
 To create repeatable local explorer fixtures after starting a fresh node, run:
 
@@ -67,10 +95,11 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm test:production
 pnpm audit
 ```
 
-CI runs lint, regression tests, and the production build without a running node. Run `pnpm bootstrap:local` separately to verify the local CLI, fixture contracts, and node together.
+CI runs lint, regression tests, the production build, and HTTP authentication smoke tests without a running node. `pnpm test:production` requires a completed build and starts temporary local Next.js servers, which it stops after testing. Run `pnpm bootstrap:local` separately to verify the local CLI, fixture contracts, and node together.
 
 ## Event Decoding
 
