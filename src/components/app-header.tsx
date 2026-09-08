@@ -11,6 +11,8 @@ export function AppHeader() {
           alt="Groundhog"
           width={40}
           height={40}
+          // The optimizer does not forward Basic Auth when fetching this image.
+          unoptimized
           className="w-10 rounded-md"
         />
         Groundhog
