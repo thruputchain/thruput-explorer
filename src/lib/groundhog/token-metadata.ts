@@ -28,7 +28,7 @@ export async function getTokenMetadata(client: GroundhogClient, address: string)
   return {
     name: name ?? fallback?.name,
     symbol: symbol ?? fallback?.symbol,
-    decimals: normalizeDecimals(decimals),
+    decimals: normalizeDecimals(decimals) ?? fallback?.decimals,
   };
 }
 

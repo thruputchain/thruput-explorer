@@ -1,7 +1,7 @@
 import { addressFromHex, toHex0x } from "@groundhogchain/client";
 import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
 
-import { createExplorerGroundhogClient } from "./client";
+import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import type { RpcFailure } from "./types";
@@ -24,10 +24,11 @@ export type LatestHogTransfersData =
   | { status: "unavailable"; nativeTokenAddress: string; error: RpcFailure };
 
 export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> {
-  const { client, nativeToken } = createExplorerGroundhogClient();
+  const { nativeToken } = getExplorerRpcConfig();
   const metadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals };
 
   try {
+    const { client } = await createExplorerGroundhogClient();
     const page = await client.getEvents({
       filters: [ERC20TransferEvent.filter({ contractAddresses: [addressFromHex(nativeToken.address)] })],
       order: "descending",
