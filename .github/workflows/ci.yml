@@ -17,8 +17,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Every route is force-dynamic, so nothing is prerendered and the build never
-      # talks to a node. The value only has to be present and well formed.
+      # RPC-backed routes are dynamic, so builds never contact a node.
       GROUNDHOG_RPC_URL: http://127.0.0.1:9545
     steps:
       - uses: actions/checkout@v4
@@ -42,3 +41,5 @@ jobs:
       - run: pnpm test
 
       - run: pnpm build
+
+      - run: pnpm test:production

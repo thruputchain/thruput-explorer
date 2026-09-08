@@ -23,8 +23,8 @@ test("the 10000ms RPC deadline remains active while reading a delayed body", { t
   const server = createServer((_request, response) => {
     response.writeHead(200, { "content-type": "application/json" });
     response.flushHeaders();
-    const timer = setTimeout(() => response.end('{"jsonrpc":"2.0","id":1,"result":null}'), 500);
-    response.on("close", () => clearTimeout(timer));
+    // Leave the JSON body unfinished until the client aborts the connection.
+    response.write('{"jsonrpc":"2.0","id":1,"result":');
   });
   t.after(() => {
     server.closeAllConnections();
@@ -41,16 +41,24 @@ test("the 10000ms RPC deadline remains active while reading a delayed body", { t
     else process.env.GROUNDHOG_RPC_URL = previous;
   });
 
-  const originalTimeout = AbortSignal.timeout.bind(AbortSignal);
+  const controller = new AbortController();
   const timeout = t.mock.method(AbortSignal, "timeout", (milliseconds: number) => {
     assert.equal(milliseconds, 10_000);
-    return originalTimeout(50);
+    return controller.signal;
   });
   const originalFetch = globalThis.fetch;
   let headersReceived = false;
   t.mock.method(globalThis, "fetch", async (...args: Parameters<typeof fetch>) => {
     const response = await originalFetch(...args);
     headersReceived = true;
+    const originalJson = response.json.bind(response);
+    t.mock.method(response, "json", () => {
+      assert.equal(controller.signal.aborted, false);
+      const body = originalJson();
+      assert.equal(response.bodyUsed, true, "body reading must start before the deadline aborts");
+      controller.abort(new DOMException("The operation timed out", "TimeoutError"));
+      return body;
+    });
     return response;
   });
 

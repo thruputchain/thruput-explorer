@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "node",
+  "exclude": [".git", ".env*", "node_modules", ".next"],
+  "packages": {
+    "node": "22"
+  },
+  "steps": {
+    "install": {
+      "inputs": ["...", { "local": true, "include": ["package.json", "pnpm-lock.yaml", ".npmrc", ".npmrc.railway"] }],
+      "secrets": ["NODE_AUTH_TOKEN"],
+      "commands": ["NPM_CONFIG_USERCONFIG=/app/.npmrc.railway pnpm install --frozen-lockfile"]
+    },
+    "build": {
+      "commands": ["pnpm build"]
+    }
+  },
+  "deploy": {
+    "startCommand": "pnpm start --hostname 0.0.0.0 --port \"$PORT\""
+  }
+}
