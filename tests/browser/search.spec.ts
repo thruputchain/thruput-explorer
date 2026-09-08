@@ -1,0 +1,96 @@
+import { expect, test } from "@playwright/test";
+
+const txHash = `0x${"ab".repeat(32)}`;
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+});
+
+test("the site logo loads behind Basic Auth", async ({ page }) => {
+  const logo = page.getByRole("img", { name: "Groundhog", exact: true });
+  await expect(logo).toBeVisible();
+  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+});
+
+test("search uses the API and RPC, then renders the decoded transfer", async ({ page }) => {
+  await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+  await page.getByRole("textbox").fill(txHash);
+  const response = page.waitForResponse("**/api/search");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  expect((await response).status()).toBe(200);
+  await expect(page).toHaveURL(`/tx/${txHash}`);
+  await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+  await expect(page.getByText("15000000", { exact: true })).toBeVisible();
+  await expect(page.getByText("Transfer", { exact: true })).toBeVisible();
+});
+
+test("search follows an address result and renders its balance", async ({ page }) => {
+  const address = `0x${"22".repeat(32)}`;
+  await page.getByRole("textbox").fill(address);
+  const response = page.waitForResponse("**/api/search");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  expect((await response).status()).toBe(200);
+  await expect(page).toHaveURL(`/address/${address}`);
+  await expect(page.getByText("2.5 HOG", { exact: true })).toBeVisible();
+  const transaction = page.locator(`a[href="/tx/${txHash}"]`);
+  await expect(transaction).toBeVisible();
+  await transaction.click();
+  await expect(page).toHaveURL(`/tx/${txHash}`);
+  await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+});
+
+test("malformed input shows validation without a search request", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/search") requests.push(request.url());
+  });
+  await page.getByRole("textbox").fill("not-a-hash");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByText("Enter a 0x-prefixed 32-byte transaction hash or address.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
+  expect(requests).toEqual([]);
+});
+
+test("search stays disabled until the deferred request is released", async ({ page }) => {
+  let release!: () => void;
+  const deferred = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/search", async (route) => {
+    await deferred;
+    await route.continue();
+  });
+  try {
+    await page.getByRole("textbox").fill(txHash);
+    const requested = page.waitForRequest("**/api/search");
+    const button = page.getByRole("button", { name: "Search", exact: true });
+    await button.click();
+    await requested;
+    await expect(button).toBeDisabled();
+    await expect(page).toHaveURL("/");
+    release();
+    await expect(page).toHaveURL(`/tx/${txHash}`);
+    await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+  } finally {
+    release();
+  }
+});
+
+for (const failure of ["503", "network", "non-JSON"] as const) {
+  test(`${failure} feedback clears on a successful retry`, async ({ page }) => {
+    const message = failure === "503" ? "Fixture search temporarily unavailable." : "Search is unavailable. Please try again.";
+    await page.route("**/api/search", async (route) => {
+      if (failure === "network") await route.abort("failed");
+      else if (failure === "503") await route.fulfill({ status: 503, json: { status: "unavailable", message } });
+      else await route.fulfill({ status: 200, contentType: "text/html", body: "<html>Not JSON</html>" });
+    }, { times: 1 });
+    await page.getByRole("textbox").fill(txHash);
+    const button = page.getByRole("button", { name: "Search", exact: true });
+    await button.click();
+    await expect(page.getByText(message, { exact: true })).toBeVisible();
+    await expect(button).toBeEnabled();
+    await expect(page).toHaveURL("/");
+    await button.click();
+    await expect(page.getByText(message, { exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(`/tx/${txHash}`);
+    await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+  });
+}

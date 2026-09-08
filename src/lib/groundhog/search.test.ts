@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
-import { createGroundhogClient, MockTransport } from "@groundhogchain/client";
+import { addressFromHex, createGroundhogClient, hashFromHex, MockTransport } from "@groundhogchain/client";
+import { ERC20Metadata } from "@groundhogchain/client/contracts";
 
 import { POST } from "../../app/api/search/route";
 
@@ -44,4 +45,70 @@ test("search prefers known transactions and routes unknown hashes to addresses d
     status: "ok", href: `/address/${hash}`,
     context: { hasNativeBalance: false, hasRootTransactions: false, token: false },
   });
+});
+
+test("search reports successful address context even when the available balance is zero", async (t) => {
+  const client = await createGroundhogClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  t.mock.method(client, "getTransactionStatus", async () => ({ status: "unknown" as const }));
+  const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 0n, height: 42n }));
+  const transactions = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromHex(hash), height: 42n }] }));
+  t.mock.method(ERC20Metadata.name, "view", async () => ({ value: "ALULA" }));
+  t.mock.method(ERC20Metadata.symbol, "view", async () => ({ value: "ALULA" }));
+  t.mock.method(ERC20Metadata.decimals, "view", async () => ({ value: 6n }));
+
+  const response = await POST(request(hash));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    status: "ok", href: `/address/${hash}`,
+    context: { hasNativeBalance: true, hasRootTransactions: true, token: true },
+  });
+  assert.deepEqual(balance.mock.calls[0].arguments, [addressFromHex(hash)]);
+  assert.deepEqual(transactions.mock.calls[0].arguments, [{ address: addressFromHex(hash), order: "descending", anchor: "end", limit: 1 }]);
+});
+
+test("a failed transaction-status lookup returns 503 without guessing an address", async (t) => {
+  const client = await createGroundhogClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  t.mock.method(client, "getTransactionStatus", async () => { throw new Error("Status RPC unavailable"); });
+  const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
+  const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
+  const view = t.mock.method(client, "view", async () => { throw new Error("Unexpected metadata lookup"); });
+
+  const response = await POST(request(hash));
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { status: "unavailable", message: "Status RPC unavailable" });
+  assert.equal(balance.mock.callCount(), 0);
+  assert.equal(history.mock.callCount(), 0);
+  assert.equal(view.mock.callCount(), 0);
+});
+
+for (const status of [
+  { status: "committed" as const, height: 42n },
+  { status: "recentFailure" as const, attemptHeight: 42n, conflict: { address: addressFromHex(hash), key: hashFromHex(hash), code: "test-conflict" } },
+]) {
+  test(`search routes ${status.status} transactions without address probes`, async (t) => {
+    const client = await createGroundhogClient({ transport: new MockTransport() });
+    t.mock.method(sdk, "createGroundhogClient", async () => client);
+    t.mock.method(client, "getTransactionStatus", async () => status);
+    const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
+    const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
+    const view = t.mock.method(client, "view", async () => { throw new Error("Unexpected metadata lookup"); });
+    const response = await POST(request(hash));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: "ok", href: `/tx/${hash}` });
+    assert.equal(balance.mock.callCount(), 0);
+    assert.equal(history.mock.callCount(), 0);
+    assert.equal(view.mock.callCount(), 0);
+  });
+}
+
+test("missing or non-string queries are rejected without a connection", async (t) => {
+  const connect = t.mock.method(sdk, "createGroundhogClient", async () => { throw new Error("Unexpected connection"); });
+  for (const body of [null, {}, { query: 42 }, { query: [hash] }, { query: null }]) {
+    const response = await POST(new Request("http://localhost/api/search", { method: "POST", body: JSON.stringify(body) }));
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).status, "malformed");
+  }
+  assert.equal(connect.mock.callCount(), 0);
 });

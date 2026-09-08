@@ -64,10 +64,13 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:production
+pnpm test:browser
 pnpm audit
 ```
 
-CI runs lint, regression tests, the production build, and HTTP authentication smoke tests without a running node. `pnpm test:production` requires a completed build and starts temporary local Next.js servers, which it stops after testing. Run `pnpm bootstrap:local` separately to verify the local CLI, fixture contracts, and node together.
+Install the browser once with `pnpm exec playwright install chromium`. Both `pnpm test:production` and `pnpm test:browser` require a completed build and stop their temporary servers after testing. Browser tests use Chromium, Basic Auth, and a local fixture RPC; they do not contact a live Groundhog node. The browser server uses port 3100, or `PLAYWRIGHT_PORT` when set, and refuses to reuse an existing server.
+
+CI runs lint, data-layer regression tests, the production build, HTTP authentication smoke tests, and browser search tests. Run `pnpm bootstrap:local` separately to verify the local CLI, fixture contracts, and node together.
 
 ## Event Decoding
 
