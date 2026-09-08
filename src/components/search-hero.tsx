@@ -18,7 +18,7 @@ export function SearchHero() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalized = normalizeTransactionHash(hash);
 
@@ -28,19 +28,25 @@ export function SearchHero() {
     }
 
     setError(null);
-    const response = await fetch("/api/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query: normalized }),
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/search", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: normalized }),
+        });
+        const result = (await response.json()) as SearchResponse;
+
+        if (result.status !== "ok") {
+          setError(result.message);
+          return;
+        }
+
+        startTransition(() => router.push(result.href));
+      } catch {
+        setError("Search is unavailable. Please try again.");
+      }
     });
-    const result = (await response.json()) as SearchResponse;
-
-    if (result.status !== "ok") {
-      setError(result.message);
-      return;
-    }
-
-    startTransition(() => router.push(result.href));
   }
 
   return (

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -77,7 +76,7 @@ export default async function AddressPage({
             ) : (
               <>
                 <AddressActivityTabs data={data} />
-                {data.contractEvents.length > 0 ? (
+                {data.contractEvents.length > 0 || data.contractEventsError ? (
                   <ContractEventsCard
                     events={data.contractEvents}
                     error={data.contractEventsError}
@@ -187,7 +186,9 @@ function TransactionHistoryCard({
           {error
             ? "This RPC could not provide address transaction history."
             : transactions.length === 0
-              ? "No transactions found for this address."
+              ? partial
+                ? "No transactions found in the available activity sources. Some sources are unavailable."
+                : "No transactions found for this address."
               : `${transactions.length} recent transaction${transactions.length === 1 ? "" : "s"} for this address.${partial ? " Some activity sources are unavailable." : ""}`}
         </CardDescription>
       </CardHeader>

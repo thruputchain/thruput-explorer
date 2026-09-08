@@ -22,6 +22,15 @@ GROUNDHOG_CLIENT_CONTRACTS_MODULE="${GROUNDHOG_CLIENT_CONTRACTS_MODULE:-@groundh
 RPC_URL="${GROUNDHOG_RPC_URL:-http://localhost:9545}"
 HOG_ADDRESS="0x0000000000000000000000000000000000000000000000000000000000000001"
 
+RPC_URL="$RPC_URL" node --input-type=module <<'NODE'
+const url = new URL(process.env.RPC_URL);
+if (!['http:', 'https:'].includes(url.protocol) ||
+    !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+    url.username || url.password) {
+  throw new Error('Local bootstrap requires a localhost RPC URL without credentials');
+}
+NODE
+
 if [[ -z "${GROUNDHOG_RUNTIME_MANIFEST:-}" ]]; then
   if [[ -f "$GROUNDHOG_GLOBAL_CONFIG" ]]; then
     if ! GROUNDHOG_RUNTIME_MANIFEST="$(GROUNDHOG_GLOBAL_CONFIG="$GROUNDHOG_GLOBAL_CONFIG" node --input-type=module <<'NODE'
@@ -87,6 +96,16 @@ if [[ ! -f "$GROUNDHOG_RUNTIME_MANIFEST" ]]; then
   exit 1
 fi
 
+node --input-type=module <<'NODE'
+import fs from 'node:fs';
+const manifest = JSON.parse(fs.readFileSync(process.env.GROUNDHOG_RUNTIME_MANIFEST, 'utf8'));
+if (manifest.kind !== 'hogd-dev-runtime' ||
+    manifest.bootstrapAccountDerivation?.scheme !== 'groundhog-bootstrap-account-v1' ||
+    manifest.bootstrapAccountDerivation?.seed !== 'groundhog-dev-accounts') {
+  throw new Error('Local bootstrap requires a runtime manifest with deterministic local dev wallets');
+}
+NODE
+
 BOOTSTRAP_CONFIG_HOME_CREATED=0
 if [[ -n "${GROUNDHOG_BOOTSTRAP_CONFIG_HOME:-}" ]]; then
   XDG_CONFIG_HOME="$GROUNDHOG_BOOTSTRAP_CONFIG_HOME"
@@ -115,6 +134,7 @@ cleanup_bootstrap_config() {
 trap cleanup_bootstrap_config EXIT
 
 GROUNDHOG_NETWORK_ARGS=(
+  --force
   --profile local
   --rpc-url "$RPC_URL"
   --runtime-manifest "$GROUNDHOG_RUNTIME_MANIFEST"
@@ -290,8 +310,8 @@ deploy_token() {
   init_calldata="$(printf '%s' "$init_call" | cut -f2)"
   init_json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$init_entrypoint" "$init_calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$init_json" "initialize $symbol" || return 1
-  deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy $symbol")" || return 1
-  init_tx="$(required_json_field "$init_json" data.tx_hash "initialize $symbol")" || return 1
+  deploy_tx="$(required_json_field "$deploy_json" data.txHash "deploy $symbol")" || return 1
+  init_tx="$(required_json_field "$init_json" data.txHash "initialize $symbol")" || return 1
 
   printf '%s\t%s\t%s\t%s\n' "$symbol" "$address" "$deploy_tx" "$init_tx"
 }
@@ -306,7 +326,7 @@ mint_token() {
   calldata="$(printf '%s' "$call" | cut -f2)"
   json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "mint $address" || return 1
-  required_json_field "$json" data.tx_hash "mint $address" || return 1
+  required_json_field "$json" data.txHash "mint $address" || return 1
 }
 
 transfer_token() {
@@ -319,7 +339,7 @@ transfer_token() {
   calldata="$(printf '%s' "$call" | cut -f2)"
   json="$(run_groundhog "$GROUNDHOG_CLI" call "$address" "$entrypoint" "$calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "transfer $address" || return 1
-  required_json_field "$json" data.tx_hash "transfer $address" || return 1
+  required_json_field "$json" data.txHash "transfer $address" || return 1
 }
 
 transfer_hog() {
@@ -331,7 +351,7 @@ transfer_hog() {
   calldata="$(printf '%s' "$call" | cut -f2)"
   json="$(run_groundhog "$GROUNDHOG_CLI" call "$HOG_ADDRESS" "$entrypoint" "$calldata" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$json" "transfer HOG" || return 1
-  required_json_field "$json" data.tx_hash "transfer HOG" || return 1
+  required_json_field "$json" data.txHash "transfer HOG" || return 1
 }
 
 deploy_ticketmaster() {
@@ -340,7 +360,7 @@ deploy_ticketmaster() {
   deploy_json="$(run_groundhog_in "$EXPLORER_DIR" "$GROUNDHOG_CLI" deploy --artifact "$TICKETMASTER_ARTIFACT" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
   require_ok_json "$deploy_json" "deploy Ticketmaster" || return 1
   address="$(required_json_field "$deploy_json" data.address "deploy Ticketmaster")" || return 1
-  deploy_tx="$(required_json_field "$deploy_json" data.tx_hash "deploy Ticketmaster")" || return 1
+  deploy_tx="$(required_json_field "$deploy_json" data.txHash "deploy Ticketmaster")" || return 1
 
   printf '%s\t%s\n' "$address" "$deploy_tx"
 }
@@ -350,9 +370,12 @@ call_ticketmaster() {
   local label="$2"
   shift 2
   local json
-  json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" call "$address" "$@" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || return 1
+  json="$(run_groundhog_in "$TICKETMASTER_PROJECT_DIR" "$GROUNDHOG_CLI" call "$address" "$@" --json "${GROUNDHOG_NETWORK_ARGS[@]}")" || {
+    printf '%s\n' "$json" >&2
+    return 1
+  }
   require_ok_json "$json" "$label" || return 1
-  required_json_field "$json" data.tx_hash "$label" || return 1
+  required_json_field "$json" data.txHash "$label" || return 1
 }
 
 DEV0="$(manifest_wallet 0)"
@@ -368,7 +391,7 @@ printf 'ERC20 project: %s\n\n' "$ERC20_PROJECT_DIR"
 printf 'Ticketmaster project: %s\n\n' "$TICKETMASTER_PROJECT_DIR"
 
 printf 'Building ERC20 fixture...\n'
-build_json="$(run_groundhog "$GROUNDHOG_CLI" build --bindings ts --json -- --locked)"
+build_json="$(run_groundhog "$GROUNDHOG_CLI" build --json -- --locked)"
 require_ok_json "$build_json" "build ERC20 fixture"
 ERC20_ARTIFACT="$(required_json_field "$build_json" data.rv32 "build ERC20 fixture")"
 
