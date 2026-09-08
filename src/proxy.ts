@@ -1,17 +1,18 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { compare } from "bcryptjs";
 import { NextResponse, type NextRequest } from "next/server";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/health") return NextResponse.next();
 
   const username = process.env.BASIC_AUTH_USER;
-  const password = process.env.BASIC_AUTH_PASSWORD;
+  const passwordHash = process.env.BASIC_AUTH_HASH;
 
-  if (!username && !password && process.env.NODE_ENV === "development") {
+  if (!username && !passwordHash && process.env.NODE_ENV === "development") {
     return NextResponse.next();
   }
 
-  if (!username || !password || username.includes(":")) {
+  if (!username || username.includes(":") || !passwordHash || !/^\$2[aby]\$(0[4-9]|[12][0-9]|3[01])\$[./A-Za-z0-9]{53}$/.test(passwordHash)) {
     return new NextResponse("Authentication is not configured.", {
       status: 503,
       headers: { "Cache-Control": "no-store" },
@@ -20,10 +21,13 @@ export function proxy(request: NextRequest) {
 
   const encoded = request.headers.get("authorization")?.match(/^Basic ([A-Za-z0-9+/]+={0,2})$/i)?.[1];
   if (encoded) {
-    const supplied = Buffer.from(encoded, "base64");
-    const expected = Buffer.from(`${username}:${password}`, "utf8");
-    // Fixed-length digests avoid leaking credential lengths during comparison.
-    if (timingSafeEqual(createHash("sha256").update(supplied).digest(), createHash("sha256").update(expected).digest())) {
+    const supplied = Buffer.from(encoded, "base64").toString("utf8");
+    const separator = supplied.indexOf(":");
+    const usernameMatches = separator >= 0 && timingSafeEqual(
+      createHash("sha256").update(supplied.slice(0, separator)).digest(),
+      createHash("sha256").update(username).digest(),
+    );
+    if (usernameMatches && await compare(supplied.slice(separator + 1), passwordHash)) {
       const response = NextResponse.next();
       response.headers.set("Cache-Control", "private, no-store");
       return response;
