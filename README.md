@@ -38,7 +38,7 @@ The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL`
 GROUNDHOG_RPC_URL=http://127.0.0.1:9545 pnpm dev
 ```
 
-Local development does not require Basic Auth when both `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are unset. Set both to test the browser login prompt locally. Production (`pnpm start`) requires both and denies access if either is missing.
+Local development does not require Basic Auth when both `BASIC_AUTH_USER` and `BASIC_AUTH_HASH` are unset. Set a username and a bcrypt password hash (for example, from `caddy hash-password`) to test the browser login prompt locally. Enter the original password in the browser, not the hash. Production (`pnpm start`) requires both variables and denies access if either is missing or the hash is invalid.
 
 ## Local Fixtures
 

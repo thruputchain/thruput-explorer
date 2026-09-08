@@ -7,11 +7,13 @@ import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
+import { hashSync } from "bcryptjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const next = createRequire(import.meta.url).resolve("next/dist/bin/next");
 const username = `smoke-${randomUUID()}`;
 const password = randomUUID();
+const passwordHash = hashSync(password, 4);
 const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
 
 async function startProduction(t, configured) {
@@ -34,7 +36,7 @@ async function startProduction(t, configured) {
       GROUNDHOG_RPC_URL: `http://127.0.0.1:${rpcPort}`,
       // Empty values also prevent Next from loading credentials from .env files.
       BASIC_AUTH_USER: configured ? username : "",
-      BASIC_AUTH_PASSWORD: configured ? password : "",
+      BASIC_AUTH_HASH: configured ? passwordHash : "",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

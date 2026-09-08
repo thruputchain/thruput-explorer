@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { hashSync } from "bcryptjs";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -29,7 +30,7 @@ export default defineConfig({
     env: {
       PLAYWRIGHT_PORT: String(port),
       BASIC_AUTH_USER: credentials.username,
-      BASIC_AUTH_PASSWORD: credentials.password,
+      BASIC_AUTH_HASH: hashSync(credentials.password, 4),
     },
   },
 });
