@@ -123,7 +123,7 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
   const asset = home.body.match(/<script\b[^>]*\bsrc="(\/_next\/static\/[^"?]+\.js(?:\?[^" ]*)?)"/)?.[1];
   assert.ok(asset, "Authenticated homepage must reference a built JavaScript asset");
   const assetPath = asset.replaceAll("&amp;", "&");
-  const routes = ["/", "/tx/not-a-hash", "/address/not-an-address", "/favicon.ico", "/images/hog.png", assetPath];
+  const routes = ["/", "/tx/not-a-hash", "/address/not-an-address", "/api/export.csv", "/images-private/test.png", "/favicon.ico/private"];
 
   for (const path of routes) {
     await t.test(`protects ${path}`, async () => {
@@ -133,9 +133,23 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
       for (const name of ["middleware", "src/middleware", "proxy", "src/proxy"]) {
         await request(path, 401, { headers: { "x-middleware-subrequest": Array(5).fill(name).join(":") } });
       }
-      if (path !== "/") await request(path, 200, { headers });
+      if (["/tx/not-a-hash", "/address/not-an-address"].includes(path)) await request(path, 200, { headers });
     });
   }
+
+  await t.test("public assets bypass authentication", async () => {
+    for (const path of ["/favicon.ico", "/images/hog.png", assetPath]) {
+      const { response } = await request(path, 200);
+      assert.equal(response.headers.get("www-authenticate"), null);
+      await request(path, 200, { method: "HEAD" });
+      await request(path, 200, { headers: { authorization: "Basic %%%" } });
+    }
+  });
+
+  await t.test("RSC navigation and prefetch requests require authentication", async () => {
+    await request("/tx/not-a-hash?_rsc=test", 401, { headers: { rsc: "1" } });
+    await request("/tx/not-a-hash", 401, { headers: { "next-router-prefetch": "1", purpose: "prefetch" } });
+  });
 
   await t.test("API authentication precedes malformed request validation", async () => {
     const options = { method: "POST", body: "{", headers: { "content-type": "application/json" } };
@@ -155,7 +169,8 @@ test("production fails closed without configured credentials", { timeout: 60_000
   const request = await startProduction(t, false);
   await request("/", 503);
   await request("/", 503, { headers: { authorization } });
-  await request("/favicon.ico", 503);
+  await request("/favicon.ico", 200);
+  await request("/images/hog.png", 200);
   await request("/api/search", 503, { method: "POST", body: "{" });
   await request("/health", 200);
 });
