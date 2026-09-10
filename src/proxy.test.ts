@@ -39,13 +39,13 @@ test("health is public and independent of credentials and RPC availability", asy
 });
 
 test("public asset paths skip the proxy", () => {
-  for (const url of ["/_next/static/chunks/test.js", "/_next/static/media/font.woff2", "/images/hog.png", "/images/hog.png?v=2", "/favicon.ico"]) {
+  for (const url of ["/_next/static/chunks/test.js", "/_next/static/media/font.woff2", "/images/hog.png", "/images/hog.png?v=2", "/favicon.ico", "/icon.svg", "/icon.svg?v=2"]) {
     assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url }), false, url);
   }
 });
 
 test("pages, API, data, and asset-like paths require authentication", async () => {
-  for (const path of ["/", "/tx/test", "/address/test", "/api/search", "/_next/data/build/tx/test.json", "/_next/image", "/images-private/test.png", "/_next/static-private/test.js", "/favicon.ico/private", "/faviconXico", "/api/export.csv", "/health/private", "/healthz"]) {
+  for (const path of ["/", "/tx/test", "/address/test", "/api/search", "/_next/data/build/tx/test.json", "/_next/image", "/images-private/test.png", "/_next/static-private/test.js", "/favicon.ico/private", "/faviconXico", "/icon.svg/private", "/iconXsvg", "/api/export.csv", "/health/private", "/healthz"]) {
     assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: path }), true, path);
     const response = await proxy(request(path));
     assert.equal(response.status, 401, path);

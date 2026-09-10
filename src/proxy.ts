@@ -7,7 +7,7 @@ const verifyPassword = createPasswordVerifier();
 
 export const config = {
   // Public assets skip the proxy; page, API, and Next.js data requests still authenticate.
-  matcher: "/((?!_next/static/|images/|favicon\\.ico$).*)",
+  matcher: "/((?!_next/static/|images/|favicon\\.ico$|icon\\.svg$).*)",
 };
 
 export async function proxy(request: NextRequest) {
@@ -45,7 +45,7 @@ export async function proxy(request: NextRequest) {
   return new NextResponse("Authentication required.", {
     status: 401,
     headers: {
-      "WWW-Authenticate": 'Basic realm="Groundhog Explorer", charset="UTF-8"',
+      "WWW-Authenticate": 'Basic realm="Thruput Explorer", charset="UTF-8"',
       "Cache-Control": "no-store",
     },
   });

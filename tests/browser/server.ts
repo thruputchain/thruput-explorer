@@ -20,6 +20,15 @@ async function main() {
       let body = "";
       for await (const chunk of request) body += chunk;
       const { id, method, params } = JSON.parse(body);
+      if (method === "groundhog_getTransactionStatus" && params?.[0] === `0x${"ee".repeat(32)}`) {
+        response.writeHead(503).end("Fixture transaction RPC unavailable");
+        return;
+      }
+      if (method === "groundhog_getTransactionsByAddress" && params?.[0]?.address === `0x${"44".repeat(32)}`) {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32601, message: "Fixture address history unavailable" } }));
+        return;
+      }
       let result: unknown;
       switch (method) {
         case "groundhog_networkInfo":
@@ -29,7 +38,9 @@ async function main() {
           result = { height: 42, blockHash: `0x${"bb".repeat(32)}` };
           break;
         case "groundhog_getTransactionStatus":
-          result = params?.[0] === txHash ? { status: "committed", height: 42 } : { status: "unknown" };
+          result = params?.[0] === txHash
+            ? { status: "committed", height: 42 }
+            : { status: params?.[0] === `0x${"cc".repeat(32)}` ? "pending" : "unknown" };
           break;
         case "groundhog_getTransactionReceipt":
           result = params?.[0] === txHash
@@ -38,7 +49,7 @@ async function main() {
           break;
         case "groundhog_getEvents":
           result = {
-            events: params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
+            events: !JSON.stringify(params).includes("33".repeat(32)) && params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
               ? [{ txHash, blockHeight: 42, sequenceNumber: 0, event }]
               : [],
             cursor: "0x", latestBlock: 42, oldestBlock: 42,

@@ -9,14 +9,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 export function CollapsibleSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Collapsible className="rounded-lg border bg-card">
-      <CollapsibleTrigger
-        render={
-          <Button type="button" variant="ghost" className="h-auto w-full justify-between px-4 py-3">
-            <span>{title}</span>
-            <ChevronDownIcon data-icon="inline-end" />
-          </Button>
-        }
-      />
+      <CollapsibleTrigger asChild>
+        <Button type="button" variant="ghost" className="h-auto w-full justify-between px-4 py-3 [&[data-state=open]>svg]:rotate-180">
+          <span>{title}</span>
+          <ChevronDownIcon data-icon="inline-end" />
+        </Button>
+      </CollapsibleTrigger>
       <CollapsibleContent className="border-t px-4 py-3">{children}</CollapsibleContent>
     </Collapsible>
   );

@@ -1,15 +1,13 @@
 import { Suspense } from "react";
 
 import { SearchHero } from "@/components/search-hero";
-import { AppHeader } from "@/components/app-header";
 import { LatestHogTransfersCard, LatestHogTransfersFallback } from "@/components/latest-hog-transfers-card";
 
 export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background mx-auto w-full max-w-5xl px-4">
-      <AppHeader />
+    <main className="app-container flex-1 py-10 sm:py-14">
       <SearchHero />
       <Suspense fallback={<LatestHogTransfersFallback />}>
         <LatestHogTransfersCard />

@@ -1,6 +1,8 @@
-# Groundhog Transaction Explorer
+# Thruput Explorer
 
-Transaction explorer for Groundhog local nodes and Devnet. The app focuses on transaction lookup, public receipt/status data, decoded token transfer events, and useful placeholders for RPC surfaces that are still evolving.
+Transaction explorer for Thruput local nodes and Devnet. The app focuses on transaction lookup, public receipt/status data, decoded token transfer events, and useful placeholders for RPC surfaces that are still evolving.
+
+The interface uses the dark-only Thruput app theme, locally bundled IBM Plex Sans/Mono fonts, and Radix-based shadcn components. Theme tokens live in `src/app/globals.css` and match the Swap and Token Launchpad apps.
 
 ## Prerequisites
 

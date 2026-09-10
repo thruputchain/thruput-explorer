@@ -6,10 +6,14 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("the site logo loads behind Basic Auth", async ({ page }) => {
-  const logo = page.getByRole("img", { name: "Groundhog", exact: true });
-  await expect(logo).toBeVisible();
-  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+test("the branded home link works from a transaction behind Basic Auth", async ({ page }) => {
+  await expect(page.getByText("Search transactions, contracts, and addresses on Thruput.")).toBeVisible();
+  await page.goto(`/tx/${txHash}`);
+  const home = page.getByRole("link", { name: "Thruput Explorer homepage" });
+  await expect(home).toBeVisible();
+  await home.click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("textbox", { name: "Transaction hash or address" })).toBeVisible();
 });
 
 test("search uses the API and RPC, then renders the decoded transfer", async ({ page }) => {

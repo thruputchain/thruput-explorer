@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -50,27 +51,32 @@ export function SearchHero() {
   }
 
   return (
-    <section className="flex flex-col gap-4 pt-8 max-w-2xl">
-      <div className="flex flex-col gap-3 justify-center">
-        <h1 className="text-2xl leading-none font-semibold tracking-tight text-balance sm:text-3xl">
-          Groundhog Explorer
-        </h1>
-      </div>
+    <section className="flex max-w-2xl flex-col gap-6">
+      <p className="text-lg text-muted-foreground">Search transactions, contracts, and addresses on Thruput.</p>
 
-      <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submit}>
-        <div className="flex flex-1 flex-col gap-2">
-          <Input
-            aria-invalid={error ? true : undefined}
-            value={hash}
-            onChange={(event) => setHash(event.target.value)}
-            placeholder="Search for transactions, contracts, or addresses..."
-          />
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        </div>
-        <Button type="submit" disabled={isPending}>
-          <SearchIcon data-icon="inline-start" />
-          Search
-        </Button>
+      <form onSubmit={submit} aria-label="Explorer search">
+        <FieldGroup className="gap-3 sm:flex-row sm:items-start">
+          <Field className="flex-1" data-invalid={Boolean(error)}>
+            <FieldLabel htmlFor="explorer-search" className="sr-only">Transaction hash or address</FieldLabel>
+            <Input
+              id="explorer-search"
+              name="query"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "search-error" : undefined}
+              value={hash}
+              onChange={(event) => setHash(event.target.value)}
+              placeholder="Transaction hash or address"
+            />
+            {error ? <FieldError id="search-error">{error}</FieldError> : null}
+          </Field>
+          <Button type="submit" size="lg" disabled={isPending} aria-busy={isPending}>
+            <SearchIcon data-icon="inline-start" />
+            Search
+          </Button>
+        </FieldGroup>
       </form>
     </section>
   );

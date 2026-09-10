@@ -9,14 +9,14 @@ export async function LatestHogTransfersCard() {
   const data = await loadLatestHogTransfers();
 
   return (
-    <section className="mx-auto mt-12 w-full pb-12">
+    <section className="mt-10 w-full sm:mt-12">
       <Card>
         <CardHeader>
           <CardTitle>Latest HOG Transfers</CardTitle>
           <CardDescription>Recent transfers emitted by the native HOG contract.</CardDescription>
           <CardAction>
-            <Button render={<Link href={`/address/${data.nativeTokenAddress}`} />} nativeButton={false} variant="outline" size="sm">
-              View all
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/address/${data.nativeTokenAddress}`}>View all</Link>
             </Button>
           </CardAction>
         </CardHeader>
@@ -61,7 +61,7 @@ export async function LatestHogTransfersCard() {
 
 export function LatestHogTransfersFallback() {
   return (
-    <section className="mx-auto mt-12 w-full pb-12">
+    <section className="mt-10 w-full sm:mt-12" aria-busy="true">
       <Card>
         <CardHeader>
           <CardTitle>Latest HOG Transfers</CardTitle>

@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+    <main className="app-container flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
       <p className="font-mono text-sm text-muted-foreground">404</p>
-      <h1 className="text-3xl font-semibold tracking-tight">Page not found</h1>
-      <p className="max-w-md text-muted-foreground">This explorer only supports the home page and transaction detail pages for now.</p>
-      <Button render={<Link href="/" />} variant="outline">
-        Back to search
+      <h1 className="app-page-title">Page not found</h1>
+      <p className="max-w-md text-muted-foreground">Search for a transaction hash or address to explore Thruput.</p>
+      <Button asChild variant="outline">
+        <Link href="/">Back to search</Link>
       </Button>
     </main>
   );

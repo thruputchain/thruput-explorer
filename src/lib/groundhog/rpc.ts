@@ -27,7 +27,7 @@ export function toRpcFailure(error: unknown): RpcFailure {
     };
   }
 
-  return { message: error instanceof Error ? error.message : "Unable to reach Groundhog RPC" };
+  return { message: error instanceof Error ? error.message : "Unable to reach Thruput RPC" };
 }
 
 export function isUnsupportedRpcError(error: unknown) {

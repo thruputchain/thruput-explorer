@@ -138,7 +138,7 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
   }
 
   await t.test("public assets bypass authentication", async () => {
-    for (const path of ["/favicon.ico", "/images/hog.png", assetPath]) {
+    for (const path of ["/icon.svg", "/images/hog.png", assetPath]) {
       const { response } = await request(path, 200);
       assert.equal(response.headers.get("www-authenticate"), null);
       await request(path, 200, { method: "HEAD" });
@@ -169,7 +169,7 @@ test("production fails closed without configured credentials", { timeout: 60_000
   const request = await startProduction(t, false);
   await request("/", 503);
   await request("/", 503, { headers: { authorization } });
-  await request("/favicon.ico", 200);
+  await request("/icon.svg", 200);
   await request("/images/hog.png", 200);
   await request("/api/search", 503, { method: "POST", body: "{" });
   await request("/health", 200);
