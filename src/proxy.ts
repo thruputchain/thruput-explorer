@@ -5,6 +5,11 @@ import { createPasswordVerifier } from "@/lib/basic-auth";
 
 const verifyPassword = createPasswordVerifier();
 
+export const config = {
+  // Public assets skip the proxy; page, API, and Next.js data requests still authenticate.
+  matcher: "/((?!_next/static/|images/|favicon\\.ico$).*)",
+};
+
 export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/health") return NextResponse.next();
 

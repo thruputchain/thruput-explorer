@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { hashSync } from "bcryptjs";
 import { NextRequest } from "next/server";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 
 import { GET } from "./app/health/route";
-import { proxy } from "./proxy";
+import { config, proxy } from "./proxy";
 
 const environment = process.env;
 const password = "test:password";
@@ -37,12 +38,25 @@ test("health is public and independent of credentials and RPC availability", asy
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
-test("pages, API, assets, and health-like paths require authentication", async () => {
-  for (const path of ["/", "/tx/test", "/address/test", "/api/search", "/_next/static/test.js", "/favicon.ico", "/health/private", "/healthz"]) {
+test("public asset paths skip the proxy", () => {
+  for (const url of ["/_next/static/chunks/test.js", "/_next/static/media/font.woff2", "/images/hog.png", "/images/hog.png?v=2", "/favicon.ico"]) {
+    assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url }), false, url);
+  }
+});
+
+test("pages, API, data, and asset-like paths require authentication", async () => {
+  for (const path of ["/", "/tx/test", "/address/test", "/api/search", "/_next/data/build/tx/test.json", "/_next/image", "/images-private/test.png", "/_next/static-private/test.js", "/favicon.ico/private", "/faviconXico", "/api/export.csv", "/health/private", "/healthz"]) {
+    assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: path }), true, path);
     const response = await proxy(request(path));
     assert.equal(response.status, 401, path);
     assert.match(response.headers.get("www-authenticate")!, /^Basic /);
     assert.equal(response.headers.get("cache-control"), "no-store");
+  }
+});
+
+test("RSC and prefetch requests still run the proxy", () => {
+  for (const headers of [{ rsc: "1" }, { "next-router-prefetch": "1" }, { purpose: "prefetch" }]) {
+    assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: "/tx/test?_rsc=test", headers }), true);
   }
 });
 
