@@ -37,7 +37,9 @@ export async function proxy(request: NextRequest) {
     );
     if (usernameMatches && await verifyPassword(supplied.slice(separator + 1), username, passwordHash)) {
       const response = NextResponse.next();
-      response.headers.set("Cache-Control", "private, no-store");
+      // no-transform on the event stream keeps compression and proxies from buffering it.
+      const streaming = request.nextUrl.pathname === "/api/live/stream";
+      response.headers.set("Cache-Control", streaming ? "private, no-store, no-transform" : "private, no-store");
       return response;
     }
   }

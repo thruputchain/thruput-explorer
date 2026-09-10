@@ -50,6 +50,41 @@ The verified block-query version set is CLI/gateway **0.31.0**, public node **0.
 
 Transaction pages request at most 50 references in ascending hash order, not execution order. They do not infer a total transaction count. A terminal continuation can also mean a stale cursor, so the UI does not certify completeness. Repeated cursors, overlapping hashes, or lost coverage stop pagination; **Start fresh** opens a new walk. RPC failures and missing history are distinct from an empty indexed block.
 
+## Live Transactions
+
+`/live` shows settled blocks as they arrive, newest on the right, with one
+square per transaction and a transactions-per-second figure. The page consumes
+`GET /api/live/stream`, a Server-Sent Events route behind the same Basic Auth as
+the rest of the app. The auth proxy sends `Cache-Control: no-transform` for that
+path so compression and intermediaries do not buffer the stream.
+
+The server tails `groundhog_getEvents` for the watched contracts, anchored at a
+height and walked ascending with cursors, and publishes a block only once the
+indexer tip is `LIVE_LAG_BLOCKS` past it (default `3`; keep at least `2` so a
+block is never read while the indexer is still writing it). The display therefore
+runs a few blocks behind the chain, and every published count is complete: a
+transaction is counted once per block when it emits at least one event on a
+watched contract. Transactions that touch none of the watched contracts are
+not visible to this route; the gateway has no block-scoped transaction listing
+yet, and `getBlockByNumber` carries no count.
+
+`LIVE_CONTRACT_ADDRESSES` is a comma-separated list of `0x` contract addresses
+to watch and defaults to the native HOG contract. The gateway accepts at most 25
+addresses per query. Polling runs only while a browser is connected and stops 30
+seconds after the last one leaves.
+
+To demo the page against a local node, start `groundhog node --json
+--block-driver interval --block-interval-ms 1000 --dev-account-count 50`, then
+generate HOG transfers between its dev accounts:
+
+```bash
+GROUNDHOG_RUNTIME_MANIFEST=<runtime_manifest.path from the node's startup JSON> \
+  RATE=300 DURATION=60 node --import tsx scripts/live-load.mts
+```
+
+The script uses the deterministic local dev signers and refuses to run without
+a manifest path, so it cannot be pointed at a shared network by accident.
+
 ## Local Fixtures
 
 To create repeatable local explorer fixtures after starting a fresh node, run:
@@ -80,7 +115,7 @@ pnpm audit
 
 Install the browser once with `pnpm exec playwright install chromium`. Both `pnpm test:production` and `pnpm test:browser` require a completed build and stop their temporary servers after testing. Browser tests use Chromium, Basic Auth, and a local fixture RPC; they do not contact a live Groundhog node. The browser server uses port 3100, or `PLAYWRIGHT_PORT` when set, and refuses to reuse an existing server.
 
-CI runs lint, data-layer regression tests, the production build, HTTP authentication smoke tests, and browser search tests. Run `pnpm bootstrap:local` separately to verify the local CLI, fixture contracts, and node together.
+CI runs lint, data-layer regression tests, the production build, HTTP authentication smoke tests, and browser search and live-stream tests. Run `pnpm bootstrap:local` separately to verify the local CLI, fixture contracts, and node together.
 
 ## Event Decoding
 

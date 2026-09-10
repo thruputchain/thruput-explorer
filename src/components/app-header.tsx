@@ -1,5 +1,7 @@
-import { ZapIcon } from "lucide-react";
+import { ActivityIcon, ZapIcon } from "lucide-react";
 import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
 
 export function AppHeader() {
   return (
@@ -12,6 +14,14 @@ export function AppHeader() {
             <span className="font-mono text-xs text-muted-foreground lg:border-l lg:pl-3">Explorer</span>
           </span>
         </Link>
+        <nav aria-label="Explorer sections" className="ml-auto">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/live" prefetch={false}>
+              <ActivityIcon data-icon="inline-start" aria-hidden="true" />
+              Live transactions
+            </Link>
+          </Button>
+        </nav>
       </div>
     </header>
   );

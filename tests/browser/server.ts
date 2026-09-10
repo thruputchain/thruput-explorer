@@ -28,6 +28,26 @@ async function main() {
   let pending = 0;
   let receiptRequests = 0;
   let released = true;
+  // A simulated chain for the live page: block 42 holds the fixture transaction,
+  // every later block holds 3 + (height % 4) HOG transfers, and a block arrives
+  // every 400ms after the server starts.
+  const liveStart = Date.now();
+  const liveHeight = () => 42 + Math.floor((Date.now() - liveStart) / 400);
+  const liveTxCount = (height: number) => (height < 42 ? 0 : height === 42 ? 1 : 3 + (height % 4));
+  const liveEvents = (fromHeight: number) => {
+    const events = [];
+    for (let height = Math.max(fromHeight, 42); height <= liveHeight(); height += 1) {
+      for (let index = 0; index < liveTxCount(height); index += 1) {
+        events.push({
+          txHash: height === 42 ? txHash : `0x${height.toString(16).padStart(8, "0")}${index.toString(16).padStart(56, "0")}`,
+          blockHeight: String(height),
+          sequenceNumber: 0,
+          event,
+        });
+      }
+    }
+    return events;
+  };
   const rpc = createServer(async (request, response) => {
     try {
       // Local fixture controls let the browser prove ordering without a sleep.
@@ -110,14 +130,30 @@ async function main() {
             ? { txHash: params[0], height: "42", gasUsed: "1000", status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
             : null;
           break;
-        case "groundhog_getEvents":
+        case "groundhog_getEvents": {
+          const watchesHog = params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress));
+          if (params?.[0]?.anchor?.kind === "atHeight") {
+            // Cursor bytes are the decimal offset into the matching events.
+            const offset = params[0].cursor && params[0].cursor !== "0x" ? Number(Buffer.from(params[0].cursor.slice(2), "hex").toString()) : 0;
+            const matching = watchesHog ? liveEvents(Number(params[0].anchor.height)) : [];
+            const limit = Number(params[0].limit) || 50;
+            const pageEvents = matching.slice(offset, offset + limit);
+            const next = offset + pageEvents.length;
+            result = {
+              events: pageEvents,
+              cursor: next < matching.length ? `0x${Buffer.from(String(next)).toString("hex")}` : "0x",
+              latestBlock: String(liveHeight()), oldestBlock: "0",
+            };
+            break;
+          }
           result = {
-            events: !JSON.stringify(params).includes("33".repeat(32)) && params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
+            events: !JSON.stringify(params).includes("33".repeat(32)) && watchesHog
               ? [{ txHash, blockHeight: "42", sequenceNumber: 0, event }]
               : [],
-            cursor: "0x", latestBlock: "42", oldestBlock: "42",
+            cursor: "0x", latestBlock: String(liveHeight()), oldestBlock: "0",
           };
           break;
+        }
         case "groundhog_getBalance":
           result = { address: params?.[0], rawBalance: "25000000", height: "42" };
           break;

@@ -98,7 +98,7 @@ async function startProduction(t, configured) {
   }
   assert.ok(Date.now() < deadline, `Next was not ready within 30s: ${lastError}\n${logs}`);
 
-  return async function request(path, status, options = {}) {
+  const request = async function request(path, status, options = {}) {
     try {
       const response = await fetch(new URL(path, origin), {
         ...options,
@@ -113,6 +113,9 @@ async function startProduction(t, configured) {
       throw new Error(`${options.method ?? "GET"} ${path} failed\nNext production logs:\n${logs}`, { cause: error });
     }
   };
+  request.origin = origin;
+  request.logs = () => logs;
+  return request;
 }
 
 test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
@@ -123,7 +126,7 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
   const asset = home.body.match(/<script\b[^>]*\bsrc="(\/_next\/static\/[^"?]+\.js(?:\?[^" ]*)?)"/)?.[1];
   assert.ok(asset, "Authenticated homepage must reference a built JavaScript asset");
   const assetPath = asset.replaceAll("&amp;", "&");
-  const routes = ["/", "/tx/not-a-hash", "/address/not-an-address", "/api/export.csv", "/images-private/test.png", "/favicon.ico/private"];
+  const routes = ["/", "/live", "/tx/not-a-hash", "/address/not-an-address", "/api/live/stream", "/api/export.csv", "/images-private/test.png", "/favicon.ico/private"];
 
   for (const path of routes) {
     await t.test(`protects ${path}`, async () => {
@@ -133,7 +136,7 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
       for (const name of ["middleware", "src/middleware", "proxy", "src/proxy"]) {
         await request(path, 401, { headers: { "x-middleware-subrequest": Array(5).fill(name).join(":") } });
       }
-      if (["/tx/not-a-hash", "/address/not-an-address"].includes(path)) await request(path, 200, { headers });
+      if (["/live", "/tx/not-a-hash", "/address/not-an-address"].includes(path)) await request(path, 200, { headers });
     });
   }
 
@@ -162,6 +165,29 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
 
   await t.test("health is public", async () => {
     await request("/health", 200);
+  });
+
+  await t.test("the live stream opens with an uncompressed hello frame", async () => {
+    const controller = new AbortController();
+    const response = await fetch(new URL("/api/live/stream", request.origin), { headers, signal: controller.signal });
+    try {
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get("content-type") ?? "", /^text\/event-stream/);
+      assert.equal(response.headers.get("content-encoding"), null, "compression would buffer the stream");
+      assert.match(response.headers.get("cache-control") ?? "", /\bno-transform\b/);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+      const deadline = Date.now() + 10_000;
+      while (!/event: hello\ndata: .*\n\n/.test(text) && Date.now() < deadline) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+      assert.match(text, /^retry: 3000\n\nevent: hello\ndata: \{"type":"hello","rpcUrl":"http:\/\/127\.0\.0\.1:\d+"/, request.logs());
+    } finally {
+      controller.abort();
+    }
   });
 });
 
