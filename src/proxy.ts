@@ -1,6 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { compare } from "bcryptjs";
 import { NextResponse, type NextRequest } from "next/server";
+
+import { createPasswordVerifier } from "@/lib/basic-auth";
+
+const verifyPassword = createPasswordVerifier();
 
 export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/health") return NextResponse.next();
@@ -27,7 +30,7 @@ export async function proxy(request: NextRequest) {
       createHash("sha256").update(supplied.slice(0, separator)).digest(),
       createHash("sha256").update(username).digest(),
     );
-    if (usernameMatches && await compare(supplied.slice(separator + 1), passwordHash)) {
+    if (usernameMatches && await verifyPassword(supplied.slice(separator + 1), username, passwordHash)) {
       const response = NextResponse.next();
       response.headers.set("Cache-Control", "private, no-store");
       return response;
