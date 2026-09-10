@@ -19,11 +19,11 @@ export default async function TransactionPage({
   const data = await loadTransactionPageData(hash);
 
   return (
-    <main className="min-h-screen bg-background px-4 pt-4">
+    <main className="min-w-0 flex-1">
       <TransactionHeader data={data} />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-8">
+      <div className="app-container flex flex-col gap-6 py-8">
         {data.status.status === "unavailable" ? (
-          <RpcAlert title="Groundhog RPC unavailable" description="The transaction page could not load from the configured RPC endpoint." error={data.status.error} />
+          <RpcAlert title="Thruput RPC unavailable" description="The transaction page could not load from the configured RPC endpoint." error={data.status.error} />
         ) : null}
 
         {data.status.status === "unknown" ? (

@@ -1,21 +1,15 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { cn } from "@/lib/utils";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { AppHeader } from "@/components/app-header";
 
 export const metadata: Metadata = {
-  title: "Groundhog Transaction Explorer",
+  title: "Thruput Explorer",
+  description: "Explore transactions, addresses, and token transfers on Thruput.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#10110f",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -24,17 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={cn(
-        "antialiased",
-        geistSans.variable,
-        geistMono.variable,
-      )}
-    >
-      <body className="flex min-h-full flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+    <html lang="en" className="dark">
+      <body className="flex min-h-svh flex-col">
+        <AppHeader />
+        {children}
       </body>
     </html>
   );

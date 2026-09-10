@@ -99,7 +99,7 @@ function DecodedEvent({
           </>
         ) : null}
         <EventLabel>Amount</EventLabel>
-        <p>
+        <p className="font-mono tabular-nums wrap-anywhere">
           {event.amount}
           {event.symbol ? ` ${event.symbol}` : ""}
         </p>

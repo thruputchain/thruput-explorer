@@ -38,7 +38,7 @@ export default async function AddressPage({
   const data = await loadAddressPageData(address);
 
   return (
-    <main className="min-h-screen bg-background px-4 pt-4">
+    <main className="min-w-0 flex-1">
       <PageHeader
         eyebrow="Address"
         title={data.status === "ok" && data.label ? data.label : "Address"}
@@ -47,7 +47,7 @@ export default async function AddressPage({
         copyLabel="Copy address"
       />
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-8">
+      <div className="app-container flex flex-col gap-6 py-8">
         {data.status === "malformed" ? (
           <Alert variant="destructive">
             <AlertCircleIcon />
@@ -58,7 +58,7 @@ export default async function AddressPage({
 
         {data.status === "unavailable" ? (
           <RpcAlert
-            title="Groundhog RPC unavailable"
+            title="Thruput RPC unavailable"
             description="The address page could not load from the configured RPC endpoint."
             error={data.error}
           />
@@ -102,7 +102,7 @@ function AddressActivityTabs({
 }) {
   return (
     <Tabs defaultValue="transactions" className="w-full">
-      <TabsList variant="line">
+      <TabsList variant="line" aria-label="Address activity">
         <TabsTrigger value="transactions">Transactions</TabsTrigger>
         <TabsTrigger value="transfers">HOG Transfers</TabsTrigger>
       </TabsList>
@@ -136,14 +136,14 @@ function AddressSummaryCard({
       <CardHeader>
         <CardTitle>Summary</CardTitle>
         <CardDescription>
-          Current public RPC view of this Groundhog address.
+          Current public RPC view of this Thruput address.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_1fr]">
+      <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_minmax(0,1fr)]">
         <SummaryLabel>Address</SummaryLabel>
         <code className="break-all text-xs">{data.address}</code>
         <SummaryLabel>Native balance</SummaryLabel>
-        <p>
+        <p className="font-mono tabular-nums wrap-anywhere">
           {data.nativeBalance
             ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}`
             : "Not available"}
@@ -155,11 +155,11 @@ function AddressSummaryCard({
         {data.metadata ? (
           <>
             <SummaryLabel>Token name</SummaryLabel>
-            <p>{data.metadata.name}</p>
+            <p className="wrap-anywhere">{data.metadata.name}</p>
             <SummaryLabel>Token symbol</SummaryLabel>
-            <p>{data.metadata.symbol}</p>
+            <p className="font-mono wrap-anywhere">{data.metadata.symbol}</p>
             <SummaryLabel>Token decimals</SummaryLabel>
-            <p>{data.metadata.decimals}</p>
+            <p className="font-mono tabular-nums">{data.metadata.decimals}</p>
           </>
         ) : null}
         <SummaryLabel>RPC URL</SummaryLabel>
