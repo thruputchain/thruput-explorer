@@ -85,8 +85,13 @@ the `groundhog-rpc` repo:
 cargo build --release -p groundhog-bench   # in groundhog-rpc
 target/release/groundhog-bench --url http://127.0.0.1:9545 \
   --runtime-manifest <runtime_manifest.path from the node's startup JSON> \
-  --method sendRawTransaction --rate 3000 --duration 60 --accounts 50 --workers 8 --force
+  --method sendRawTransaction --payload hog-transfer \
+  --rate 3000 --duration 60 --accounts 50 --workers 8 --force
 ```
+
+`--payload hog-transfer` needs `groundhog-rpc` branch `feat/bench-hog-transfer`
+until it merges; the bench's default payload commits as a fault with no
+events, so the live page would count nothing.
 
 ## Local Fixtures
 
