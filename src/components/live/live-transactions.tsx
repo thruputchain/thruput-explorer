@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { BlockWall } from "@/components/live/block-wall";
+import { DustStream } from "@/components/live/dust-stream";
 import { useLiveStream, type LiveConnection } from "@/components/live/use-live-stream";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -69,7 +69,7 @@ export function LiveTransactions() {
             {showTable ? "Hide table" : "Show table"}
           </Button>
         </div>
-        <BlockWall blocks={stream.blocks} now={now} className="h-64 sm:h-80 lg:h-96" />
+        <DustStream blocks={stream.blocks} blockIntervalMs={stats.blockIntervalMs} className="h-64 sm:h-80 lg:h-96" />
       </section>
 
       {showTable ? (

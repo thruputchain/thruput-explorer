@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { representation } from "@/components/live/dust-stream";
+
 import { formatAge, formatInteger, formatRate, formatSeconds } from "./format";
 import { computeLiveStats, mergeLiveBlocks } from "./stats";
 import type { LiveBlock } from "./types";
@@ -55,4 +57,13 @@ test("formatting keeps large heights exact and rates readable", () => {
   assert.equal(formatSeconds(125_000), "2 min");
   assert.equal(formatAge(null, 10_000), "before the stream started");
   assert.equal(formatAge(7_000, 10_000), "3 s ago");
+});
+
+test("dust representation keeps one speck per transaction until a block exceeds the speck budget", () => {
+  assert.deepEqual(representation(0), { specks: 0, perSpeck: 1 });
+  assert.deepEqual(representation(1), { specks: 1, perSpeck: 1 });
+  assert.deepEqual(representation(6_000), { specks: 6_000, perSpeck: 1 });
+  assert.deepEqual(representation(6_001), { specks: 3_001, perSpeck: 2 });
+  assert.deepEqual(representation(25_000), { specks: 5_000, perSpeck: 5 });
+  assert.deepEqual(representation(10, 4), { specks: 4, perSpeck: 3 });
 });

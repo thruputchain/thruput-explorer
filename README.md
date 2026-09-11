@@ -52,8 +52,11 @@ Transaction pages request at most 50 references in ascending hash order, not exe
 
 ## Live Transactions
 
-`/live` shows settled blocks as they arrive, newest on the right, with one
-square per transaction and a transactions-per-second figure. The page consumes
+`/live` shows transactions as dust flowing through space: each settled block
+releases one speck per transaction, spread over the block interval, alongside a
+transactions-per-second figure and a table view. Above 6,000 transactions in a
+block one speck stands for several and the caption says so; the figures are
+always exact. The page consumes
 `GET /api/live/stream`, a Server-Sent Events route behind the same Basic Auth as
 the rest of the app. The auth proxy sends `Cache-Control: no-transform` for that
 path so compression and intermediaries do not buffer the stream.

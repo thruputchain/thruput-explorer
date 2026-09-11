@@ -11,7 +11,8 @@ test("the header links to the live page and settled blocks stream in with exact 
 
   await expect(page.getByText(/^Live, \d+ blocks? behind the indexer tip/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/transactions per second over the last/)).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("img", { name: /newest on the right/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Latest block \d[\d,]* has \d+ transactions/ })).toBeVisible();
+  await expect(page.getByText(/^Each speck is one transaction/)).toBeVisible();
 
   const toggle = page.getByRole("button", { name: /table$/ });
   await expect(toggle).toHaveText("Show table");
