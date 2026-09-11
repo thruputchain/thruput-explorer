@@ -76,17 +76,17 @@ to watch and defaults to the native HOG contract. The gateway accepts at most 25
 addresses per query. Polling runs only while a browser is connected and stops 30
 seconds after the last one leaves.
 
-To demo the page against a local node, start `groundhog node --json
---block-driver interval --block-interval-ms 1000 --dev-account-count 50`, then
-generate HOG transfers between its dev accounts:
+To demo the page against a local node, start
+`groundhog node --block-driver interval --block-interval-ms 1000 --dev-account-count 50`
+and generate HOG transfers between its dev accounts with `groundhog-bench` from
+the `groundhog-rpc` repo:
 
 ```bash
-GROUNDHOG_RUNTIME_MANIFEST=<runtime_manifest.path from the node's startup JSON> \
-  RATE=300 DURATION=60 node --import tsx scripts/live-load.mts
+cargo build --release -p groundhog-bench   # in groundhog-rpc
+target/release/groundhog-bench --url http://127.0.0.1:9545 \
+  --runtime-manifest <runtime_manifest.path from the node's startup JSON> \
+  --method sendRawTransaction --rate 3000 --duration 60 --accounts 50 --workers 8 --force
 ```
-
-The script uses the deterministic local dev signers and refuses to run without
-a manifest path, so it cannot be pointed at a shared network by accident.
 
 ## Local Fixtures
 
