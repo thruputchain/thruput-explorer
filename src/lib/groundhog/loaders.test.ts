@@ -95,7 +95,7 @@ test("async client connection failures become unavailable for every loader", asy
   assert.equal(request.mock.callCount(), 0);
 });
 
-test("partial HOG metadata preserves successful fields and fills missing fields", async (t) => {
+test("partial custom-token metadata preserves successful fields", async (t) => {
   const client = await createGroundhogClient({ transport: new MockTransport() });
   t.mock.method(ERC20Metadata.name, "view", async () => ({ value: "Groundhog" }));
   t.mock.method(ERC20Metadata.symbol, "view", async () => {
@@ -105,8 +105,8 @@ test("partial HOG metadata preserves successful fields and fills missing fields"
     throw new Error("Decimals view unavailable");
   });
 
-  assert.deepEqual(await getTokenMetadata(client, NATIVE_HOG_ADDRESS), {
-    name: "Groundhog", symbol: "HOG", decimals: 7,
+  assert.deepEqual(await getTokenMetadata(client, hash), {
+    name: "Groundhog", symbol: undefined, decimals: undefined,
   });
 });
 
@@ -137,7 +137,7 @@ test("unavailable metadata falls back for HOG but does not label other contracts
   assert.equal(await getTokenMetadata(client, hash), undefined);
 });
 
-test("invalid HOG decimals fall back without replacing a successful symbol", async (t) => {
+test("invalid custom-token decimals are omitted without replacing a successful symbol", async (t) => {
   const client = await createGroundhogClient({ transport: new MockTransport() });
   t.mock.method(ERC20Metadata.name, "view", async () => {
     throw new Error("Name view unavailable");
@@ -145,8 +145,8 @@ test("invalid HOG decimals fall back without replacing a successful symbol", asy
   t.mock.method(ERC20Metadata.symbol, "view", async () => ({ value: "LIVE" }));
   for (const decimals of [-1n, 31n]) {
     const view = t.mock.method(ERC20Metadata.decimals, "view", async () => ({ value: decimals }));
-    assert.deepEqual(await getTokenMetadata(client, NATIVE_HOG_ADDRESS), {
-      name: "HOG", symbol: "LIVE", decimals: 7,
+    assert.deepEqual(await getTokenMetadata(client, hash), {
+      name: undefined, symbol: "LIVE", decimals: undefined,
     });
     view.mock.restore();
   }

@@ -14,8 +14,14 @@ const BUILT_IN_TOKEN_METADATA: Record<string, TokenMetadata> = {
   [NATIVE_HOG_ADDRESS]: { name: "HOG", symbol: "HOG", decimals: 7 },
 };
 
+export function getBuiltInTokenMetadata(address: string): TokenMetadata | undefined {
+  return BUILT_IN_TOKEN_METADATA[normalizeAddress(address)];
+}
+
 export async function getTokenMetadata(client: GroundhogClient, address: string): Promise<TokenMetadata | undefined> {
-  const fallback = BUILT_IN_TOKEN_METADATA[normalizeAddress(address)];
+  // Native HOG is a precompile without ERC20Metadata entrypoints.
+  const builtIn = getBuiltInTokenMetadata(address);
+  if (builtIn) return builtIn;
   const contract = addressFromHex(address);
   const [name, symbol, decimals] = await Promise.all([
     viewMetadataValue(() => ERC20Metadata.name.view({ client, contract })),
@@ -23,12 +29,12 @@ export async function getTokenMetadata(client: GroundhogClient, address: string)
     viewMetadataValue(() => ERC20Metadata.decimals.view({ client, contract })),
   ]);
 
-  if (name == null && symbol == null && decimals == null) return fallback;
+  if (name == null && symbol == null && decimals == null) return undefined;
 
   return {
-    name: name ?? fallback?.name,
-    symbol: symbol ?? fallback?.symbol,
-    decimals: normalizeDecimals(decimals) ?? fallback?.decimals,
+    name: name ?? undefined,
+    symbol: symbol ?? undefined,
+    decimals: normalizeDecimals(decimals),
   };
 }
 
