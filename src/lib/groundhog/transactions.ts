@@ -91,8 +91,8 @@ function formatEvent(event: EmittedEvent, metadata?: TokenMetadata): EventView {
     contractName: metadata?.name,
     topics: event.topics.map(toHex),
     data: toHex(event.data),
-    // Without metadata, show raw events rather than an unscaled token amount.
-    decoded: metadata ? decodeTokenEvent(event, metadata) : undefined,
+    // Names and symbols alone cannot establish the token amount scale.
+    decoded: metadata?.decimals !== undefined ? decodeTokenEvent(event, metadata) : undefined,
   };
 }
 

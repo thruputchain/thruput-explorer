@@ -239,3 +239,33 @@ test("native HOG events have canonical metadata without any view requests", asyn
   assert.deepEqual(await result.loadEnrichedEvents!(), result.receipt!.events);
   assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_view").length, 0);
 });
+
+for (const decimals of [undefined, -1n, 31n, 0n]) {
+  test(`custom-token enrichment handles ${decimals === undefined ? "unavailable" : decimals} decimals without guessing the scale`, async (t) => {
+    const contractAddress = `0x${"55".repeat(32)}`;
+    const event = transferEvent({ contractAddress, amount: 10000000n });
+    const wireEvent = { contractAddress, topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
+    const receipt = { ...rawReceipt, events: [wireEvent] };
+    mockRpc(t, { groundhog_getTransactionReceipt: receipt });
+    t.mock.method(ERC20Metadata.name, "view", async () => ({ value: "Custom token" }));
+    t.mock.method(ERC20Metadata.symbol, "view", async () => ({ value: "TOKEN" }));
+    t.mock.method(ERC20Metadata.decimals, "view", async () => {
+      if (decimals === undefined) throw new Error("Decimals unavailable");
+      return { value: decimals };
+    });
+
+    const result = await loadTransactionPageData(hash);
+    const [enriched] = await result.loadEnrichedEvents!();
+    assert.equal(enriched.contractName, "Custom token");
+    assert.equal(enriched.contractAddress, wireEvent.contractAddress);
+    assert.deepEqual(enriched.topics, wireEvent.topics);
+    assert.equal(enriched.data, wireEvent.data);
+    assert.deepEqual(JSON.parse(result.receipt!.rawJson!), receipt);
+    if (decimals === 0n) {
+      assert.equal(enriched.decoded?.amount, "10000000");
+      assert.equal(enriched.decoded?.symbol, "TOKEN");
+    } else {
+      assert.equal(enriched.decoded, undefined);
+    }
+  });
+}
