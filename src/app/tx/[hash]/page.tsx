@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { AlertCircleIcon } from "lucide-react";
 
 import { RpcAlert } from "@/components/rpc-alert";
@@ -6,7 +8,7 @@ import { TransactionHeader } from "@/components/transaction/transaction-header";
 import { TransactionRawReceiptCard } from "@/components/transaction/transaction-raw-receipt-card";
 import { TransactionSummaryCard } from "@/components/transaction/transaction-summary-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { loadTransactionPageData } from "@/lib/groundhog/transactions";
+import { loadTransactionPageData, type LoadedTransactionPage } from "@/lib/groundhog/transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +39,18 @@ export default async function TransactionPage({
         ) : null}
 
         <TransactionSummaryCard data={data} />
-        <TransactionEventsCard events={data.receipt?.events ?? []} />
+        <Suspense fallback={<TransactionEventsCard events={data.receipt?.events ?? []} />}>
+          <EnrichedTransactionEvents data={data} />
+        </Suspense>
         <TransactionRawReceiptCard data={data} />
       </div>
     </main>
   );
+}
+
+async function EnrichedTransactionEvents({ data }: { data: LoadedTransactionPage }) {
+  const events = data.loadEnrichedEvents
+    ? await data.loadEnrichedEvents()
+    : data.receipt?.events ?? [];
+  return <TransactionEventsCard events={events} />;
 }

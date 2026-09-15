@@ -2,8 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 import { hashSync } from "bcryptjs";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error("PLAYWRIGHT_PORT must be an integer between 1 and 65535");
+if (!Number.isInteger(port) || port < 1 || port > 65534) {
+  throw new Error("PLAYWRIGHT_PORT must be an integer between 1 and 65534 (the RPC fixture uses the next port)");
 }
 const baseURL = `http://127.0.0.1:${port}`;
 const credentials = { username: "browser-test-only", password: "browser-test-only-password" };

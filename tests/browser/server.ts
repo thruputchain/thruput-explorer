@@ -15,8 +15,30 @@ async function main() {
     topics: transfer.topics.map(toHex0x),
     data: toHex0x(transfer.data),
   };
+  const slowTxHash = `0x${"dd".repeat(32)}`;
+  const slowEvent = { ...event, contractAddress: `0x${"55".repeat(32)}` };
+  let releaseMetadata = () => {};
+  let metadataGate = Promise.resolve();
+  let pending = 0;
+  let receiptRequests = 0;
+  let released = true;
   const rpc = createServer(async (request, response) => {
     try {
+      // Local fixture controls let the browser prove ordering without a sleep.
+      if (request.url?.startsWith("/metadata/")) {
+        if (request.url === "/metadata/reset" && request.method === "POST") {
+          releaseMetadata();
+          metadataGate = new Promise<void>((resolve) => { releaseMetadata = resolve; });
+          receiptRequests = 0;
+          released = false;
+        } else if (request.url === "/metadata/release" && request.method === "POST") {
+          released = true;
+          releaseMetadata();
+        }
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ pending, receiptRequests, released }));
+        return;
+      }
       let body = "";
       for await (const chunk of request) body += chunk;
       const { id, method, params } = JSON.parse(body);
@@ -38,13 +60,14 @@ async function main() {
           result = { height: 42, blockHash: `0x${"bb".repeat(32)}` };
           break;
         case "groundhog_getTransactionStatus":
-          result = params?.[0] === txHash
+          result = [txHash, slowTxHash].includes(params?.[0])
             ? { status: "committed", height: 42 }
             : { status: params?.[0] === `0x${"cc".repeat(32)}` ? "pending" : "unknown" };
           break;
         case "groundhog_getTransactionReceipt":
-          result = params?.[0] === txHash
-            ? { txHash, height: 42, status: { result: "ok" }, events: [event], returnData: null, abortData: null }
+          if (params?.[0] === slowTxHash) receiptRequests++;
+          result = [txHash, slowTxHash].includes(params?.[0])
+            ? { txHash: params[0], height: 42, status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
             : null;
           break;
         case "groundhog_getEvents":
@@ -62,7 +85,11 @@ async function main() {
           result = { refs: [], cursor: "0x", latestBlock: 42, oldestBlock: 42 };
           break;
         default:
-          // Metadata views deliberately use the application's built-in HOG fallback.
+          if (method === "groundhog_view" && JSON.stringify(params).includes("55".repeat(32))) {
+            pending++;
+            try { await metadataGate; } finally { pending--; }
+          }
+          // Metadata errors exercise the application's fallback rendering.
           if (method !== "groundhog_view") console.error(`Unexpected fixture RPC method: ${method}`);
           response.writeHead(200, { "content-type": "application/json" });
           response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32601, message: "Fixture method unavailable" } }));
@@ -74,7 +101,7 @@ async function main() {
       response.writeHead(400).end();
     }
   });
-  rpc.listen(0, "127.0.0.1");
+  rpc.listen(Number(process.env.PLAYWRIGHT_PORT ?? 3100) + 1, "127.0.0.1");
   await once(rpc, "listening");
   const address = rpc.address();
   if (!address || typeof address === "string") throw new Error("Fixture RPC did not bind a TCP port");
@@ -93,6 +120,7 @@ async function main() {
   const stop = () => {
     if (stopping) return;
     stopping = true;
+    releaseMetadata();
     child.kill("SIGTERM");
     setTimeout(() => child.kill("SIGKILL"), 5_000).unref();
   };

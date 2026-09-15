@@ -1,4 +1,4 @@
-import { hashFromHex, toHex0x, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
+import { getTransactionReceipt, hashFromHex, toHex0x, type EmittedEvent, type GroundhogClient, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
 import { ExecResult } from "@groundhogchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
@@ -7,10 +7,14 @@ import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
 import { stringifyJson } from "./format";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
-import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
-import type { TransactionPageData } from "./types";
+import { getBuiltInTokenMetadata, getTokenMetadata, type TokenMetadata } from "./token-metadata";
+import type { EventView, TransactionPageData } from "./types";
 
-export async function loadTransactionPageData(hashInput: string): Promise<TransactionPageData> {
+export type LoadedTransactionPage = TransactionPageData & {
+  loadEnrichedEvents?: () => Promise<EventView[]>;
+};
+
+export async function loadTransactionPageData(hashInput: string): Promise<LoadedTransactionPage> {
   const hash = normalizeTransactionHash(hashInput);
   const { rpcUrl } = getExplorerRpcConfig();
 
@@ -27,26 +31,30 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
     const { transport, client } = await createExplorerGroundhogClient();
     const txHash = hashFromHex(hash);
 
-    const [status, receipt, chainTip, rawReceipt] = await Promise.all([
+    let rawReceipt: unknown;
+    // Capture the response consumed by the SDK validator, rather than issue a
+    // second request that could observe a different receipt.
+    const receiptRequest = getTransactionReceipt({
+      async request<T>(method: string, params?: unknown[]) {
+        const response = await transport.request<T>(method, params);
+        rawReceipt = response;
+        return response;
+      },
+    }, txHash);
+    const [status, receipt, chainTip] = await Promise.all([
       client.getTransactionStatus(txHash),
-      client.getTransactionReceipt(txHash),
+      receiptRequest,
       client.getChainTip().catch(() => undefined),
-      transport.request<unknown>("groundhog_getTransactionReceipt", [hash]).catch(() => undefined),
     ]);
-    const metadataByAddress = new Map<string, TokenMetadata | undefined>();
-    if (receipt) {
-      await Promise.all(
-        Array.from(new Set(receipt.events.map((event) => toHex(event.contractAddress)))).map(async (contractAddress) => {
-          metadataByAddress.set(contractAddress, await getTokenMetadata(client, contractAddress));
-        }),
-      );
-    }
 
     return {
       hash,
       rpcUrl,
       status: formatTransactionStatus(status),
       chainTipHeight: chainTip?.height.toString(),
+      loadEnrichedEvents: receipt?.events.length
+        ? () => enrichTransactionEvents(client, receipt.events)
+        : undefined,
       receipt: receipt
         ? {
             txHash: toHex(receipt.txHash),
@@ -54,17 +62,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
             execResult: formatExecResult(receipt.execResult),
             returnData: receipt.returnData ? toHex(receipt.returnData) : null,
             abortData: receipt.abortData ? toHex(receipt.abortData) : null,
-            events: receipt.events.map((event) => {
-              const contractAddress = toHex(event.contractAddress);
-
-              return {
-                contractAddress,
-                contractName: metadataByAddress.get(contractAddress)?.name,
-                topics: event.topics.map(toHex),
-                data: toHex(event.data),
-                decoded: decodeTokenEvent(event, metadataByAddress.get(contractAddress)),
-              };
-            }),
+            events: receipt.events.map((event) => formatEvent(event, getBuiltInTokenMetadata(toHex(event.contractAddress)))),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),
           }
         : null,
@@ -77,6 +75,25 @@ export async function loadTransactionPageData(hashInput: string): Promise<Transa
       receipt: null,
     };
   }
+}
+
+async function enrichTransactionEvents(client: GroundhogClient, events: EmittedEvent[]): Promise<EventView[]> {
+  const metadataByAddress = new Map<string, TokenMetadata | undefined>();
+  await Promise.all(Array.from(new Set(events.map((event) => toHex(event.contractAddress)))).map(async (address) => {
+    metadataByAddress.set(address, await getTokenMetadata(client, address));
+  }));
+  return events.map((event) => formatEvent(event, metadataByAddress.get(toHex(event.contractAddress))));
+}
+
+function formatEvent(event: EmittedEvent, metadata?: TokenMetadata): EventView {
+  return {
+    contractAddress: toHex(event.contractAddress),
+    contractName: metadata?.name,
+    topics: event.topics.map(toHex),
+    data: toHex(event.data),
+    // Names and symbols alone cannot establish the token amount scale.
+    decoded: metadata?.decimals !== undefined ? decodeTokenEvent(event, metadata) : undefined,
+  };
 }
 
 function formatTransactionStatus(status: SdkTransactionStatus) {
