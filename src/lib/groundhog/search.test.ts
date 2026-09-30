@@ -6,6 +6,7 @@ import { addressFromHex, createGroundhogClient, hashFromHex, MockTransport } fro
 import { ERC20Metadata } from "@groundhogchain/client/contracts";
 
 import { POST } from "../../app/api/search/route";
+import { displayAddress } from "../address";
 
 const sdk: typeof import("@groundhogchain/client") = createRequire(import.meta.url)("@groundhogchain/client");
 const hash = `0x${"ab".repeat(32)}`;
@@ -42,7 +43,7 @@ test("search prefers known transactions and routes unknown hashes to addresses d
   const address = await POST(request(hash));
   assert.equal(address.status, 200);
   assert.deepEqual(await address.json(), {
-    status: "ok", href: `/address/${hash}`,
+    status: "ok", href: `/address/${displayAddress(hash)}`,
     context: { hasNativeBalance: false, hasRootTransactions: false, token: false },
   });
 });
@@ -60,11 +61,30 @@ test("search reports successful address context even when the available balance 
   const response = await POST(request(hash));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    status: "ok", href: `/address/${hash}`,
+    status: "ok", href: `/address/${displayAddress(hash)}`,
     context: { hasNativeBalance: true, hasRootTransactions: true, token: true },
   });
   assert.deepEqual(balance.mock.calls[0].arguments, [addressFromHex(hash)]);
   assert.deepEqual(transactions.mock.calls[0].arguments, [{ address: addressFromHex(hash), order: "descending", anchor: "end", limit: 1 }]);
+});
+
+test("search accepts a StrKey address without a transaction lookup", async (t) => {
+  const client = await createGroundhogClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  const status = t.mock.method(client, "getTransactionStatus", async () => { throw new Error("Unexpected status lookup"); });
+  const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 5n, height: 42n }));
+  t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [] }));
+  t.mock.method(client, "view", async () => { throw new Error("Unavailable"); });
+
+  const strkey = displayAddress(hash);
+  const response = await POST(request(strkey));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    status: "ok", href: `/address/${strkey}`,
+    context: { hasNativeBalance: true, hasRootTransactions: false, token: false },
+  });
+  assert.equal(status.mock.callCount(), 0);
+  assert.deepEqual(balance.mock.calls[0].arguments, [addressFromHex(hash)]);
 });
 
 test("a failed transaction-status lookup returns 503 without guessing an address", async (t) => {

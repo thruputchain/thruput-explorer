@@ -1,6 +1,7 @@
 import { getTransactionReceipt, hashFromHex, toHex0x, type EmittedEvent, type GroundhogClient, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
 import { ExecResult } from "@groundhogchain/protocol";
 
+import { hexifyAddresses } from "@/lib/address";
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
@@ -38,7 +39,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
       async request<T>(method: string, params?: unknown[]) {
         const response = await transport.request<T>(method, params);
         rawReceipt = response;
-        return response;
+        return hexifyAddresses(response) as T;
       },
     }, txHash);
     const [status, receipt, chainTip] = await Promise.all([

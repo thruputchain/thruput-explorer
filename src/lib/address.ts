@@ -35,6 +35,22 @@ export function displayAddress(value: string): string {
   return HEX_ADDRESS.test(lowercase) ? formatContractAddress(hexToBytes(lowercase.slice(2))) : value;
 }
 
+/**
+ * Copy of a decoded JSON-RPC result with every C StrKey string rewritten as
+ * 0x hex. The RPC returns addresses as StrKeys, and the SDK parses only hex.
+ */
+export function hexifyAddresses(value: unknown): unknown {
+  if (typeof value === "string") {
+    const bytes = CONTRACT_STRKEY.test(value) ? decodeContractStrKey(value) : null;
+    return bytes ? bytesToHex0x(bytes) : value;
+  }
+  if (Array.isArray(value)) return value.map(hexifyAddresses);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, hexifyAddresses(item)]));
+  }
+  return value;
+}
+
 function decodeContractStrKey(text: string): Uint8Array | null {
   if (!CONTRACT_STRKEY.test(text)) return null;
   const data = base32Decode(text);

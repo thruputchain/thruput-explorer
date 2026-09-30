@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bytesToHex0x, displayAddress, formatContractAddress, parseContractAddress } from "./address";
+import { bytesToHex0x, displayAddress, formatContractAddress, hexifyAddresses, parseContractAddress } from "./address";
 
 // SEP-23 example contract address and its 32-byte payload.
 const SEP23_STRKEY = "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE";
@@ -47,4 +47,20 @@ test("displays hex as a StrKey and leaves other text unchanged", () => {
   assert.equal(displayAddress(SEP23_HEX), SEP23_STRKEY);
   assert.equal(displayAddress(SEP23_STRKEY), SEP23_STRKEY);
   assert.equal(displayAddress("not an address"), "not an address");
+});
+
+test("rewrites StrKeys nested in an RPC result as hex and leaves the rest alone", () => {
+  const result = {
+    txHash: "0xab",
+    height: 42,
+    ok: true,
+    nothing: null,
+    events: [{ contractAddress: SEP23_STRKEY, topics: [SEP23_HEX, "not an address"], data: "0x" }],
+  };
+  assert.deepEqual(hexifyAddresses(result), {
+    ...result,
+    events: [{ contractAddress: SEP23_HEX, topics: [SEP23_HEX, "not an address"], data: "0x" }],
+  });
+  assert.equal(hexifyAddresses(`${SEP23_STRKEY.slice(0, -1)}A`), `${SEP23_STRKEY.slice(0, -1)}A`);
+  assert.equal(hexifyAddresses(null), null);
 });

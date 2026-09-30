@@ -1,5 +1,7 @@
-import { HttpTransport, createGroundhogClient, toHex0x, type GroundhogClient } from "@groundhogchain/client";
+import { HttpTransport, createGroundhogClient, toHex0x, type GroundhogClient, type Transport } from "@groundhogchain/client";
 import { HOG_ADDRESS } from "@groundhogchain/protocol";
+
+import { hexifyAddresses } from "@/lib/address";
 
 const DEFAULT_RPC_URL = "http://localhost:9545";
 export const NATIVE_HOG_ADDRESS = toHex0x(HOG_ADDRESS);
@@ -36,6 +38,18 @@ export function getExplorerRpcConfig(): ExplorerRpcConfig {
   };
 }
 
+/**
+ * Wrap a transport so results reach the SDK with addresses as 0x hex, which is
+ * all the SDK parses. The RPC returns addresses as StrKeys.
+ */
+export function withHexAddresses(transport: Transport): Transport {
+  return {
+    async request<T>(...args: Parameters<Transport["request"]>) {
+      return hexifyAddresses(await transport.request<T>(...args)) as T;
+    },
+  };
+}
+
 export async function createExplorerGroundhogClient(): Promise<ExplorerGroundhogClient> {
   const config = getExplorerRpcConfig();
   const transport = new HttpTransport(process.env.GROUNDHOG_RPC_URL?.trim() || DEFAULT_RPC_URL, {
@@ -50,6 +64,6 @@ export async function createExplorerGroundhogClient(): Promise<ExplorerGroundhog
   return {
     ...config,
     transport,
-    client: await createGroundhogClient({ transport }),
+    client: await createGroundhogClient({ transport: withHexAddresses(transport) }),
   };
 }

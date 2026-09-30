@@ -3,6 +3,10 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { test } from "node:test";
 
+import { toHex0x } from "@groundhogchain/client";
+
+import { displayAddress } from "../address";
+
 import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
 
 test("RPC config displays only the origin, never credentials, path, or query", (t) => {
@@ -70,4 +74,44 @@ test("the 10000ms RPC deadline remains active while reading a delayed body", { t
   });
   assert.equal(headersReceived, true, "the deadline must abort body reading, not just the connection");
   assert.equal(timeout.mock.callCount(), 1);
+});
+
+test("the SDK client parses events whose addresses the RPC returns as StrKeys", async (t) => {
+  const strkey = displayAddress(`0x${"ab".repeat(32)}`);
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        events: [{
+          txHash: `0x${"cd".repeat(32)}`,
+          blockHeight: 42,
+          sequenceNumber: 0,
+          event: { contractAddress: strkey, topics: [], data: "0x" },
+        }],
+        cursor: "0x",
+        latestBlock: 42,
+        oldestBlock: 1,
+      },
+    }));
+  });
+  t.after(() => {
+    server.closeAllConnections();
+    server.close();
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const previous = process.env.GROUNDHOG_RPC_URL;
+  process.env.GROUNDHOG_RPC_URL = `http://127.0.0.1:${address.port}`;
+  t.after(() => {
+    if (previous === undefined) delete process.env.GROUNDHOG_RPC_URL;
+    else process.env.GROUNDHOG_RPC_URL = previous;
+  });
+
+  const { client } = await createExplorerGroundhogClient();
+  const page = await client.getEvents({ filters: [{ contractAddresses: [] }], limit: 1 });
+  assert.equal(toHex0x(page.events[0].event.contractAddress), `0x${"ab".repeat(32)}`);
 });
