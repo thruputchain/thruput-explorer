@@ -1,5 +1,6 @@
 import { addressFromHex, hashFromHex } from "@groundhogchain/client";
 
+import { displayAddress } from "@/lib/address";
 import { createExplorerGroundhogClient } from "@/lib/groundhog/client";
 import { getNativeBalance } from "@/lib/groundhog/native-balance";
 import { toRpcFailure } from "@/lib/groundhog/rpc";
@@ -13,21 +14,23 @@ export async function POST(request: Request) {
   const rawQuery = typeof body?.query === "string" ? body.query : "";
   const query = normalizeTransactionHash(rawQuery);
 
-  if (!isTransactionHash(query)) {
+  if (!isTransactionHash(query) && !isContractAddress(rawQuery)) {
     return Response.json(
-      { status: "malformed", message: "Enter a 0x-prefixed 32-byte transaction hash or address." },
+      { status: "malformed", message: "Enter a 0x-prefixed 32-byte transaction hash or an address." },
       { status: 400 },
     );
   }
 
   try {
     const { client } = await createExplorerGroundhogClient();
-    const txStatus = await client.getTransactionStatus(hashFromHex(query));
-    if (txStatus.status !== "unknown") {
-      return Response.json({ status: "ok", href: `/tx/${query}` });
+    if (isTransactionHash(query)) {
+      const txStatus = await client.getTransactionStatus(hashFromHex(query));
+      if (txStatus.status !== "unknown") {
+        return Response.json({ status: "ok", href: `/tx/${query}` });
+      }
     }
 
-    const address = normalizeContractAddress(query);
+    const address = normalizeContractAddress(rawQuery);
     if (!isContractAddress(address)) {
       return Response.json({ status: "malformed", message: "Malformed address." }, { status: 400 });
     }
@@ -43,7 +46,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       status: "ok",
-      href: `/address/${address}`,
+      href: `/address/${displayAddress(address)}`,
       context: {
         hasNativeBalance: Boolean(nativeBalance),
         hasRootTransactions: txRefs.length > 0,

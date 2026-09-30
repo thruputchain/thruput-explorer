@@ -32,7 +32,7 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://localhost:3000` and search for a `0x`-prefixed 32-byte transaction hash.
+Open `http://localhost:3000` and search for a `0x`-prefixed 32-byte transaction hash or an address. Addresses are shown as Stellar `C...` StrKeys and are accepted as either a StrKey or `0x` hex.
 
 The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL` when set and otherwise defaults to `http://localhost:9545`:
 

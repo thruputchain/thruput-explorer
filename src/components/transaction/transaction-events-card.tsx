@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { displayAddress } from "@/lib/address";
 import type { EventView } from "@/lib/groundhog/types";
 
 export function TransactionEventsCard({ events }: { events: EventView[] }) {
@@ -111,18 +112,20 @@ function DecodedEvent({
 }
 
 function ContractAddressLink({ address, name }: { address: string; name?: string }) {
+  const shown = displayAddress(address);
   return (
-    <Link className="break-all underline-offset-4 hover:underline" href={`/address/${address}`}>
+    <Link className="break-all underline-offset-4 hover:underline" href={`/address/${shown}`}>
       {name ? <p className="text-sm font-medium">{name}</p> : null}
-      <code className="break-all text-xs">{address}</code>
+      <code className="break-all text-xs">{shown}</code>
     </Link>
   );
 }
 
 function WalletAddressLink({ address }: { address: string }) {
+  const shown = displayAddress(address);
   return (
-    <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${address}`}>
-      {address}
+    <Link className="break-all font-mono text-xs underline-offset-4 hover:underline" href={`/address/${shown}`}>
+      {shown}
     </Link>
   );
 }

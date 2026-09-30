@@ -2,6 +2,7 @@ import { FieldRow } from "./field-row";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { displayAddress } from "@/lib/address";
 import { formatFreshness } from "@/lib/groundhog/format";
 import type { TransactionPageData } from "@/lib/groundhog/types";
 
@@ -48,7 +49,7 @@ function getExecutionDetails(data: TransactionPageData) {
 
   if (data.status.status === "recentFailure") {
     details.push({ label: "Attempt height", value: data.status.attemptHeight });
-    details.push({ label: "Conflict address", value: data.status.conflict.address });
+    details.push({ label: "Conflict address", value: displayAddress(data.status.conflict.address) });
     details.push({ label: "Conflict key", value: data.status.conflict.key });
     details.push({ label: "Conflict code", value: data.status.conflict.code });
   }

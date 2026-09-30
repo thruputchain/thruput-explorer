@@ -7,7 +7,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
+import { isContractAddress, isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 type SearchResponse =
   | { status: "ok"; href: string }
@@ -21,10 +21,10 @@ export function SearchHero() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalized = normalizeTransactionHash(hash);
+    const query = hash.trim();
 
-    if (!isTransactionHash(normalized)) {
-      setError("Enter a 0x-prefixed 32-byte transaction hash or address.");
+    if (!isTransactionHash(normalizeTransactionHash(query)) && !isContractAddress(query)) {
+      setError("Enter a 0x-prefixed 32-byte transaction hash or an address.");
       return;
     }
 
@@ -34,7 +34,7 @@ export function SearchHero() {
         const response = await fetch("/api/search", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ query: normalized }),
+          body: JSON.stringify({ query }),
         });
         const result = (await response.json()) as SearchResponse;
 

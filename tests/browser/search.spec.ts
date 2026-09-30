@@ -34,7 +34,7 @@ test("search follows an address result and renders its balance", async ({ page }
   const response = page.waitForResponse("**/api/search");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   expect((await response).status()).toBe(200);
-  await expect(page).toHaveURL(`/address/${address}`);
+  await expect(page).toHaveURL("/address/CARCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEVQO");
   await expect(page.getByText("2.5 HOG", { exact: true })).toBeVisible();
   const transaction = page.locator(`a[href="/tx/${txHash}"]`);
   await expect(transaction).toBeVisible();
@@ -50,7 +50,7 @@ test("malformed input shows validation without a search request", async ({ page 
   });
   await page.getByRole("textbox").fill("not-a-hash");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByText("Enter a 0x-prefixed 32-byte transaction hash or address.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enter a 0x-prefixed 32-byte transaction hash or an address.", { exact: true })).toBeVisible();
   await expect(page.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
   expect(requests).toEqual([]);
 });

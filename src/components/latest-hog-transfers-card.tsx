@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { displayAddress } from "@/lib/address";
 import { loadLatestHogTransfers } from "@/lib/groundhog/latest-hog-transfers";
 
 export async function LatestHogTransfersCard() {
@@ -16,7 +17,7 @@ export async function LatestHogTransfersCard() {
           <CardDescription>Recent transfers emitted by the native HOG contract.</CardDescription>
           <CardAction>
             <Button asChild variant="outline" size="sm">
-              <Link href={`/address/${data.nativeTokenAddress}`}>View all</Link>
+              <Link href={`/address/${displayAddress(data.nativeTokenAddress)}`}>View all</Link>
             </Button>
           </CardAction>
         </CardHeader>
@@ -73,9 +74,10 @@ export function LatestHogTransfersFallback() {
 }
 
 function AddressLink({ value, fallback }: { value?: string; fallback: string }) {
-  return value ? (
-    <Link className="font-mono underline underline-offset-4" href={`/address/${value}`} title={value}>
-      {shortenHex(value)}
+  const shown = value ? displayAddress(value) : undefined;
+  return shown ? (
+    <Link className="font-mono underline underline-offset-4" href={`/address/${shown}`} title={shown}>
+      {shortenHex(shown)}
     </Link>
   ) : (
     <span className="text-muted-foreground">{fallback}</span>

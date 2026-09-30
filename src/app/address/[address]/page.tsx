@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { displayAddress } from "@/lib/address";
 import {
   loadAddressPageData,
   type AddressEventView,
@@ -42,7 +43,7 @@ export default async function AddressPage({
       <PageHeader
         eyebrow="Address"
         title={data.status === "ok" && data.label ? data.label : "Address"}
-        value={data.address}
+        value={displayAddress(data.address)}
         badges={data.status === "ok" ? data.badges : []}
         copyLabel="Copy address"
       />
@@ -141,7 +142,7 @@ function AddressSummaryCard({
       </CardHeader>
       <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_minmax(0,1fr)]">
         <SummaryLabel>Address</SummaryLabel>
-        <code className="break-all text-xs">{data.address}</code>
+        <code className="break-all text-xs">{displayAddress(data.address)}</code>
         <SummaryLabel>Native balance</SummaryLabel>
         <p className="font-mono tabular-nums wrap-anywhere">
           {data.nativeBalance
@@ -439,13 +440,14 @@ function RawEventRow({ event }: { event: AddressEventView }) {
 }
 
 function AddressLink({ value }: { value?: string }) {
-  return value ? (
+  const shown = value ? displayAddress(value) : undefined;
+  return shown ? (
     <Link
       className="font-mono underline underline-offset-4"
-      href={`/address/${value}`}
-      title={value}
+      href={`/address/${shown}`}
+      title={shown}
     >
-      {shortenHex(value)}
+      {shortenHex(shown)}
     </Link>
   ) : (
     <span className="text-muted-foreground">-</span>
