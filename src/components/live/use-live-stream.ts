@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { createSessionTracker } from "@/lib/groundhog/live/session";
 import { mergeLiveBlocks } from "@/lib/groundhog/live/stats";
 import type { LiveBlock, LiveBlockMessage, LiveHello, LiveStatus, LiveStatusMessage } from "@/lib/groundhog/live/types";
 
@@ -13,11 +14,10 @@ export type LiveStreamState = {
   status: LiveStatus | null;
   /** Settled blocks, ascending by height. */
   blocks: LiveBlock[];
-  /** Blocks and transactions that settled after this page connected. */
+  /** Timed blocks and untimed blocks above the indexer height first reported live
+   * after this page connected, including blocks re-walked after a reconnect. */
   session: { txCount: number; blockCount: number };
 };
-
-const SEEN_LIMIT = 5_000;
 
 const initialState: LiveStreamState = {
   connection: "connecting",
@@ -32,56 +32,40 @@ export function useLiveStream(url = "/api/live/stream"): LiveStreamState {
 
   useEffect(() => {
     const source = new EventSource(url);
-    const seen = new Set<string>();
-    let initialised = false;
-
-    const remember = (height: string) => {
-      seen.add(height);
-      if (seen.size > SEEN_LIMIT) {
-        for (const stale of [...seen].slice(0, SEEN_LIMIT / 5)) seen.delete(stale);
-      }
-    };
-
-    // Blocks without an observation time were backfilled from before the stream
-    // started, so they predate this page and never count toward the session.
-    const count = (blocks: LiveBlock[], session: LiveStreamState["session"]) => {
-      let { txCount, blockCount } = session;
-      for (const block of blocks) {
-        if (seen.has(block.height)) continue;
-        remember(block.height);
-        if (block.observedAt === null) continue;
-        txCount += block.txCount;
-        blockCount += 1;
-      }
-      return { txCount, blockCount };
-    };
+    const tracker = createSessionTracker();
 
     source.addEventListener("hello", (event: MessageEvent<string>) => {
       const hello = JSON.parse(event.data) as LiveHello;
-      // The first snapshot is history; later ones cover a reconnect gap.
-      const history = !initialised;
-      initialised = true;
-      if (history) for (const block of hello.blocks) remember(block.height);
+      // Mutate the tracker outside React's replayable state updaters.
+      const delta = tracker.onHello(hello, { txCount: 0, blockCount: 0 });
       setState((previous) => ({
         connection: "open",
         hello: { rpcUrl: hello.rpcUrl, contracts: hello.contracts, lagBlocks: hello.lagBlocks },
         status: hello.status,
         blocks: mergeLiveBlocks(previous.blocks, hello.blocks),
-        session: history ? previous.session : count(hello.blocks, previous.session),
+        session: {
+          txCount: previous.session.txCount + delta.txCount,
+          blockCount: previous.session.blockCount + delta.blockCount,
+        },
       }));
     });
 
     source.addEventListener("block", (event: MessageEvent<string>) => {
       const { block } = JSON.parse(event.data) as LiveBlockMessage;
+      const delta = tracker.onBlock(block, { txCount: 0, blockCount: 0 });
       setState((previous) => ({
         ...previous,
         blocks: mergeLiveBlocks(previous.blocks, [block]),
-        session: count([block], previous.session),
+        session: {
+          txCount: previous.session.txCount + delta.txCount,
+          blockCount: previous.session.blockCount + delta.blockCount,
+        },
       }));
     });
 
     source.addEventListener("status", (event: MessageEvent<string>) => {
       const { status } = JSON.parse(event.data) as LiveStatusMessage;
+      tracker.onStatus(status);
       setState((previous) => ({ ...previous, connection: "open", status }));
     });
 
