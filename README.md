@@ -8,17 +8,17 @@ The interface uses the dark-only Thruput app theme, locally bundled IBM Plex San
 
 - Node.js 22.12+
 - pnpm 10.33.4+
-- GitHub Packages read access for `@groundhogchain/*` packages
+- GitHub Packages read access for `@thruputchain/*` packages
 - For local development, a Groundhog node listening on `http://localhost:9545`
 
 Configure GitHub Packages auth in your local npm config:
 
 ```ini
-@groundhogchain:registry=https://npm.pkg.github.com
+@thruputchain:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
 ```
 
-The token needs `read:packages` and access to the Groundhog packages.
+The token needs `read:packages` and access to the private Thruput packages.
 
 ## Install
 

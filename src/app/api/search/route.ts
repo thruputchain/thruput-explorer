@@ -1,4 +1,4 @@
-import { addressFromHex, hashFromHex } from "@groundhogchain/client";
+import { addressFromHex, hashFromHex } from "@thruputchain/client";
 
 import { createExplorerGroundhogClient } from "@/lib/groundhog/client";
 import { getNativeBalance } from "@/lib/groundhog/native-balance";

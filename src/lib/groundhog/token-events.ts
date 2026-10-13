@@ -1,5 +1,5 @@
-import { toHex0x, type EmittedEvent } from "@groundhogchain/client";
-import { decodeERC20Event } from "@groundhogchain/client/contracts";
+import { toHex0x, type EmittedEvent } from "@thruputchain/client";
+import { decodeERC20Event } from "@thruputchain/client/contracts";
 
 import type { TokenMetadata } from "./token-metadata";
 import type { DecodedEventView } from "./types";

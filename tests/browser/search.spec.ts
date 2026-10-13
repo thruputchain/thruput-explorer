@@ -23,7 +23,7 @@ test("search uses the API and RPC, then renders the decoded transfer", async ({ 
   await page.getByRole("button", { name: "Search", exact: true }).click();
   expect((await response).status()).toBe(200);
   await expect(page).toHaveURL(`/tx/${txHash}`);
-  await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-slot="card"]').filter({ has: page.getByRole("heading", { name: "Events", exact: true }) }).getByText("1.5 HOG", { exact: true })).toBeVisible();
   await expect(page.getByText("15000000", { exact: true })).toBeVisible();
   await expect(page.getByText("Transfer", { exact: true })).toBeVisible();
 });
@@ -36,11 +36,11 @@ test("search follows an address result and renders its balance", async ({ page }
   expect((await response).status()).toBe(200);
   await expect(page).toHaveURL(`/address/${address}`);
   await expect(page.getByText("2.5 HOG", { exact: true })).toBeVisible();
-  const transaction = page.locator(`a[href="/tx/${txHash}"]`);
+  const transaction = page.getByRole("tabpanel", { name: "Transactions", exact: true }).locator(`a[href="/tx/${txHash}"]`);
   await expect(transaction).toBeVisible();
   await transaction.click();
   await expect(page).toHaveURL(`/tx/${txHash}`);
-  await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-slot="card"]').filter({ has: page.getByRole("heading", { name: "Events", exact: true }) }).getByText("1.5 HOG", { exact: true })).toBeVisible();
 });
 
 test("malformed input shows validation without a search request", async ({ page }) => {
@@ -72,7 +72,7 @@ test("search stays disabled until the deferred request is released", async ({ pa
     await expect(page).toHaveURL("/");
     release();
     await expect(page).toHaveURL(`/tx/${txHash}`);
-    await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+    await expect(page.locator('[data-slot="card"]').filter({ has: page.getByRole("heading", { name: "Events", exact: true }) }).getByText("1.5 HOG", { exact: true })).toBeVisible();
   } finally {
     release();
   }
@@ -95,6 +95,6 @@ for (const failure of ["503", "network", "non-JSON"] as const) {
     await button.click();
     await expect(page.getByText(message, { exact: true })).toHaveCount(0);
     await expect(page).toHaveURL(`/tx/${txHash}`);
-    await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+    await expect(page.locator('[data-slot="card"]').filter({ has: page.getByRole("heading", { name: "Events", exact: true }) }).getByText("1.5 HOG", { exact: true })).toBeVisible();
   });
 }

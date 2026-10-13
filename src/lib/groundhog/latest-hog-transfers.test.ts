@@ -2,23 +2,23 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
-import { MockTransport, addressFromHex, createGroundhogClient, hashFromHex, type EventPage } from "@groundhogchain/client";
-import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
+import { MockTransport, addressFromHex, createThruputClient, hashFromHex, type EventPage } from "@thruputchain/client";
+import { groundhog_erc20_if } from "@thruputchain/client/contracts";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
 import { loadLatestHogTransfers } from "./latest-hog-transfers";
 import { transferEvent } from "./test-fixtures";
 
 // Match the existing CommonJS tsx tests by mocking the published SDK factory.
-const sdk: typeof import("@groundhogchain/client") = createRequire(import.meta.url)("@groundhogchain/client");
+const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 const from = `0x${"11".repeat(32)}`;
 const to = `0x${"22".repeat(32)}`;
 const zero = `0x${"00".repeat(32)}`;
 
 for (const populated of [false, true]) {
   test(`latest HOG feed maps ${populated ? "a populated" : "an empty"} page and requests the exact newest-six filter`, async (t) => {
-    const client = await createGroundhogClient({ transport: new MockTransport() });
-    t.mock.method(sdk, "createGroundhogClient", async () => client);
+    const client = await createThruputClient({ transport: new MockTransport() });
+    t.mock.method(sdk, "createThruputClient", async () => client);
     const page: EventPage = {
       events: populated ? [
         {
@@ -68,7 +68,7 @@ for (const populated of [false, true]) {
     assert.deepEqual(getEvents.mock.calls[0].arguments, [{
       filters: [{
         contractAddresses: [addressFromHex(NATIVE_HOG_ADDRESS)],
-        topics: { topic0: [ERC20TransferEvent.signature] },
+        topics: { topic0: [groundhog_erc20_if.v0_1.events.TransferEvent.signature] },
       }],
       order: "descending",
       anchor: "end",

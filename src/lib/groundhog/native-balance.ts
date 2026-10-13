@@ -1,4 +1,4 @@
-import { addressFromHex, type GroundhogClient } from "@groundhogchain/client";
+import { addressFromHex, type ThruputClient } from "@thruputchain/client";
 
 export type NativeBalanceView = {
   rawBalance: string;
@@ -9,7 +9,7 @@ export type NativeBalanceView = {
 
 const NATIVE_HOG_DECIMALS = 7;
 
-export async function getNativeBalance(client: GroundhogClient, address: string): Promise<NativeBalanceView | undefined> {
+export async function getNativeBalance(client: ThruputClient, address: string): Promise<NativeBalanceView | undefined> {
   try {
     const balance = await client.getBalance(addressFromHex(address));
     const rawBalance = balance.rawBalance.toString();

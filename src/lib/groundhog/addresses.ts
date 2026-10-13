@@ -1,5 +1,5 @@
-import { addressFromHex, toHex0x, type IdentifiedEvent } from "@groundhogchain/client";
-import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
+import { addressFromHex, toHex0x, type IdentifiedEvent } from "@thruputchain/client";
+import { groundhog_erc20_if } from "@thruputchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
@@ -78,11 +78,11 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
         : client
             .getEvents({
               filters: [
-                ERC20TransferEvent.filter({
+                groundhog_erc20_if.v0_1.events.TransferEvent.filter({
                   contractAddresses: [nativeTokenAddress],
                   topics: { from: contractAddress },
                 }),
-                ERC20TransferEvent.filter({
+                groundhog_erc20_if.v0_1.events.TransferEvent.filter({
                   contractAddresses: [nativeTokenAddress],
                   topics: { to: contractAddress },
                 }),

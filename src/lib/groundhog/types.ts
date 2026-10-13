@@ -1,3 +1,5 @@
+import type { SchedulerTransactionError } from "@thruputchain/client";
+
 export type RpcFailure = {
   message: string;
   code?: number;
@@ -18,9 +20,11 @@ export type TransactionReceiptView = {
 
 export type TransactionStatus =
   | { status: "pending" }
-  | { status: "committed"; height: string }
+  | { status: "committed"; height?: string }
+  | { status: "retry"; error: SchedulerTransactionError }
+  | { status: "dropped"; error: SchedulerTransactionError }
   | { status: "invalid"; reason: string }
-  | { status: "recentFailure"; attemptHeight: string; conflict: { address: string; key: string; code: string } }
+  | { status: "recentFailure"; attemptHeight: string; cause: TransactionFailureCauseView }
   | { status: "other" }
   | { status: "unknown" };
 
@@ -49,3 +53,8 @@ export type TransactionPageData = {
   chainTipHeight?: string;
   receipt: TransactionReceiptView | null;
 };
+
+export type TransactionFailureCauseView =
+  | { kind: "dbConflict"; conflict: { address: string; key: string; code: string } }
+  | { kind: "contractRejected"; contractIndex: number; code: string }
+  | { kind: "other" };

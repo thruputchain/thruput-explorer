@@ -2,19 +2,19 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
-import { addressFromHex, createGroundhogClient, hashFromHex, MockTransport } from "@groundhogchain/client";
-import { ERC20Metadata } from "@groundhogchain/client/contracts";
+import { addressFromHex, createThruputClient, hashFromHex, MockTransport } from "@thruputchain/client";
+import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { POST } from "../../app/api/search/route";
 
-const sdk: typeof import("@groundhogchain/client") = createRequire(import.meta.url)("@groundhogchain/client");
+const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 const hash = `0x${"ab".repeat(32)}`;
 const request = (query: string) => new Request("http://localhost/api/search", {
   method: "POST", body: JSON.stringify({ query }),
 });
 
 test("search rejects malformed input before connecting and reports factory rejection as 503", async (t) => {
-  const connect = t.mock.method(sdk, "createGroundhogClient", async () => {
+  const connect = t.mock.method(sdk, "createThruputClient", async () => {
     throw new Error("Connection failed");
   });
   assert.equal((await POST(request("bad hash"))).status, 400);
@@ -25,8 +25,8 @@ test("search rejects malformed input before connecting and reports factory rejec
 });
 
 test("search prefers known transactions and routes unknown hashes to addresses despite failed context RPCs", async (t) => {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createThruputClient", async () => client);
   const status = t.mock.method(client, "getTransactionStatus", async () => ({ status: "pending" as const }));
   const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unavailable"); });
   t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unavailable"); });
@@ -48,14 +48,14 @@ test("search prefers known transactions and routes unknown hashes to addresses d
 });
 
 test("search reports successful address context even when the available balance is zero", async (t) => {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getTransactionStatus", async () => ({ status: "unknown" as const }));
   const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 0n, height: 42n }));
   const transactions = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromHex(hash), height: 42n }] }));
-  t.mock.method(ERC20Metadata.name, "view", async () => ({ value: "ALULA" }));
-  t.mock.method(ERC20Metadata.symbol, "view", async () => ({ value: "ALULA" }));
-  t.mock.method(ERC20Metadata.decimals, "view", async () => ({ value: 6n }));
+  t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "ALULA" }));
+  t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "ALULA" }));
+  t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => ({ value: 6n }));
 
   const response = await POST(request(hash));
   assert.equal(response.status, 200);
@@ -68,8 +68,8 @@ test("search reports successful address context even when the available balance 
 });
 
 test("a failed transaction-status lookup returns 503 without guessing an address", async (t) => {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getTransactionStatus", async () => { throw new Error("Status RPC unavailable"); });
   const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
   const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
@@ -85,11 +85,11 @@ test("a failed transaction-status lookup returns 503 without guessing an address
 
 for (const status of [
   { status: "committed" as const, height: 42n },
-  { status: "recentFailure" as const, attemptHeight: 42n, conflict: { address: addressFromHex(hash), key: hashFromHex(hash), code: "test-conflict" } },
+  { status: "recentFailure" as const, attemptHeight: 42n, cause: { kind: "dbConflict" as const, conflict: { address: addressFromHex(hash), key: hashFromHex(hash), code: "other" as const } } },
 ]) {
   test(`search routes ${status.status} transactions without address probes`, async (t) => {
-    const client = await createGroundhogClient({ transport: new MockTransport() });
-    t.mock.method(sdk, "createGroundhogClient", async () => client);
+    const client = await createThruputClient({ transport: new MockTransport() });
+    t.mock.method(sdk, "createThruputClient", async () => client);
     t.mock.method(client, "getTransactionStatus", async () => status);
     const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
     const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
@@ -104,7 +104,7 @@ for (const status of [
 }
 
 test("missing or non-string queries are rejected without a connection", async (t) => {
-  const connect = t.mock.method(sdk, "createGroundhogClient", async () => { throw new Error("Unexpected connection"); });
+  const connect = t.mock.method(sdk, "createThruputClient", async () => { throw new Error("Unexpected connection"); });
   for (const body of [null, {}, { query: 42 }, { query: [hash] }, { query: null }]) {
     const response = await POST(new Request("http://localhost/api/search", { method: "POST", body: JSON.stringify(body) }));
     assert.equal(response.status, 400);

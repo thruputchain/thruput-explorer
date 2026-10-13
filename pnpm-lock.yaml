@@ -14,12 +14,12 @@ importers:
       '@fontsource/ibm-plex-sans':
         specifier: 5.3.0
         version: 5.3.0
-      '@groundhogchain/client':
-        specifier: 0.7.0
-        version: 0.7.0
-      '@groundhogchain/protocol':
-        specifier: 0.11.0
-        version: 0.11.0
+      '@thruputchain/client':
+        specifier: 0.18.0
+        version: 0.18.0
+      '@thruputchain/protocol':
+        specifier: 0.15.0
+        version: 0.15.0
       bcryptjs:
         specifier: 3.0.3
         version: 3.0.3
@@ -459,22 +459,6 @@ packages:
 
   '@fontsource/ibm-plex-sans@5.3.0':
     resolution: {integrity: sha512-CbE4CbbEEZJX860XyUiRpsksXIQR8Rp2XDva2VO53NJox9tVNtusrysd2x5YkUEY3ErQ66W1IiiQL8/wihhw5w==}
-
-  '@groundhogchain/client@0.7.0':
-    resolution: {integrity: sha512-ybOdv4hSd2TdeN0cVWWJzieu4p3E7ttWU7q3cm+Nylt/faiUB8lmsY+u9D598UkdLTv+YzTHVe/fooN2JmsClQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/client/0.7.0/1102c4f4d8d8333e73361d5ebb9016af9e4b7d2b}
-    engines: {node: '>=22.12.0'}
-
-  '@groundhogchain/contract-spec@0.11.0':
-    resolution: {integrity: sha512-NFL/77xR+Sd4DtJ2Z16U1Xulvv3a0fDSyt5jIJj7hSNLscdCyWkP0WWzBgqmifpxcrd/FMulIqnAaQQdE5Ervg==, tarball: https://npm.pkg.github.com/download/@groundhogchain/contract-spec/0.11.0/40f29b1a19311787ea6f65e934bb09ea1896b370}
-    engines: {node: '>=22.12.0'}
-
-  '@groundhogchain/protocol@0.11.0':
-    resolution: {integrity: sha512-fTOXwTvUxfD9aMNev5NZv84r7OlPDw5lC/sfAO2yo2EWqyr5npFjFkhjegfVc9VvM4JMSljljOIe8evJKGYfSA==, tarball: https://npm.pkg.github.com/download/@groundhogchain/protocol/0.11.0/a3c301f84657839de6272cf83857c0ed6b1c41e8}
-    engines: {node: '>=22.12.0'}
-
-  '@groundhogchain/xdr@0.11.0':
-    resolution: {integrity: sha512-HAG3FJHfFZUQSoIZ+t7hscaunhIit1MW533nv1LpldP1oBhE9YjYoB4dTqqwnDx2AOWkV8NABumKtrXXp+qtIQ==, tarball: https://npm.pkg.github.com/download/@groundhogchain/xdr/0.11.0/3344cef67671c7280e8a276fd459c2eec78ab3b1}
-    engines: {node: '>=22.12.0'}
 
   '@hono/node-server@2.1.1':
     resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
@@ -1581,6 +1565,22 @@ packages:
 
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
+
+  '@thruputchain/client@0.18.0':
+    resolution: {integrity: sha512-ThtZG5nDeUKH/HBmV0Xifgks72rtzSlhRNLJGY+DwVnecgnIFCTEBsCgDY5VcHJJ7b/4c2fEAXX+NNNaUqv5LA==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.18.0/7d905dbeac88c382804cfa8e89aa0fe760da99e7}
+    engines: {node: '>=22.12.0'}
+
+  '@thruputchain/contract-spec@0.15.0':
+    resolution: {integrity: sha512-lotZIsXHMv4AXrwS36SQIBkzqpgdcWWf+eRC2eJz8TEjn5LgV5I0QNem4wrpKWI31i4FIc2HnWV1MvsgWXY6kA==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.15.0/747111b9cbd267ac6b777398f193892224f068f3}
+    engines: {node: '>=22.12.0'}
+
+  '@thruputchain/protocol@0.15.0':
+    resolution: {integrity: sha512-Y0pshTDoTN+B8u97JzyESWIx20Z39aOTEjN5K/lcLh4TPiK2EuqkN2mfVVstbbeNKvLBq0q+YRlKmFeX+f4pOw==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.15.0/072fd8ac5d647b863e7fb67abbe58f2bbd959a9a}
+    engines: {node: '>=22.12.0'}
+
+  '@thruputchain/xdr@0.15.0':
+    resolution: {integrity: sha512-zeUIJOxY+tsSOv9iE/5q9P4ZpNH7UUBJuLM1rVgzh/MFN7Qm0EtKk6QGgMirBY596OyyJ6kYdennVWSXZNjc5g==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.15.0/a4988e034ef7520c89481de2597bffd20700acc8}
+    engines: {node: '>=22.12.0'}
 
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
@@ -3587,10 +3587,6 @@ packages:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
 
-  smol-toml@1.8.0:
-    resolution: {integrity: sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==}
-    engines: {node: '>= 18'}
-
   socks@2.8.10:
     resolution: {integrity: sha512-e0VyvkVTwVYViNovRkZ9aodhxVlyoMn7eJhVUPxZ+eK9P/7CBkxvvsBOHqFPEH416726W8tLXXXjKwqgTErrCQ==}
     engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
@@ -4304,27 +4300,6 @@ snapshots:
   '@fontsource/ibm-plex-mono@5.3.0': {}
 
   '@fontsource/ibm-plex-sans@5.3.0': {}
-
-  '@groundhogchain/client@0.7.0':
-    dependencies:
-      '@groundhogchain/contract-spec': 0.11.0
-      '@groundhogchain/protocol': 0.11.0
-      '@groundhogchain/xdr': 0.11.0
-      '@noble/ed25519': 3.2.0
-      '@noble/hashes': 2.4.0
-      smol-toml: 1.8.0
-
-  '@groundhogchain/contract-spec@0.11.0':
-    dependencies:
-      '@groundhogchain/protocol': 0.11.0
-      '@groundhogchain/xdr': 0.11.0
-
-  '@groundhogchain/protocol@0.11.0':
-    dependencies:
-      '@groundhogchain/xdr': 0.11.0
-      '@noble/hashes': 2.2.0
-
-  '@groundhogchain/xdr@0.11.0': {}
 
   '@hono/node-server@2.1.1(hono@4.13.7)':
     dependencies:
@@ -5383,6 +5358,26 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       postcss: 8.5.28
       tailwindcss: 4.3.3
+
+  '@thruputchain/client@0.18.0':
+    dependencies:
+      '@noble/ed25519': 3.2.0
+      '@noble/hashes': 2.4.0
+      '@thruputchain/contract-spec': 0.15.0
+      '@thruputchain/protocol': 0.15.0
+      '@thruputchain/xdr': 0.15.0
+
+  '@thruputchain/contract-spec@0.15.0':
+    dependencies:
+      '@thruputchain/protocol': 0.15.0
+      '@thruputchain/xdr': 0.15.0
+
+  '@thruputchain/protocol@0.15.0':
+    dependencies:
+      '@noble/hashes': 2.2.0
+      '@thruputchain/xdr': 0.15.0
+
+  '@thruputchain/xdr@0.15.0': {}
 
   '@ts-morph/common@0.27.0':
     dependencies:
@@ -7648,8 +7643,6 @@ snapshots:
   sisteransi@1.0.5: {}
 
   smart-buffer@4.2.0: {}
-
-  smol-toml@1.8.0: {}
 
   socks@2.8.10:
     dependencies:
