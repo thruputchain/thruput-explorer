@@ -1,5 +1,5 @@
-import { HttpTransport, createGroundhogClient, toHex0x, type GroundhogClient } from "@groundhogchain/client";
-import { HOG_ADDRESS } from "@groundhogchain/protocol";
+import { HttpTransport, createThruputClient, toHex0x, type ThruputClient } from "@thruputchain/client";
+import { HOG_ADDRESS } from "@thruputchain/protocol";
 
 const DEFAULT_RPC_URL = "http://localhost:9545";
 export const NATIVE_HOG_ADDRESS = toHex0x(HOG_ADDRESS);
@@ -15,7 +15,7 @@ export type ExplorerRpcConfig = {
 
 export type ExplorerGroundhogClient = ExplorerRpcConfig & {
   transport: HttpTransport;
-  client: GroundhogClient;
+  client: ThruputClient;
 };
 
 export function getExplorerRpcConfig(): ExplorerRpcConfig {
@@ -50,6 +50,6 @@ export async function createExplorerGroundhogClient(): Promise<ExplorerGroundhog
   return {
     ...config,
     transport,
-    client: await createGroundhogClient({ transport }),
+    client: await createThruputClient({ transport }),
   };
 }

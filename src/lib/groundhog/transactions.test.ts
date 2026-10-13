@@ -2,21 +2,22 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
-import { HttpTransport, toHex0x } from "@groundhogchain/client";
-import { ERC20Metadata } from "@groundhogchain/client/contracts";
-import { ExecResult } from "@groundhogchain/protocol";
+import { HttpTransport, toHex0x } from "@thruputchain/client";
+import { ERC20Metadata } from "@thruputchain/client/contracts";
+import { ExecResult } from "@thruputchain/protocol";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
 import { transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
 
-const sdk: typeof import("@groundhogchain/client") = createRequire(import.meta.url)("@groundhogchain/client");
+const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 const hash = `0x${"ab".repeat(32)}`;
 const height = "9007199254740993";
 const chainTipHeight = "9007199254740994";
 const rawReceipt = {
   txHash: hash,
   height,
+  gasUsed: "1000",
   status: { result: "ok" },
   events: [],
   returnData: null,
@@ -44,7 +45,7 @@ for (const status of ["pending", "unknown"]) {
       groundhog_getTransactionStatus: { status },
       groundhog_getTransactionReceipt: null,
     });
-    const metadata = t.mock.method(ERC20Metadata.name, "view", async () => {
+    const metadata = t.mock.method(ERC20Metadata.v0_1.name, "view", async () => {
       throw new Error("Unexpected metadata lookup without a receipt");
     });
 
@@ -69,7 +70,7 @@ test("recentFailure converts the conflict bytes and attempt height without losin
     groundhog_getTransactionStatus: {
       status: "recentFailure",
       attemptHeight: height,
-      conflict: { address, key, code: "valueMismatch" },
+      cause: { kind: "dbConflict", conflict: { address, key, code: "valueMismatch" } },
     },
     groundhog_getTransactionReceipt: null,
   });
@@ -78,7 +79,7 @@ test("recentFailure converts the conflict bytes and attempt height without losin
   assert.deepEqual(result.status, {
     status: "recentFailure",
     attemptHeight: height,
-    conflict: { address, key, code: "valueMismatch" },
+    cause: { kind: "dbConflict", conflict: { address, key, code: "valueMismatch" } },
   });
   assert.equal(result.receipt, null);
   assert.equal(result.chainTipHeight, chainTipHeight);
@@ -88,7 +89,7 @@ for (const execResult of ["reverted", "deterministicError", "nonDeterministicErr
   test(`committed ${execResult} receipts retain return and abort data`, async (t) => {
     const receipt = {
       ...rawReceipt,
-      status: { result: execResult },
+      status: execResult === "deterministicError" ? { result: execResult, kind: "fixtureFailure" } : { result: execResult },
       returnData: "0x00abcd",
       abortData: "0x00deadbeef",
     };
@@ -188,13 +189,13 @@ test("core events load without metadata; enrichment queries each unique contract
   }));
   const receipt = { ...rawReceipt, events: wireEvents };
   mockRpc(t, { groundhog_getTransactionReceipt: receipt });
-  const name = t.mock.method(ERC20Metadata.name, "view", async ({ contract }: Parameters<typeof ERC20Metadata.name.view>[0]) => ({
+  const name = t.mock.method(ERC20Metadata.v0_1.name, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.name.view>[0]) => ({
     value: toHex0x(contract) === contracts[0] ? "First token" : "Second token",
   }));
-  const symbol = t.mock.method(ERC20Metadata.symbol, "view", async ({ contract }: Parameters<typeof ERC20Metadata.symbol.view>[0]) => ({
+  const symbol = t.mock.method(ERC20Metadata.v0_1.symbol, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.symbol.view>[0]) => ({
     value: toHex0x(contract) === contracts[0] ? "ONE" : "TWO",
   }));
-  const decimals = t.mock.method(ERC20Metadata.decimals, "view", async ({ contract }: Parameters<typeof ERC20Metadata.decimals.view>[0]) => ({
+  const decimals = t.mock.method(ERC20Metadata.v0_1.decimals, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.decimals.view>[0]) => ({
     value: toHex0x(contract) === contracts[0] ? 2n : 3n,
   }));
 
@@ -247,9 +248,9 @@ for (const decimals of [undefined, -1n, 31n, 0n]) {
     const wireEvent = { contractAddress, topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
     const receipt = { ...rawReceipt, events: [wireEvent] };
     mockRpc(t, { groundhog_getTransactionReceipt: receipt });
-    t.mock.method(ERC20Metadata.name, "view", async () => ({ value: "Custom token" }));
-    t.mock.method(ERC20Metadata.symbol, "view", async () => ({ value: "TOKEN" }));
-    t.mock.method(ERC20Metadata.decimals, "view", async () => {
+    t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "Custom token" }));
+    t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "TOKEN" }));
+    t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => {
       if (decimals === undefined) throw new Error("Decimals unavailable");
       return { value: decimals };
     });
@@ -269,3 +270,28 @@ for (const decimals of [undefined, -1n, 31n, 0n]) {
     }
   });
 }
+
+for (const status of ["retry", "dropped"] as const) {
+  test(`${status} preserves the scheduler diagnostic without a receipt`, async (t) => {
+    const error = { source: "scheduler", code: -7 };
+    mockRpc(t, { groundhog_getTransactionStatus: { status, error }, groundhog_getTransactionReceipt: null });
+    const result = await loadTransactionPageData(hash);
+    assert.deepEqual(result.status, { status, error });
+    assert.equal(result.receipt, null);
+  });
+}
+
+for (const cause of [{ kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" }, { kind: "other" }]) {
+  test(`recent failure retains ${cause.kind} rather than inventing a storage conflict`, async (t) => {
+    mockRpc(t, { groundhog_getTransactionStatus: { status: "recentFailure", attemptHeight: height, cause }, groundhog_getTransactionReceipt: null });
+    const result = await loadTransactionPageData(hash);
+    assert.deepEqual(result.status, { status: "recentFailure", attemptHeight: height, cause });
+  });
+}
+
+test("known commitment without indexed height remains committed", async (t) => {
+  mockRpc(t, { groundhog_getTransactionStatus: { status: "committed" }, groundhog_getTransactionReceipt: null });
+  const result = await loadTransactionPageData(hash);
+  assert.equal(result.status.status, "committed");
+  assert.equal(result.receipt, null);
+});

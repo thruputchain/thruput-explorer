@@ -1,5 +1,5 @@
-import { addressFromHex, toHex0x } from "@groundhogchain/client";
-import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
+import { addressFromHex, toHex0x } from "@thruputchain/client";
+import { groundhog_erc20_if } from "@thruputchain/client/contracts";
 
 import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
 import { toRpcFailure } from "./rpc";
@@ -30,7 +30,7 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
   try {
     const { client } = await createExplorerGroundhogClient();
     const page = await client.getEvents({
-      filters: [ERC20TransferEvent.filter({ contractAddresses: [addressFromHex(nativeToken.address)] })],
+      filters: [groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromHex(nativeToken.address)] })],
       order: "descending",
       anchor: "end",
       limit: LATEST_HOG_TRANSFER_LIMIT,

@@ -1,5 +1,5 @@
-import { getTransactionReceipt, hashFromHex, toHex0x, type EmittedEvent, type GroundhogClient, type TransactionStatus as SdkTransactionStatus } from "@groundhogchain/client";
-import { ExecResult } from "@groundhogchain/protocol";
+import { getTransactionReceipt, hashFromHex, toHex0x, type EmittedEvent, type ThruputClient, type TransactionStatus as SdkTransactionStatus } from "@thruputchain/client";
+import { ExecResult } from "@thruputchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -77,7 +77,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
   }
 }
 
-async function enrichTransactionEvents(client: GroundhogClient, events: EmittedEvent[]): Promise<EventView[]> {
+async function enrichTransactionEvents(client: ThruputClient, events: EmittedEvent[]): Promise<EventView[]> {
   const metadataByAddress = new Map<string, TokenMetadata | undefined>();
   await Promise.all(Array.from(new Set(events.map((event) => toHex(event.contractAddress)))).map(async (address) => {
     metadataByAddress.set(address, await getTokenMetadata(client, address));
@@ -97,16 +97,18 @@ function formatEvent(event: EmittedEvent, metadata?: TokenMetadata): EventView {
 }
 
 function formatTransactionStatus(status: SdkTransactionStatus) {
-  if (status.status === "committed") return { status: "committed" as const, height: status.height.toString() };
+  if (status.status === "committed") return { status: "committed" as const, height: status.height?.toString() };
   if (status.status === "recentFailure") {
     return {
       status: "recentFailure" as const,
       attemptHeight: status.attemptHeight.toString(),
-      conflict: {
-        address: toHex(status.conflict.address),
-        key: toHex(status.conflict.key),
-        code: status.conflict.code,
-      },
+      cause: status.cause.kind === "dbConflict"
+        ? { kind: "dbConflict" as const, conflict: {
+            address: toHex(status.cause.conflict.address),
+            key: toHex(status.cause.conflict.key),
+            code: status.cause.conflict.code,
+          } }
+        : status.cause,
     };
   }
 

@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
-import { MockTransport, addressFromHex, createGroundhogClient, hashFromHex, type EventQuery, type IdentifiedEvent } from "@groundhogchain/client";
-import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
+import { MockTransport, addressFromHex, createThruputClient, hashFromHex, type EventQuery, type IdentifiedEvent } from "@thruputchain/client";
+import { groundhog_erc20_if } from "@thruputchain/client/contracts";
 
 import { loadAddressPageData } from "./addresses";
 import { NATIVE_HOG_ADDRESS } from "./client";
 import { transferEvent } from "./test-fixtures";
 
 // Match the CommonJS SDK factory mock used by loaders.test.ts.
-const sdk: typeof import("@groundhogchain/client") = createRequire(import.meta.url)("@groundhogchain/client");
+const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 const address = `0x${"ab".repeat(32)}`;
 const peer = `0x${"cd".repeat(32)}`;
 const balance = { rawBalance: "15000000", amount: "1.5", symbol: "HOG", height: "42" };
@@ -24,8 +24,8 @@ function event(id: number, blockHeight: bigint, options: Parameters<typeof trans
 }
 
 async function mockClient(t: TestContext) {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  t.mock.method(sdk, "createGroundhogClient", async () => client);
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
   t.mock.method(client, "view", async () => { throw new Error("Metadata unavailable"); });
   return client;
@@ -72,8 +72,8 @@ test("address merges incoming and outgoing HOG history with roots and deduplicat
   assert.deepEqual(events.mock.calls.map(({ arguments: args }) => args[0]), [
     {
       filters: [
-        ERC20TransferEvent.filter({ contractAddresses: [addressFromHex(NATIVE_HOG_ADDRESS)], topics: { from: addressFromHex(address) } }),
-        ERC20TransferEvent.filter({ contractAddresses: [addressFromHex(NATIVE_HOG_ADDRESS)], topics: { to: addressFromHex(address) } }),
+        groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromHex(NATIVE_HOG_ADDRESS)], topics: { from: addressFromHex(address) } }),
+        groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromHex(NATIVE_HOG_ADDRESS)], topics: { to: addressFromHex(address) } }),
       ],
       order: "descending", anchor: "end", limit: 25,
     },

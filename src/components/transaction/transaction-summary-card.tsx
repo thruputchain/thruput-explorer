@@ -22,7 +22,7 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           </FieldRow>
           {data.receipt ? <FieldRow label="Execution">{data.receipt.execResult}</FieldRow> : null}
           <FieldRow label="Block height">
-            {data.status.status === "committed" ? data.status.height : statusLabel(data.status.status)}
+            {data.status.status === "committed" ? data.status.height ?? "Not indexed yet" : statusLabel(data.status.status)}
           </FieldRow>
           {executionDetails.map((detail) => (
             <FieldRow label={detail.label} key={detail.label}>
@@ -48,9 +48,22 @@ function getExecutionDetails(data: TransactionPageData) {
 
   if (data.status.status === "recentFailure") {
     details.push({ label: "Attempt height", value: data.status.attemptHeight });
-    details.push({ label: "Conflict address", value: data.status.conflict.address });
-    details.push({ label: "Conflict key", value: data.status.conflict.key });
-    details.push({ label: "Conflict code", value: data.status.conflict.code });
+    const cause = data.status.cause;
+    if (cause.kind === "dbConflict") {
+      details.push({ label: "Conflict address", value: cause.conflict.address });
+      details.push({ label: "Conflict key", value: cause.conflict.key });
+      details.push({ label: "Conflict code", value: cause.conflict.code });
+    } else if (cause.kind === "contractRejected") {
+      details.push({ label: "Rejected contract index", value: String(cause.contractIndex) });
+      details.push({ label: "Rejection code", value: cause.code });
+    } else {
+      details.push({ label: "Failure cause", value: "Other" });
+    }
+  }
+
+  if (data.status.status === "retry" || data.status.status === "dropped") {
+    details.push({ label: "Error source", value: data.status.error.source });
+    details.push({ label: "Error code", value: String(data.status.error.code) });
   }
 
   const receipt = data.receipt;
@@ -71,6 +84,10 @@ function statusLabel(status: TransactionPageData["status"]["status"]) {
   switch (status) {
     case "pending":
       return "Pending";
+    case "retry":
+      return "Retry";
+    case "dropped":
+      return "Dropped";
     case "invalid":
       return "Invalid";
     case "malformed":
