@@ -30,7 +30,7 @@ jobs:
           node-version: '22'
           cache: pnpm
           registry-url: https://npm.pkg.github.com
-          scope: '@groundhogchain'
+          scope: '@thruputchain'
 
       - run: pnpm install --frozen-lockfile
         env:

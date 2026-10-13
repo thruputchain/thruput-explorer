@@ -2,13 +2,19 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
-import { toHex0x } from "@groundhogchain/client";
-import { HOG_ADDRESS } from "@groundhogchain/protocol";
+import { toHex0x } from "@thruputchain/client";
+import { HOG_ADDRESS } from "@thruputchain/protocol";
 
 import { transferEvent } from "../../src/lib/groundhog/test-fixtures";
 
 async function main() {
   const txHash = `0x${"ab".repeat(32)}`;
+  const statusFixtures: Record<string, unknown> = {
+    [`0x${"a1".repeat(32)}`]: { status: "retry", error: { source: "scheduler", code: -7 } },
+    [`0x${"a2".repeat(32)}`]: { status: "dropped", error: { source: "auth", code: -3 } },
+    [`0x${"a3".repeat(32)}`]: { status: "recentFailure", attemptHeight: "41", cause: { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" } },
+    [`0x${"a4".repeat(32)}`]: { status: "committed" },
+  };
   const transfer = transferEvent({ contractAddress: toHex0x(HOG_ADDRESS) });
   const event = {
     contractAddress: toHex0x(transfer.contractAddress),
@@ -57,32 +63,32 @@ async function main() {
           result = { networkHash: `0x${"00".repeat(32)}` };
           break;
         case "groundhog_chainTip":
-          result = { height: 42, blockHash: `0x${"bb".repeat(32)}` };
+          result = { height: "42", blockHash: `0x${"bb".repeat(32)}` };
           break;
         case "groundhog_getTransactionStatus":
-          result = [txHash, slowTxHash].includes(params?.[0])
-            ? { status: "committed", height: 42 }
-            : { status: params?.[0] === `0x${"cc".repeat(32)}` ? "pending" : "unknown" };
+          result = statusFixtures[params?.[0]] ?? ([txHash, slowTxHash].includes(params?.[0])
+            ? { status: "committed", height: "42" }
+            : { status: params?.[0] === `0x${"cc".repeat(32)}` ? "pending" : "unknown" });
           break;
         case "groundhog_getTransactionReceipt":
           if (params?.[0] === slowTxHash) receiptRequests++;
           result = [txHash, slowTxHash].includes(params?.[0])
-            ? { txHash: params[0], height: 42, status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
+            ? { txHash: params[0], height: "42", gasUsed: "1000", status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
             : null;
           break;
         case "groundhog_getEvents":
           result = {
             events: !JSON.stringify(params).includes("33".repeat(32)) && params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
-              ? [{ txHash, blockHeight: 42, sequenceNumber: 0, event }]
+              ? [{ txHash, blockHeight: "42", sequenceNumber: 0, event }]
               : [],
-            cursor: "0x", latestBlock: 42, oldestBlock: 42,
+            cursor: "0x", latestBlock: "42", oldestBlock: "42",
           };
           break;
         case "groundhog_getBalance":
-          result = { address: params?.[0], rawBalance: "25000000", height: 42 };
+          result = { address: params?.[0], rawBalance: "25000000", height: "42" };
           break;
         case "groundhog_getTransactionsByAddress":
-          result = { refs: [], cursor: "0x", latestBlock: 42, oldestBlock: 42 };
+          result = { refs: [], cursor: "0x", latestBlock: "42", oldestBlock: "42" };
           break;
         default:
           if (method === "groundhog_view" && JSON.stringify(params).includes("55".repeat(32))) {

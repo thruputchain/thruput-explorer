@@ -1,4 +1,4 @@
-import { GroundhogRpcErrorCode, JsonRpcError } from "@groundhogchain/client";
+import { ThruputRpcErrorCode, JsonRpcError } from "@thruputchain/client";
 
 import type { RpcFailure } from "./types";
 
@@ -31,5 +31,5 @@ export function toRpcFailure(error: unknown): RpcFailure {
 }
 
 export function isUnsupportedRpcError(error: unknown) {
-  return error instanceof JsonRpcError && error.code === GroundhogRpcErrorCode.NotImplemented;
+  return error instanceof JsonRpcError && error.code === ThruputRpcErrorCode.NotImplemented;
 }

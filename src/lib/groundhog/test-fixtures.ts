@@ -1,6 +1,6 @@
-import { addressFromHex, type EmittedEvent } from "@groundhogchain/client";
-import { ERC20TransferEvent } from "@groundhogchain/client/contracts";
-import { CxsWriter, Int128Codec } from "@groundhogchain/protocol";
+import { addressFromHex, type EmittedEvent } from "@thruputchain/client";
+import { groundhog_erc20_if } from "@thruputchain/client/contracts";
+import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
 export function transferEvent(options: {
   contractAddress?: string;
@@ -14,7 +14,7 @@ export function transferEvent(options: {
   return {
     contractAddress: addressFromHex(options.contractAddress ?? `0x${"cc".repeat(32)}`),
     topics: [
-      ERC20TransferEvent.signature.slice(),
+      groundhog_erc20_if.v0_1.events.TransferEvent.signature.slice(),
       addressFromHex(options.from ?? `0x${"11".repeat(32)}`),
       addressFromHex(options.to ?? `0x${"22".repeat(32)}`),
     ],

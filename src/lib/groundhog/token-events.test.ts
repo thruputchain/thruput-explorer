@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { addressFromHex, type EmittedEvent } from "@groundhogchain/client";
-import { ERC20ApprovalEvent, decodeERC20Event } from "@groundhogchain/client/contracts";
-import { CxsWriter, Int128Codec } from "@groundhogchain/protocol";
+import { addressFromHex, type EmittedEvent } from "@thruputchain/client";
+import { groundhog_erc20_if, decodeERC20Event } from "@thruputchain/client/contracts";
+import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
 import { transferEvent } from "./test-fixtures";
 import { decodeTokenEvent } from "./token-events";
@@ -101,13 +101,13 @@ test("rejects unknown signatures, missing topics, malformed addresses, and inval
   }
 });
 
-test("ignores a valid ERC20 ApprovalEvent", () => {
+test("ignores a valid ERC20 AllowanceChangeEvent", () => {
   const writer = new CxsWriter();
   Int128Codec.encode(writer, -123n);
   const event = transferEvent();
-  event.topics[0] = ERC20ApprovalEvent.signature;
+  event.topics[0] = groundhog_erc20_if.v0_1.events.AllowanceChangeEvent.signature;
   event.data = writer.finish();
 
-  assert.equal(decodeERC20Event(event)?.name, "ApprovalEvent");
+  assert.equal(decodeERC20Event(event)?.name, "AllowanceChangeEvent");
   assert.equal(decodeTokenEvent(event), undefined);
 });

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
-import { HttpTransport, MockTransport, createGroundhogClient, hashFromHex } from "@groundhogchain/client";
-import { ERC20Metadata } from "@groundhogchain/client/contracts";
+import { HttpTransport, MockTransport, createThruputClient, hashFromHex } from "@thruputchain/client";
+import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { loadAddressPageData } from "./addresses";
 import { NATIVE_HOG_ADDRESS } from "./client";
@@ -13,13 +13,13 @@ import { loadTransactionPageData } from "./transactions";
 
 // tsx runs this package as CommonJS. Mock the published factory rather than
 // replacing Explorer's modules or reaching into SDK implementation files.
-const sdk: typeof import("@groundhogchain/client") = createRequire(import.meta.url)("@groundhogchain/client");
+const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 const hash = `0x${"ab".repeat(32)}`;
 
 for (const partial of [false, true]) {
   test(`address retains balance and root transactions with ${partial ? "failed" : "successful"} event RPCs`, async (t) => {
-    const client = await createGroundhogClient({ transport: new MockTransport() });
-    t.mock.method(sdk, "createGroundhogClient", async () => client);
+    const client = await createThruputClient({ transport: new MockTransport() });
+    t.mock.method(sdk, "createThruputClient", async () => client);
     t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
     t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromHex(hash), height: 42n }] }));
     t.mock.method(client, "getEvents", async () => {
@@ -43,7 +43,7 @@ for (const partial of [false, true]) {
 }
 
 test("malformed addresses and transaction hashes never create a client or access RPC", async (t) => {
-  const connect = t.mock.method(sdk, "createGroundhogClient", async () => {
+  const connect = t.mock.method(sdk, "createThruputClient", async () => {
     throw new Error("Unexpected client creation");
   });
   const request = t.mock.method(HttpTransport.prototype, "request", async () => {
@@ -67,7 +67,7 @@ test("malformed addresses and transaction hashes never create a client or access
 });
 
 test("async client connection failures become unavailable for every loader", async (t) => {
-  const connect = t.mock.method(sdk, "createGroundhogClient", async () => {
+  const connect = t.mock.method(sdk, "createThruputClient", async () => {
     await Promise.resolve();
     throw new Error("Network handshake failed");
   });
@@ -96,12 +96,12 @@ test("async client connection failures become unavailable for every loader", asy
 });
 
 test("partial custom-token metadata preserves successful fields", async (t) => {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  t.mock.method(ERC20Metadata.name, "view", async () => ({ value: "Groundhog" }));
-  t.mock.method(ERC20Metadata.symbol, "view", async () => {
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "Groundhog" }));
+  t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => {
     throw new Error("Symbol view unavailable");
   });
-  t.mock.method(ERC20Metadata.decimals, "view", async () => {
+  t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => {
     throw new Error("Decimals view unavailable");
   });
 
@@ -124,8 +124,8 @@ test("latest feed reports RPC failure instead of an empty successful feed", asyn
 });
 
 test("unavailable metadata falls back for HOG but does not label other contracts HOG", async (t) => {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  for (const method of [ERC20Metadata.name, ERC20Metadata.symbol, ERC20Metadata.decimals]) {
+  const client = await createThruputClient({ transport: new MockTransport() });
+  for (const method of [ERC20Metadata.v0_1.name, ERC20Metadata.v0_1.symbol, ERC20Metadata.v0_1.decimals]) {
     t.mock.method(method, "view", async () => {
       throw new Error("Metadata unavailable");
     });
@@ -138,13 +138,13 @@ test("unavailable metadata falls back for HOG but does not label other contracts
 });
 
 test("invalid custom-token decimals are omitted without replacing a successful symbol", async (t) => {
-  const client = await createGroundhogClient({ transport: new MockTransport() });
-  t.mock.method(ERC20Metadata.name, "view", async () => {
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(ERC20Metadata.v0_1.name, "view", async () => {
     throw new Error("Name view unavailable");
   });
-  t.mock.method(ERC20Metadata.symbol, "view", async () => ({ value: "LIVE" }));
+  t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "LIVE" }));
   for (const decimals of [-1n, 31n]) {
-    const view = t.mock.method(ERC20Metadata.decimals, "view", async () => ({ value: decimals }));
+    const view = t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => ({ value: decimals }));
     assert.deepEqual(await getTokenMetadata(client, hash), {
       name: undefined, symbol: "LIVE", decimals: undefined,
     });
@@ -153,7 +153,7 @@ test("invalid custom-token decimals are omitted without replacing a successful s
 });
 
 test("chain tip failure does not erase a committed transaction receipt", async (t) => {
-  const rawReceipt = { txHash: hash, height: "42", status: { result: "ok" }, events: [], returnData: "0x1234", abortData: null };
+  const rawReceipt = { txHash: hash, height: "42", gasUsed: "1000", status: { result: "ok" }, events: [], returnData: "0x1234", abortData: null };
   const methods: string[] = [];
   t.mock.method(HttpTransport.prototype, "request", async (method: string) => {
     methods.push(method);

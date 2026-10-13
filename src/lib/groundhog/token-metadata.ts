@@ -1,5 +1,5 @@
-import { addressFromHex, type GroundhogClient } from "@groundhogchain/client";
-import { ERC20Metadata } from "@groundhogchain/client/contracts";
+import { addressFromHex, type ThruputClient } from "@thruputchain/client";
+import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
 
@@ -18,15 +18,15 @@ export function getBuiltInTokenMetadata(address: string): TokenMetadata | undefi
   return BUILT_IN_TOKEN_METADATA[normalizeAddress(address)];
 }
 
-export async function getTokenMetadata(client: GroundhogClient, address: string): Promise<TokenMetadata | undefined> {
+export async function getTokenMetadata(client: ThruputClient, address: string): Promise<TokenMetadata | undefined> {
   // Native HOG is a precompile without ERC20Metadata entrypoints.
   const builtIn = getBuiltInTokenMetadata(address);
   if (builtIn) return builtIn;
   const contract = addressFromHex(address);
   const [name, symbol, decimals] = await Promise.all([
-    viewMetadataValue(() => ERC20Metadata.name.view({ client, contract })),
-    viewMetadataValue(() => ERC20Metadata.symbol.view({ client, contract })),
-    viewMetadataValue(() => ERC20Metadata.decimals.view({ client, contract })),
+    viewMetadataValue(() => ERC20Metadata.v0_1.name.view({ client, contract })),
+    viewMetadataValue(() => ERC20Metadata.v0_1.symbol.view({ client, contract })),
+    viewMetadataValue(() => ERC20Metadata.v0_1.decimals.view({ client, contract })),
   ]);
 
   if (name == null && symbol == null && decimals == null) return undefined;

@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 const groundhogPackages = [
-  "@groundhogchain/client",
-  "@groundhogchain/contract-spec",
-  "@groundhogchain/protocol",
-  "@groundhogchain/xdr",
+  "@thruputchain/client",
+  "@thruputchain/contract-spec",
+  "@thruputchain/protocol",
+  "@thruputchain/xdr",
 ];
 
 const nextConfig: NextConfig = {
