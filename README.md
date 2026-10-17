@@ -104,6 +104,6 @@ CI runs lint, data-layer regression tests, the production build, HTTP authentica
 
 ## Event Decoding
 
-The explorer uses SDK receipt/status APIs for transaction data, SDK-generated ERC20 event decoders for token transfers, and SDK contract helpers for ERC20 metadata view calls. Events from other contracts are displayed as raw topics and data until the protocol exposes a canonical contract-spec discovery mechanism.
+The explorer uses SDK receipt/status APIs for transaction data, including exact gas usage and available execution fault/revert details. It uses SDK-generated ERC20 event decoders for token transfers and `readViews` with generated metadata requests for one shared-height name/symbol/decimals read per token. Contract-level failures retain successful metadata fields; a failed batch leaves metadata unavailable. Events from other contracts are displayed as raw topics and data until the protocol exposes a canonical contract-spec discovery mechanism.
 
-Token metadata uses the generated SDK contract views and return decoders. HOG uses a built-in `HOG`/7-decimal fallback for missing metadata fields. RPC requests have a 10-second deadline, and displayed RPC URLs omit credentials, paths, and queries.
+HOG uses built-in `HOG`/7-decimal metadata. Amount formatting uses SDK `formatUnits`, with the explorer's 30-decimal display limit for custom tokens. RPC requests use the SDK transport's 10-second deadline, including response-body reading, and displayed RPC URLs omit credentials, paths, and queries.

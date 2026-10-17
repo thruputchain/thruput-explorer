@@ -39,12 +39,7 @@ export function getExplorerRpcConfig(): ExplorerRpcConfig {
 export async function createExplorerGroundhogClient(): Promise<ExplorerGroundhogClient> {
   const config = getExplorerRpcConfig();
   const transport = new HttpTransport(process.env.GROUNDHOG_RPC_URL?.trim() || DEFAULT_RPC_URL, {
-    fetch: (input, init) => {
-      // Keep the deadline active through body decoding, not just response headers.
-      const timeout = AbortSignal.timeout(10_000);
-      const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
-      return fetch(input, { ...init, signal });
-    },
+    timeoutMs: 10_000,
   });
 
   return {

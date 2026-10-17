@@ -11,7 +11,7 @@ test("transaction details render while optional metadata is still pending", asyn
     // Exercise client navigation, the path used when selecting a transaction.
     await page.getByRole("textbox").fill(txHash);
     await page.getByRole("button", { name: "Search", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(`${rpcOrigin}/metadata/state`)).json()).pending).toBe(3);
+    await expect.poll(async () => (await (await request.get(`${rpcOrigin}/metadata/state`)).json()).pending).toBe(1);
     await expect(page).toHaveURL(`/tx/${txHash}`);
     await expect(page.getByText("Available", { exact: true })).toBeVisible({ timeout: 2_000 });
     await expect(page.getByText("Raw transaction receipt", { exact: true })).toBeVisible();
@@ -20,7 +20,7 @@ test("transaction details render while optional metadata is still pending", asyn
     await expect(page.getByText("Amount", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Topics", { exact: true })).toBeVisible();
     const state = await (await request.get(`${rpcOrigin}/metadata/state`)).json();
-    expect(state).toEqual({ pending: 3, receiptRequests: 1, released: false });
+    expect(state).toEqual({ pending: 1, receiptRequests: 1, released: false });
 
     // Metadata failures leave the receipt and raw events available.
     await request.post(`${rpcOrigin}/metadata/release`);

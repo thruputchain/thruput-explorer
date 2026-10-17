@@ -14,6 +14,8 @@ async function main() {
     [identifier(0xa2)]: { status: "dropped", error: { source: "auth", code: -3 } },
     [identifier(0xa3)]: { status: "recentFailure", attemptHeight: "41", cause: { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" } },
     [identifier(0xa4)]: { status: "committed" },
+    [identifier(0xa5)]: { status: "committed", height: "42" },
+    [identifier(0xa6)]: { status: "committed", height: "42" },
   };
   const transfer = transferEvent({ contractAddress: toBase58(HOG_ADDRESS) });
   const event = {
@@ -105,6 +107,13 @@ async function main() {
             : { status: params?.[0] === identifier(0xcc) ? "pending" : "unknown" });
           break;
         case "groundhog_getTransactionReceipt":
+          if ([identifier(0xa5), identifier(0xa6)].includes(params?.[0])) {
+            result = {
+              txHash: params[0], height: "42", gasUsed: "9007199254740993", events: [], returnData: null, abortData: null,
+              status: params[0] === identifier(0xa5) ? { result: "reverted", message: "Transfer exceeds available balance" } : { result: "deterministicError", kind: "outOfGas" },
+            };
+            break;
+          }
           if (params?.[0] === slowTxHash) receiptRequests++;
           result = [txHash, slowTxHash].includes(params?.[0])
             ? { txHash: params[0], height: "42", gasUsed: "1000", status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
@@ -124,11 +133,14 @@ async function main() {
         case "groundhog_getTransactionsByAddress":
           result = { refs: [], cursor: "0x", latestBlock: "42", oldestBlock: "42" };
           break;
-        default:
-          if (method === "groundhog_view" && JSON.stringify(params).includes(identifier(0x55))) {
+        case "groundhog_viewBatch":
+          if (JSON.stringify(params).includes(identifier(0x55))) {
             pending++;
             try { await metadataGate; } finally { pending--; }
           }
+          result = { height: "42", results: params[0].calls.map(() => ({ output: { result: "fault" }, gasUsed: "1", events: [] })) };
+          break;
+        default:
           // Metadata errors exercise the application's fallback rendering.
           if (method !== "groundhog_view") console.error(`Unexpected fixture RPC method: ${method}`);
           response.writeHead(200, { "content-type": "application/json" });

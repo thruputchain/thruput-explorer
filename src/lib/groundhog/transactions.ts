@@ -60,8 +60,10 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
             txHash: toBase58(receipt.txHash),
             height: receipt.height.toString(),
             execResult: formatExecResult(receipt.execResult),
-            returnData: receipt.returnData ? toHex(receipt.returnData) : null,
-            abortData: receipt.abortData ? toHex(receipt.abortData) : null,
+            executionStatus: receipt.executionStatus,
+            gasUsed: receipt.gasUsed.toString(),
+            returnData: receipt.returnData ? toHex0x(receipt.returnData) : null,
+            abortData: receipt.abortData ? toHex0x(receipt.abortData) : null,
             events: receipt.events.map((event) => formatEvent(event, getBuiltInTokenMetadata(toBase58(event.contractAddress)))),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),
           }
@@ -89,8 +91,8 @@ function formatEvent(event: EmittedEvent, metadata?: TokenMetadata): EventView {
   return {
     contractAddress: toBase58(event.contractAddress),
     contractName: metadata?.name,
-    topics: event.topics.map(toHex),
-    data: toHex(event.data),
+    topics: event.topics.map(toHex0x),
+    data: toHex0x(event.data),
     // Names and symbols alone cannot establish the token amount scale.
     decoded: metadata?.decimals !== undefined ? decodeTokenEvent(event, metadata) : undefined,
   };
@@ -105,7 +107,7 @@ function formatTransactionStatus(status: SdkTransactionStatus) {
       cause: status.cause.kind === "dbConflict"
         ? { kind: "dbConflict" as const, conflict: {
             address: toBase58(status.cause.conflict.address),
-            key: toHex(status.cause.conflict.key),
+            key: toHex0x(status.cause.conflict.key),
             code: status.cause.conflict.code,
           } }
         : status.cause,
@@ -113,10 +115,6 @@ function formatTransactionStatus(status: SdkTransactionStatus) {
   }
 
   return status;
-}
-
-function toHex(value: Uint8Array) {
-  return toHex0x(value);
 }
 
 function formatExecResult(value: number) {

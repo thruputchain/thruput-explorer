@@ -27,7 +27,7 @@ async function mockClient(t: TestContext) {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
-  t.mock.method(client, "view", async () => { throw new Error("Metadata unavailable"); });
+  t.mock.method(client, "readViews", async () => { throw new Error("Metadata unavailable"); });
   return client;
 }
 

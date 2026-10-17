@@ -1,4 +1,4 @@
-import type { SchedulerTransactionError } from "@thruputchain/client";
+import type { ExecutionStatus, SchedulerTransactionError } from "@thruputchain/client";
 
 export type RpcFailure = {
   message: string;
@@ -12,6 +12,8 @@ export type TransactionReceiptView = {
   txHash: string;
   height: string;
   execResult: string;
+  executionStatus?: ExecutionStatus;
+  gasUsed: string;
   events: EventView[];
   returnData: string | null;
   abortData: string | null;
