@@ -1,5 +1,6 @@
 import { AlertCircleIcon } from "lucide-react";
 import Link from "next/link";
+import { BlockLink } from "@/components/block-link";
 
 import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
@@ -224,7 +225,7 @@ function TransactionHistoryCard({
                       {shortenValue(transaction.txHash)}
                     </Link>
                   </TableCell>
-                  <TableCell>{transaction.height}</TableCell>
+                  <TableCell><BlockLink height={transaction.height} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -397,7 +398,7 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
           {shortenValue(event.txHash)}
         </Link>
       </TableCell>
-      <TableCell>{event.blockHeight}</TableCell>
+      <TableCell><BlockLink height={event.blockHeight} /></TableCell>
       <TableCell>
         <AddressLink value={decoded?.from} />
       </TableCell>
@@ -421,7 +422,7 @@ function RawEventRow({ event }: { event: AddressEventView }) {
           {shortenValue(event.txHash)}
         </Link>
       </TableCell>
-      <TableCell>{event.blockHeight}</TableCell>
+      <TableCell><BlockLink height={event.blockHeight} /></TableCell>
       <TableCell>
         <code className="font-mono text-xs" title={event.topics.join(", ")}>
           {event.topics.length > 0

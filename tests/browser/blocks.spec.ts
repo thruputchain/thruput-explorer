@@ -57,7 +57,7 @@ test("empty block, genesis, large heights and receipt navigation", async ({
   ).toBeVisible();
   await page.goto(`/tx/${identifier(0xab)}`);
   await expect(
-    page.getByRole("link", { name: "42", exact: true }),
+    page.getByRole("link", { name: "42", exact: true }).first(),
   ).toHaveAttribute("href", "/block/42");
 });
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BlockLink } from "@/components/block-link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ export async function LatestHogTransfersCard() {
   const data = await loadLatestHogTransfers();
 
   return (
-    <section className="mt-10 w-full sm:mt-12">
+    <section className="w-full">
       <Card>
         <CardHeader>
           <CardTitle>Latest HOG Transfers</CardTitle>
@@ -44,7 +45,7 @@ export async function LatestHogTransfersCard() {
                         {shortenValue(transfer.txHash)}
                       </Link>
                     </TableCell>
-                    <TableCell>{transfer.blockHeight}</TableCell>
+                    <TableCell><BlockLink height={transfer.blockHeight} /></TableCell>
                     <TableCell><AddressLink value={transfer.from} fallback={transfer.name} /></TableCell>
                     <TableCell><AddressLink value={transfer.to} fallback={transfer.name} /></TableCell>
                     <TableCell className="text-right">{transfer.amount} {transfer.symbol}</TableCell>
@@ -61,7 +62,7 @@ export async function LatestHogTransfersCard() {
 
 export function LatestHogTransfersFallback() {
   return (
-    <section className="mt-10 w-full sm:mt-12" aria-busy="true">
+    <section className="w-full" aria-busy="true">
       <Card>
         <CardHeader>
           <CardTitle>Latest HOG Transfers</CardTitle>

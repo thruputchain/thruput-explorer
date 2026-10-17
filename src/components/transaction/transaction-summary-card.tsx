@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BlockLink } from "@/components/block-link";
 import { FieldRow } from "./field-row";
 
 import { StatusBadge } from "@/components/status-badge";
@@ -26,14 +26,15 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
             <FieldRow label="Gas used">{data.receipt.gasUsed}</FieldRow>
           </> : null}
           <FieldRow label="Block height">
-            {data.status.status === "committed" ? data.status.height ? <Link className="underline underline-offset-4" href={`/block/${data.status.height}`}>{data.status.height}</Link> : "Not indexed yet" : statusLabel(data.status.status)}
+            {data.status.status === "committed" ? data.status.height ? <BlockLink height={data.status.height} /> : "Not indexed yet" : statusLabel(data.status.status)}
           </FieldRow>
+          {data.status.status === "recentFailure" ? <FieldRow label="Attempt height"><BlockLink height={data.status.attemptHeight} /></FieldRow> : null}
           {executionDetails.map((detail) => (
             <FieldRow label={detail.label} key={detail.label}>
               <span className="break-all font-mono">{detail.value}</span>
             </FieldRow>
           ))}
-          <FieldRow label="Chain tip">{data.chainTipHeight ?? "Unavailable"}</FieldRow>
+          <FieldRow label="Chain tip">{data.chainTipHeight ? <BlockLink height={data.chainTipHeight} /> : "Unavailable"}</FieldRow>
           <FieldRow label="Freshness">{freshness ?? "-"}</FieldRow>
           <FieldRow label="Receipt">{data.receipt ? "Available" : "Not available"}</FieldRow>
           <FieldRow label="RPC URL"><span className="font-mono">{data.rpcUrl}</span></FieldRow>
@@ -51,7 +52,6 @@ function getExecutionDetails(data: TransactionPageData) {
   }
 
   if (data.status.status === "recentFailure") {
-    details.push({ label: "Attempt height", value: data.status.attemptHeight });
     const cause = data.status.cause;
     if (cause.kind === "dbConflict") {
       details.push({ label: "Conflict address", value: cause.conflict.address });
