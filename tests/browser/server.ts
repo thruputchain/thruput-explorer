@@ -48,6 +48,19 @@ async function main() {
       let body = "";
       for await (const chunk of request) body += chunk;
       const { id, method, params } = JSON.parse(body);
+      if (["groundhog_getBlockByNumber", "groundhog_getTransactionsByBlock"].includes(method)) {
+        const height = method === "groundhog_getBlockByNumber" ? params?.[0] : params?.[0]?.height;
+        if (height === "43" || height === "45") {
+          response.writeHead(200, { "content-type": "application/json" });
+          response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: height === "45" ? -32601 : -32603, message: "Private upstream diagnostics" } }));
+          return;
+        }
+        if (height === "44") {
+          response.writeHead(200, { "content-type": "application/json" });
+          response.end(JSON.stringify({ jsonrpc: "2.0", id, result: { invalid: true } }));
+          return;
+        }
+      }
       if (method === "groundhog_getTransactionStatus" && params?.[0] === `0x${"ee".repeat(32)}`) {
         response.writeHead(503).end("Fixture transaction RPC unavailable");
         return;
@@ -59,6 +72,27 @@ async function main() {
       }
       let result: unknown;
       switch (method) {
+        case "groundhog_getBlockByNumber": {
+          const height = params[0];
+          result = ["40", "41", "42", "9007199254740993"].includes(height) ? {
+            blockHeight: height, blockHash: `0x${"bb".repeat(32)}`, prevBlockHash: `0x${"aa".repeat(32)}`,
+            protocol: 1, networkHash: `0x${"00".repeat(32)}`, proposer: `0x${"11".repeat(32)}`,
+            blockTimepoint: "1770000000000000000", txsHash: `0x${"22".repeat(32)}`,
+            storageHash: `0x${"33".repeat(32)}`, eventsHash: `0x${"44".repeat(32)}`,
+            configHash: `0x${"55".repeat(32)}`, proposalTxsHash: `0x${"66".repeat(32)}`, upgrades: [],
+          } : null;
+          break;
+        }
+        case "groundhog_getTransactionsByBlock": {
+          const { height, cursor, limit, order } = params[0];
+          if (limit !== 50 || order !== "ascending") throw new Error("Unexpected block page parameters");
+          result = {
+            refs: height === "42" && cursor !== "0xbb" ? [{ txHash: cursor === "0x" ? txHash : slowTxHash, height }] : [],
+            cursor: height === "42" ? cursor === "0x" ? "0xaa" : cursor === "0xaa" ? "0xbb" : "0x" : "0x",
+            oldestBlock: "40", latestBlock: "9007199254740993",
+          };
+          break;
+        }
         case "groundhog_networkInfo":
           result = { networkHash: `0x${"00".repeat(32)}` };
           break;

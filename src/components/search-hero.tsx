@@ -7,7 +7,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
+import { isBlockHeight, isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 type SearchResponse =
   | { status: "ok"; href: string }
@@ -23,8 +23,8 @@ export function SearchHero() {
     event.preventDefault();
     const normalized = normalizeTransactionHash(hash);
 
-    if (!isTransactionHash(normalized)) {
-      setError("Enter a 0x-prefixed 32-byte transaction hash or address.");
+    if (!isBlockHeight(normalized) && !isTransactionHash(normalized)) {
+      setError("Enter a block height or a 0x-prefixed 32-byte transaction hash or address.");
       return;
     }
 
@@ -52,12 +52,12 @@ export function SearchHero() {
 
   return (
     <section className="flex max-w-2xl flex-col gap-6">
-      <p className="text-lg text-muted-foreground">Search transactions, contracts, and addresses on Thruput.</p>
+      <p className="text-lg text-muted-foreground">Search blocks, transactions, contracts, and addresses on Thruput.</p>
 
       <form onSubmit={submit} aria-label="Explorer search">
         <FieldGroup className="gap-3 sm:flex-row sm:items-start">
           <Field className="flex-1" data-invalid={Boolean(error)}>
-            <FieldLabel htmlFor="explorer-search" className="sr-only">Transaction hash or address</FieldLabel>
+            <FieldLabel htmlFor="explorer-search" className="sr-only">Block height, transaction hash or address</FieldLabel>
             <Input
               id="explorer-search"
               name="query"
@@ -68,7 +68,7 @@ export function SearchHero() {
               aria-describedby={error ? "search-error" : undefined}
               value={hash}
               onChange={(event) => setHash(event.target.value)}
-              placeholder="Transaction hash or address"
+              placeholder="Block height, transaction hash or address"
             />
             {error ? <FieldError id="search-error">{error}</FieldError> : null}
           </Field>
