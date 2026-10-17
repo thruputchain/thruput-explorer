@@ -4,7 +4,7 @@ import { createExplorerGroundhogClient } from "@/lib/groundhog/client";
 import { getNativeBalance } from "@/lib/groundhog/native-balance";
 import { toRpcFailure } from "@/lib/groundhog/rpc";
 import { getTokenMetadata } from "@/lib/groundhog/token-metadata";
-import { isContractAddress, isTransactionHash, normalizeContractAddress, normalizeTransactionHash } from "@/lib/validation";
+import { isBlockHeight, isContractAddress, isTransactionHash, normalizeContractAddress, normalizeTransactionHash } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +13,13 @@ export async function POST(request: Request) {
   const rawQuery = typeof body?.query === "string" ? body.query : "";
   const query = normalizeTransactionHash(rawQuery);
 
+  if (isBlockHeight(query)) {
+    return Response.json({ status: "ok", href: `/block/${query}` });
+  }
+
   if (!isTransactionHash(query)) {
     return Response.json(
-      { status: "malformed", message: "Enter a 0x-prefixed 32-byte transaction hash or address." },
+      { status: "malformed", message: "Enter a block height or a 0x-prefixed 32-byte transaction hash or address." },
       { status: 400 },
     );
   }

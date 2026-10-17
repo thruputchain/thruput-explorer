@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FieldRow } from "./field-row";
 
 import { StatusBadge } from "@/components/status-badge";
@@ -22,7 +23,7 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           </FieldRow>
           {data.receipt ? <FieldRow label="Execution">{data.receipt.execResult}</FieldRow> : null}
           <FieldRow label="Block height">
-            {data.status.status === "committed" ? data.status.height ?? "Not indexed yet" : statusLabel(data.status.status)}
+            {data.status.status === "committed" ? data.status.height ? <Link className="underline underline-offset-4" href={`/block/${data.status.height}`}>{data.status.height}</Link> : "Not indexed yet" : statusLabel(data.status.status)}
           </FieldRow>
           {executionDetails.map((detail) => (
             <FieldRow label={detail.label} key={detail.label}>

@@ -7,13 +7,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("the branded home link works from a transaction behind Basic Auth", async ({ page }) => {
-  await expect(page.getByText("Search transactions, contracts, and addresses on Thruput.")).toBeVisible();
+  await expect(page.getByText("Search blocks, transactions, contracts, and addresses on Thruput.")).toBeVisible();
   await page.goto(`/tx/${txHash}`);
   const home = page.getByRole("link", { name: "Thruput Explorer homepage" });
   await expect(home).toBeVisible();
   await home.click();
   await expect(page).toHaveURL("/");
-  await expect(page.getByRole("textbox", { name: "Transaction hash or address" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Block height, transaction hash or address" })).toBeVisible();
 });
 
 test("search uses the API and RPC, then renders the decoded transfer", async ({ page }) => {
@@ -50,7 +50,7 @@ test("malformed input shows validation without a search request", async ({ page 
   });
   await page.getByRole("textbox").fill("not-a-hash");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByText("Enter a 0x-prefixed 32-byte transaction hash or address.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enter a block height or a 0x-prefixed 32-byte transaction hash or address.", { exact: true })).toBeVisible();
   await expect(page.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
   expect(requests).toEqual([]);
 });
