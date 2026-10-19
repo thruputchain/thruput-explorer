@@ -1,4 +1,4 @@
-import { addressFromHex, toHex0x, type EventQuery, type GroundhogClient, type IdentifiedEvent } from "@groundhogchain/client";
+import { addressFromHex, toHex0x, type EventQuery, type ThruputClient, type IdentifiedEvent } from "@thruputchain/client";
 
 import { createExplorerGroundhogClient, getExplorerRpcConfig, NATIVE_HOG_ADDRESS } from "../client";
 import { toRpcFailure } from "../rpc";
@@ -27,7 +27,7 @@ type Listener = (message: LiveMessage) => void;
 export type LiveHubOptions = {
   clock?: () => number;
   /** Creates the RPC client on first use; injectable for tests. */
-  createClient?: () => Promise<Pick<GroundhogClient, "getEvents">>;
+  createClient?: () => Promise<Pick<ThruputClient, "getEvents">>;
   /** Parses the watched contracts and lag; injectable for tests. */
   loadConfig?: () => LiveConfig;
   rpcUrl?: () => string;
@@ -44,11 +44,11 @@ export class LiveHub {
   private readonly ring: LiveBlock[] = [];
   private readonly tipSeenAt = new Map<string, number>();
   private readonly clock: () => number;
-  private readonly createClient: () => Promise<Pick<GroundhogClient, "getEvents">>;
+  private readonly createClient: () => Promise<Pick<ThruputClient, "getEvents">>;
   private readonly rpcUrl: () => string;
   private status: LiveStatus;
   private config: LiveConfig | null = null;
-  private client: Pick<GroundhogClient, "getEvents"> | null = null;
+  private client: Pick<ThruputClient, "getEvents"> | null = null;
   private nextHeight: bigint | null = null;
   private lastTip: { height: bigint; at: number } | null = null;
   private running = false;

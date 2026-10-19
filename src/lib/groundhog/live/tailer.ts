@@ -1,4 +1,4 @@
-import { toHex0x, type EventPage, type EventQuery, type IdentifiedEvent } from "@groundhogchain/client";
+import { toHex0x, type EventPage, type EventQuery, type IdentifiedEvent } from "@thruputchain/client";
 
 export type PageFetcher = (query: EventQuery) => Promise<EventPage>;
 

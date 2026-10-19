@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
-import { addressFromHex, hashFromHex, toHex0x, type EventPage, type EventQuery } from "@groundhogchain/client";
+import { addressFromHex, hashFromHex, toHex0x, type EventPage, type EventQuery } from "@thruputchain/client";
 
 import { NATIVE_HOG_ADDRESS } from "../client";
 import { transferEvent } from "../test-fixtures";
