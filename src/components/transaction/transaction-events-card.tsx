@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { EventView } from "@/lib/groundhog/types";
+import type { EventView } from "@/lib/thruput/types";
 
 export function TransactionEventsCard({ events }: { events: EventView[] }) {
   return (

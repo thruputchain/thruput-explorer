@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { TransactionPageData } from "@/lib/groundhog/types";
+import type { TransactionPageData } from "@/lib/thruput/types";
 
 export function TransactionRawReceiptCard({ data }: { data: TransactionPageData }) {
   if (!data.receipt?.rawJson) return null;

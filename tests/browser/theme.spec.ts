@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { identifier } from "../../src/lib/groundhog/test-fixtures";
+import { identifier } from "../../src/lib/thruput/test-fixtures";
 
 const txHash = identifier(0xab);
 const address = identifier(0x22);

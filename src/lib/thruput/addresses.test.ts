@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
 import { MockTransport, addressFromBase58, createThruputClient, hashFromBase58, toBase58, type EventQuery, type IdentifiedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if } from "@thruputchain/client/contracts";
+import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
 import { loadAddressPageData } from "./addresses";
 import { NATIVE_HOG_ADDRESS } from "./client";
@@ -27,7 +27,7 @@ async function mockClient(t: TestContext) {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
-  t.mock.method(client, "view", async () => { throw new Error("Metadata unavailable"); });
+  t.mock.method(client, "readViews", async () => { throw new Error("Metadata unavailable"); });
   return client;
 }
 
@@ -72,8 +72,8 @@ test("address merges incoming and outgoing HOG history with roots and deduplicat
   assert.deepEqual(events.mock.calls.map(({ arguments: args }) => args[0]), [
     {
       filters: [
-        groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { from: addressFromBase58(address) } }),
-        groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { to: addressFromBase58(address) } }),
+        ERC20.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { from: addressFromBase58(address) } }),
+        ERC20.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { to: addressFromBase58(address) } }),
       ],
       order: "descending", anchor: "end", limit: 25,
     },

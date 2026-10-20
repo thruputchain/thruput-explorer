@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
 import { FieldRow } from "@/components/transaction/field-row";
 import { Button } from "@/components/ui/button";
-import { loadBlock, loadBlockTransactions } from "@/lib/groundhog/blocks";
+import { loadBlock, loadBlockTransactions } from "@/lib/thruput/blocks";
 
 export default async function BlockPage({
   params,

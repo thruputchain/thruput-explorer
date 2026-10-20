@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { HttpTransport, MockTransport, createThruputClient, hashFromBase58 } from "@thruputchain/client";
 import { identifier } from "./test-fixtures";
 import { ERC20Metadata } from "@thruputchain/client/contracts";
+import { metadataBatchResponse } from "./test-fixtures";
 
 import { loadAddressPageData } from "./addresses";
 import { NATIVE_HOG_ADDRESS } from "./client";
@@ -27,7 +28,7 @@ for (const partial of [false, true]) {
       if (partial) throw new Error("Events unavailable");
       return { events: [] };
     });
-    t.mock.method(client, "view", async () => { throw new Error("Metadata unavailable"); });
+    t.mock.method(client, "readViews", async () => { throw new Error("Metadata unavailable"); });
 
     const result = await loadAddressPageData(hash);
     assert.equal(result.status, "ok");
@@ -97,18 +98,18 @@ test("async client connection failures become unavailable for every loader", asy
 });
 
 test("partial custom-token metadata preserves successful fields", async (t) => {
-  const client = await createThruputClient({ transport: new MockTransport() });
-  t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "Groundhog" }));
-  t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => {
-    throw new Error("Symbol view unavailable");
-  });
-  t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => {
-    throw new Error("Decimals view unavailable");
-  });
+  const transport = new MockTransport();
+  const client = await createThruputClient({ transport });
+  const request = t.mock.method(transport, "request", async () => metadataBatchResponse(["Thruput", undefined, undefined]));
 
   assert.deepEqual(await getTokenMetadata(client, hash), {
-    name: "Groundhog", symbol: undefined, decimals: undefined,
+    name: "Thruput", symbol: undefined, decimals: undefined,
   });
+  assert.equal(request.mock.callCount(), 1);
+  const calls = [ERC20Metadata.v0_1.name, ERC20Metadata.v0_1.symbol, ERC20Metadata.v0_1.decimals];
+  const [method, params] = request.mock.calls[0].arguments;
+  assert.equal(method, "groundhog_viewBatch");
+  assert.equal((params?.[0] as { calls: unknown[] }).calls.length, calls.length);
 });
 
 test("latest feed reports RPC failure instead of an empty successful feed", async (t) => {
@@ -126,26 +127,21 @@ test("latest feed reports RPC failure instead of an empty successful feed", asyn
 
 test("unavailable metadata falls back for HOG but does not label other contracts HOG", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
-  for (const method of [ERC20Metadata.v0_1.name, ERC20Metadata.v0_1.symbol, ERC20Metadata.v0_1.decimals]) {
-    t.mock.method(method, "view", async () => {
-      throw new Error("Metadata unavailable");
-    });
-  }
+  const read = t.mock.method(client, "readViews", async () => { throw new Error("Metadata unavailable"); });
 
   assert.deepEqual(await getTokenMetadata(client, NATIVE_HOG_ADDRESS), {
     name: "HOG", symbol: "HOG", decimals: 7,
   });
+  assert.equal(read.mock.callCount(), 0);
   assert.equal(await getTokenMetadata(client, hash), undefined);
 });
 
 test("invalid custom-token decimals are omitted without replacing a successful symbol", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
-  t.mock.method(ERC20Metadata.v0_1.name, "view", async () => {
-    throw new Error("Name view unavailable");
-  });
-  t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "LIVE" }));
   for (const decimals of [-1n, 31n]) {
-    const view = t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => ({ value: decimals }));
+    const view = t.mock.method(client, "readViews", async () => ({ height: 42n, results: [
+      { kind: "fault" }, { kind: "return", value: "LIVE" }, { kind: "return", value: decimals },
+    ] }));
     assert.deepEqual(await getTokenMetadata(client, hash), {
       name: undefined, symbol: "LIVE", decimals: undefined,
     });

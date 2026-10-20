@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 
 import { MockTransport, addressFromBase58, createThruputClient, hashFromBase58, type EventPage } from "@thruputchain/client";
-import { groundhog_erc20_if } from "@thruputchain/client/contracts";
+import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
 import { loadLatestHogTransfers } from "./latest-hog-transfers";
@@ -68,7 +68,7 @@ for (const populated of [false, true]) {
     assert.deepEqual(getEvents.mock.calls[0].arguments, [{
       filters: [{
         contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)],
-        topics: { topic0: [groundhog_erc20_if.v0_1.events.TransferEvent.signature] },
+        topics: { topic0: [ERC20.v0_1.events.TransferEvent.signature] },
       }],
       order: "descending",
       anchor: "end",

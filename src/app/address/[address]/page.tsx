@@ -24,8 +24,8 @@ import {
   loadAddressPageData,
   type AddressEventView,
   type AddressTransactionRefView,
-} from "@/lib/groundhog/addresses";
-import type { RpcFailure } from "@/lib/groundhog/types";
+} from "@/lib/thruput/addresses";
+import type { RpcFailure } from "@/lib/thruput/types";
 
 export const dynamic = "force-dynamic";
 

@@ -1,4 +1,4 @@
-import { addressFromBase58, type ThruputClient } from "@thruputchain/client";
+import { addressFromBase58, formatUnits, type ThruputClient } from "@thruputchain/client";
 
 export type NativeBalanceView = {
   rawBalance: string;
@@ -16,22 +16,11 @@ export async function getNativeBalance(client: ThruputClient, address: string): 
 
     return {
       rawBalance,
-      amount: formatNativeHog(rawBalance),
+      amount: formatUnits(balance.rawBalance, NATIVE_HOG_DECIMALS),
       symbol: "HOG",
       height: balance.height.toString(),
     };
   } catch {
     return undefined;
   }
-}
-
-function formatNativeHog(rawBalance: string) {
-  const raw = rawBalance.trim();
-  if (!/^\d+$/.test(raw)) return rawBalance;
-  if (raw === "0") return "0";
-
-  const padded = raw.padStart(NATIVE_HOG_DECIMALS + 1, "0");
-  const whole = padded.slice(0, -NATIVE_HOG_DECIMALS);
-  const fraction = padded.slice(-NATIVE_HOG_DECIMALS).replace(/0+$/, "");
-  return fraction ? `${whole}.${fraction}` : whole;
 }

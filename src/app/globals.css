@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "@fontsource/ibm-plex-mono/latin-400.css";
 @import "@fontsource/ibm-plex-mono/latin-500.css";
 @import "@fontsource/ibm-plex-mono/latin-600.css";
@@ -10,7 +9,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* THRUPUT app theme. Align with groundhog-examples/apps/{swap,token-launchpad}/src/styles.css. */
+/* Thruput app theme. */
 :root {
   color-scheme: only dark;
   --background: #10110f;

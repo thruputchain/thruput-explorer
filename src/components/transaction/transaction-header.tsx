@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/page-header";
-import type { TransactionPageData } from "@/lib/groundhog/types";
+import type { TransactionPageData } from "@/lib/thruput/types";
 
 export function TransactionHeader({ data }: { data: TransactionPageData }) {
   return (
