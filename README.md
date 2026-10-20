@@ -39,6 +39,12 @@ pnpm start
 
 `railpack.json` supplies the Railway build and start commands. Set `NPM_TOKEN` for package installation and the three application variables above. `/health` is the unauthenticated health endpoint.
 
+## Wallet Shortcut
+
+Select **Connect** in the header and approve access in a compatible Thruput wallet extension. If several wallets are available, choose one from the menu. The connected menu offers **View wallet**, which opens `/address/<address>`, and **Disconnect**, which clears the shortcut and asks the wallet to revoke access.
+
+The shortcut follows wallet account changes and revocation. It lasts across in-app navigation; reload the page and connect again to start a new session. It uses the first authorized account and displays that address on the explorer's configured network. Connecting does not change networks, sign transactions, or expose the server RPC configuration to the browser.
+
 ## Data behavior
 
 - Search accepts a decimal block height or a base58 transaction hash or address. Base58 is case-sensitive. Opaque payloads and pagination cursors remain hex.
