@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { identifier } from "../../src/lib/groundhog/test-fixtures";
 
 for (const width of [390, 1280]) {
   test(`block search, details and bounded transactions at ${width}px`, async ({
@@ -16,12 +17,12 @@ for (const width of [390, 1280]) {
     ).toHaveAttribute("href", "/block/41");
     await page.getByRole("link", { name: "View transactions" }).click();
     await expect(
-      page.getByRole("link", { name: `0x${"ab".repeat(32)}`, exact: true }),
-    ).toHaveAttribute("href", `/tx/0x${"ab".repeat(32)}`);
+      page.getByRole("link", { name: identifier(0xab), exact: true }),
+    ).toHaveAttribute("href", `/tx/${identifier(0xab)}`);
     await page.getByRole("button", { name: "Next page" }).click();
     await expect(
-      page.getByRole("link", { name: `0x${"dd".repeat(32)}`, exact: true }),
-    ).toHaveAttribute("href", `/tx/0x${"dd".repeat(32)}`);
+      page.getByRole("link", { name: identifier(0xdd), exact: true }),
+    ).toHaveAttribute("href", `/tx/${identifier(0xdd)}`);
     await page.getByRole("button", { name: "Next page" }).click();
     await expect(page.getByRole("status")).toContainText(
       "completeness is not verified",
@@ -54,7 +55,7 @@ test("empty block, genesis, large heights and receipt navigation", async ({
   await expect(
     page.getByRole("heading", { name: "Block 9007199254740993", exact: true }),
   ).toBeVisible();
-  await page.goto(`/tx/0x${"ab".repeat(32)}`);
+  await page.goto(`/tx/${identifier(0xab)}`);
   await expect(
     page.getByRole("link", { name: "42", exact: true }),
   ).toHaveAttribute("href", "/block/42");

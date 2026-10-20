@@ -1,4 +1,4 @@
-import { toHex0x } from "@thruputchain/client";
+import { toBase58 } from "@thruputchain/client";
 
 import { BlockTransactions } from "@/components/block-transactions";
 import { PageHeader } from "@/components/page-header";
@@ -31,7 +31,7 @@ export default async function BlockTransactionsPage({
       <PageHeader
         eyebrow="Block transactions"
         title={`Transactions in block ${height}`}
-        value={toHex0x(block.data.blockHash)}
+        value={toBase58(block.data.blockHash)}
         copyLabel="Copy block hash"
         backHref={`/block/${height}`}
         backLabel="Block details"

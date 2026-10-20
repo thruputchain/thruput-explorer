@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
-import { HttpTransport, toHex0x } from "@thruputchain/client";
+import { HttpTransport, toBase58, toHex0x } from "@thruputchain/client";
 import { ERC20Metadata } from "@thruputchain/client/contracts";
 import { ExecResult } from "@thruputchain/protocol";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
-import { transferEvent } from "./test-fixtures";
+import { identifier, transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
-const hash = `0x${"ab".repeat(32)}`;
+const hash = identifier(0xab);
 const height = "9007199254740993";
 const chainTipHeight = "9007199254740994";
 const rawReceipt = {
@@ -64,7 +64,7 @@ for (const status of ["pending", "unknown"]) {
 }
 
 test("recentFailure converts the conflict bytes and attempt height without losing its code", async (t) => {
-  const address = `0x${"cd".repeat(32)}`;
+  const address = identifier(0xcd);
   const key = "0x00deadbeef";
   mockRpc(t, {
     groundhog_getTransactionStatus: {
@@ -176,27 +176,27 @@ for (const method of ["groundhog_getTransactionStatus", "groundhog_getTransactio
 }
 
 test("core events load without metadata; enrichment queries each unique contract once", async (t) => {
-  const contracts = [`0x${"11".repeat(32)}`, `0x${"22".repeat(32)}`];
-  const from = `0x${"33".repeat(32)}`;
-  const to = `0x${"44".repeat(32)}`;
+  const contracts = [identifier(0x11), identifier(0x22)];
+  const from = identifier(0x33);
+  const to = identifier(0x44);
   const events = [contracts[0], contracts[1], contracts[0]].map((contractAddress, index) =>
     transferEvent({ contractAddress, from, to, amount: BigInt(index + 1) * 125n }),
   );
   const wireEvents = events.map((event) => ({
-    contractAddress: toHex0x(event.contractAddress),
+    contractAddress: toBase58(event.contractAddress),
     topics: event.topics.map(toHex0x),
     data: toHex0x(event.data),
   }));
   const receipt = { ...rawReceipt, events: wireEvents };
   mockRpc(t, { groundhog_getTransactionReceipt: receipt });
   const name = t.mock.method(ERC20Metadata.v0_1.name, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.name.view>[0]) => ({
-    value: toHex0x(contract) === contracts[0] ? "First token" : "Second token",
+    value: toBase58(contract) === contracts[0] ? "First token" : "Second token",
   }));
   const symbol = t.mock.method(ERC20Metadata.v0_1.symbol, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.symbol.view>[0]) => ({
-    value: toHex0x(contract) === contracts[0] ? "ONE" : "TWO",
+    value: toBase58(contract) === contracts[0] ? "ONE" : "TWO",
   }));
   const decimals = t.mock.method(ERC20Metadata.v0_1.decimals, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.decimals.view>[0]) => ({
-    value: toHex0x(contract) === contracts[0] ? 2n : 3n,
+    value: toBase58(contract) === contracts[0] ? 2n : 3n,
   }));
 
   const result = await loadTransactionPageData(hash);
@@ -209,7 +209,7 @@ test("core events load without metadata; enrichment queries each unique contract
   for (const view of [name, symbol, decimals]) {
     assert.equal(view.mock.callCount(), contracts.length);
     assert.deepEqual(
-      view.mock.calls.map(({ arguments: [args] }) => toHex0x(args.contract)).sort(),
+      view.mock.calls.map(({ arguments: [args] }) => toBase58(args.contract)).sort(),
       contracts,
     );
   }
@@ -231,7 +231,7 @@ test("core events load without metadata; enrichment queries each unique contract
 
 
 test("native HOG events have canonical metadata without any view requests", async (t) => {
-  const event = transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, from: `0x${"11".repeat(32)}`, to: `0x${"22".repeat(32)}`, amount: 10000000n });
+  const event = transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, from: identifier(0x11), to: identifier(0x22), amount: 10000000n });
   const request = mockRpc(t, { groundhog_getTransactionReceipt: { ...rawReceipt, events: [{ contractAddress: NATIVE_HOG_ADDRESS, topics: event.topics.map(toHex0x), data: toHex0x(event.data) }] } });
   const result = await loadTransactionPageData(hash);
   assert.equal(result.receipt!.events[0].contractName, "HOG");
@@ -243,7 +243,7 @@ test("native HOG events have canonical metadata without any view requests", asyn
 
 for (const decimals of [undefined, -1n, 31n, 0n]) {
   test(`custom-token enrichment handles ${decimals === undefined ? "unavailable" : decimals} decimals without guessing the scale`, async (t) => {
-    const contractAddress = `0x${"55".repeat(32)}`;
+    const contractAddress = identifier(0x55);
     const event = transferEvent({ contractAddress, amount: 10000000n });
     const wireEvent = { contractAddress, topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
     const receipt = { ...rawReceipt, events: [wireEvent] };

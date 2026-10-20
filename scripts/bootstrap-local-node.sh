@@ -20,7 +20,7 @@ GROUNDHOG_GLOBAL_CONFIG="${GROUNDHOG_GLOBAL_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.co
 GROUNDHOG_CLIENT_CONTRACTS_MODULE="${GROUNDHOG_CLIENT_CONTRACTS_MODULE:-@thruputchain/client/contracts}"
 
 RPC_URL="${GROUNDHOG_RPC_URL:-http://localhost:9545}"
-HOG_ADDRESS="0x0000000000000000000000000000000000000000000000000000000000000001"
+HOG_ADDRESS="11111111111111111111111111111112"
 
 RPC_URL="$RPC_URL" node --input-type=module <<'NODE'
 const url = new URL(process.env.RPC_URL);
@@ -216,16 +216,16 @@ erc20_metadata_initialize_call() {
   CONTRACT_ADDRESS="$contract" ADMIN_ADDRESS="$admin" TOKEN_NAME="$name" TOKEN_SYMBOL="$symbol" TOKEN_DECIMALS="$decimals" \
     GROUNDHOG_CLIENT_CONTRACTS_MODULE="$GROUNDHOG_CLIENT_CONTRACTS_MODULE" \
     node --input-type=module <<'NODE'
-import { addressFromHex, toHex0x } from "@thruputchain/client";
+import { addressFromBase58, toHex0x } from "@thruputchain/client";
 import { gasAmount } from "@thruputchain/protocol";
 
 const { ERC20Metadata } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
 const invocation = ERC20Metadata.v0_1.initialize.invocation(
-  addressFromHex(process.env.CONTRACT_ADDRESS),
+  addressFromBase58(process.env.CONTRACT_ADDRESS),
   gasAmount(BigInt(500_000)),
   {
-    administrator: addressFromHex(process.env.ADMIN_ADDRESS),
+    administrator: addressFromBase58(process.env.ADMIN_ADDRESS),
     name: process.env.TOKEN_NAME,
     symbol: process.env.TOKEN_SYMBOL,
     decimals: BigInt(process.env.TOKEN_DECIMALS),
@@ -243,16 +243,16 @@ erc20_mint_call() {
   CONTRACT_ADDRESS="$contract" RECEIVER_ADDRESS="$receiver" RAW_AMOUNT="$amount" \
     GROUNDHOG_CLIENT_CONTRACTS_MODULE="$GROUNDHOG_CLIENT_CONTRACTS_MODULE" \
     node --input-type=module <<'NODE'
-import { addressFromHex, toHex0x } from "@thruputchain/client";
+import { addressFromBase58, toHex0x } from "@thruputchain/client";
 import { gasAmount } from "@thruputchain/protocol";
 
 const { ERC20 } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
 const invocation = ERC20.v0_1.mint.invocation(
-  addressFromHex(process.env.CONTRACT_ADDRESS),
+  addressFromBase58(process.env.CONTRACT_ADDRESS),
   gasAmount(BigInt(500_000)),
   {
-    receiver: addressFromHex(process.env.RECEIVER_ADDRESS),
+    receiver: addressFromBase58(process.env.RECEIVER_ADDRESS),
     amount: BigInt(process.env.RAW_AMOUNT),
   },
 );
@@ -268,16 +268,16 @@ erc20_transfer_call() {
   CONTRACT_ADDRESS="$contract" RECEIVER_ADDRESS="$receiver" RAW_AMOUNT="$amount" \
     GROUNDHOG_CLIENT_CONTRACTS_MODULE="$GROUNDHOG_CLIENT_CONTRACTS_MODULE" \
     node --input-type=module <<'NODE'
-import { addressFromHex, toHex0x } from "@thruputchain/client";
+import { addressFromBase58, toHex0x } from "@thruputchain/client";
 import { gasAmount } from "@thruputchain/protocol";
 
 const { ERC20 } = await import(process.env.GROUNDHOG_CLIENT_CONTRACTS_MODULE);
 
 const invocation = ERC20.v0_1.transfer.invocation(
-  addressFromHex(process.env.CONTRACT_ADDRESS),
+  addressFromBase58(process.env.CONTRACT_ADDRESS),
   gasAmount(BigInt(500_000)),
   {
-    receiver: addressFromHex(process.env.RECEIVER_ADDRESS),
+    receiver: addressFromBase58(process.env.RECEIVER_ADDRESS),
     amount: BigInt(process.env.RAW_AMOUNT),
   },
 );

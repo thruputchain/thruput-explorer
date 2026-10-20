@@ -24,7 +24,7 @@ export function SearchHero() {
     const normalized = normalizeTransactionHash(hash);
 
     if (!isBlockHeight(normalized) && !isTransactionHash(normalized)) {
-      setError("Enter a block height or a 0x-prefixed 32-byte transaction hash or address.");
+      setError("Enter a block height or a base58 transaction hash or address (32 bytes).");
       return;
     }
 

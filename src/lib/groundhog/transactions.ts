@@ -1,4 +1,4 @@
-import { getTransactionReceipt, hashFromHex, toHex0x, type EmittedEvent, type ThruputClient, type TransactionStatus as SdkTransactionStatus } from "@thruputchain/client";
+import { getTransactionReceipt, hashFromBase58, toBase58, toHex0x, type EmittedEvent, type ThruputClient, type TransactionStatus as SdkTransactionStatus } from "@thruputchain/client";
 import { ExecResult } from "@thruputchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
@@ -29,7 +29,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
 
   try {
     const { transport, client } = await createExplorerGroundhogClient();
-    const txHash = hashFromHex(hash);
+    const txHash = hashFromBase58(hash);
 
     let rawReceipt: unknown;
     // Capture the response consumed by the SDK validator, rather than issue a
@@ -57,12 +57,12 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
         : undefined,
       receipt: receipt
         ? {
-            txHash: toHex(receipt.txHash),
+            txHash: toBase58(receipt.txHash),
             height: receipt.height.toString(),
             execResult: formatExecResult(receipt.execResult),
             returnData: receipt.returnData ? toHex(receipt.returnData) : null,
             abortData: receipt.abortData ? toHex(receipt.abortData) : null,
-            events: receipt.events.map((event) => formatEvent(event, getBuiltInTokenMetadata(toHex(event.contractAddress)))),
+            events: receipt.events.map((event) => formatEvent(event, getBuiltInTokenMetadata(toBase58(event.contractAddress)))),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),
           }
         : null,
@@ -79,15 +79,15 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
 
 async function enrichTransactionEvents(client: ThruputClient, events: EmittedEvent[]): Promise<EventView[]> {
   const metadataByAddress = new Map<string, TokenMetadata | undefined>();
-  await Promise.all(Array.from(new Set(events.map((event) => toHex(event.contractAddress)))).map(async (address) => {
+  await Promise.all(Array.from(new Set(events.map((event) => toBase58(event.contractAddress)))).map(async (address) => {
     metadataByAddress.set(address, await getTokenMetadata(client, address));
   }));
-  return events.map((event) => formatEvent(event, metadataByAddress.get(toHex(event.contractAddress))));
+  return events.map((event) => formatEvent(event, metadataByAddress.get(toBase58(event.contractAddress))));
 }
 
 function formatEvent(event: EmittedEvent, metadata?: TokenMetadata): EventView {
   return {
-    contractAddress: toHex(event.contractAddress),
+    contractAddress: toBase58(event.contractAddress),
     contractName: metadata?.name,
     topics: event.topics.map(toHex),
     data: toHex(event.data),
@@ -104,7 +104,7 @@ function formatTransactionStatus(status: SdkTransactionStatus) {
       attemptHeight: status.attemptHeight.toString(),
       cause: status.cause.kind === "dbConflict"
         ? { kind: "dbConflict" as const, conflict: {
-            address: toHex(status.cause.conflict.address),
+            address: toBase58(status.cause.conflict.address),
             key: toHex(status.cause.conflict.key),
             code: status.cause.conflict.code,
           } }

@@ -7,6 +7,7 @@ import { POST } from "../../app/api/search/route";
 import { isBlockHeight } from "../validation";
 import { checkBlockContinuation } from "./block-pagination";
 import { loadBlock, loadBlockTransactions } from "./blocks";
+import { identifier } from "./test-fixtures";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(
   import.meta.url,
@@ -70,12 +71,12 @@ test("block loaders separate missing metadata, index gaps, malformed responses a
 });
 
 test("pagination detects whole-walk cycles, overlapping hashes and coverage loss", () => {
-  const page = { hashes: ["0x02"], cursor: "0xbb", oldest: "1", latest: "42" };
+  const page = { hashes: [identifier(2)], cursor: "0xbb", oldest: "1", latest: "42" };
   const seen = new Set(["0xaa", "0xbb"]);
   assert.equal(
     checkBlockContinuation(
       page,
-      { ...page, hashes: ["0x03"], cursor: "0xaa" },
+      { ...page, hashes: [identifier(3)], cursor: "0xaa" },
       seen,
     ),
     false,
@@ -83,7 +84,7 @@ test("pagination detects whole-walk cycles, overlapping hashes and coverage loss
   assert.equal(
     checkBlockContinuation(
       page,
-      { ...page, hashes: ["0x02"], cursor: "0xcc" },
+      { ...page, hashes: [identifier(2)], cursor: "0xcc" },
       seen,
     ),
     false,
@@ -107,7 +108,7 @@ test("pagination detects whole-walk cycles, overlapping hashes and coverage loss
   assert.equal(
     checkBlockContinuation(
       page,
-      { ...page, hashes: ["0x03"], cursor: "0xcc", latest: "43" },
+      { ...page, hashes: [identifier(3)], cursor: "0xcc", latest: "43" },
       seen,
     ),
     true,

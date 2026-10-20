@@ -2,27 +2,27 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
-import { toHex0x } from "@thruputchain/client";
+import { toBase58, toHex0x } from "@thruputchain/client";
 import { HOG_ADDRESS } from "@thruputchain/protocol";
 
-import { transferEvent } from "../../src/lib/groundhog/test-fixtures";
+import { identifier, transferEvent } from "../../src/lib/groundhog/test-fixtures";
 
 async function main() {
-  const txHash = `0x${"ab".repeat(32)}`;
+  const txHash = identifier(0xab);
   const statusFixtures: Record<string, unknown> = {
-    [`0x${"a1".repeat(32)}`]: { status: "retry", error: { source: "scheduler", code: -7 } },
-    [`0x${"a2".repeat(32)}`]: { status: "dropped", error: { source: "auth", code: -3 } },
-    [`0x${"a3".repeat(32)}`]: { status: "recentFailure", attemptHeight: "41", cause: { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" } },
-    [`0x${"a4".repeat(32)}`]: { status: "committed" },
+    [identifier(0xa1)]: { status: "retry", error: { source: "scheduler", code: -7 } },
+    [identifier(0xa2)]: { status: "dropped", error: { source: "auth", code: -3 } },
+    [identifier(0xa3)]: { status: "recentFailure", attemptHeight: "41", cause: { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" } },
+    [identifier(0xa4)]: { status: "committed" },
   };
-  const transfer = transferEvent({ contractAddress: toHex0x(HOG_ADDRESS) });
+  const transfer = transferEvent({ contractAddress: toBase58(HOG_ADDRESS) });
   const event = {
-    contractAddress: toHex0x(transfer.contractAddress),
+    contractAddress: toBase58(transfer.contractAddress),
     topics: transfer.topics.map(toHex0x),
     data: toHex0x(transfer.data),
   };
-  const slowTxHash = `0x${"dd".repeat(32)}`;
-  const slowEvent = { ...event, contractAddress: `0x${"55".repeat(32)}` };
+  const slowTxHash = identifier(0xdd);
+  const slowEvent = { ...event, contractAddress: identifier(0x55) };
   let releaseMetadata = () => {};
   let metadataGate = Promise.resolve();
   let pending = 0;
@@ -61,11 +61,11 @@ async function main() {
           return;
         }
       }
-      if (method === "groundhog_getTransactionStatus" && params?.[0] === `0x${"ee".repeat(32)}`) {
+      if (method === "groundhog_getTransactionStatus" && params?.[0] === identifier(0xee)) {
         response.writeHead(503).end("Fixture transaction RPC unavailable");
         return;
       }
-      if (method === "groundhog_getTransactionsByAddress" && params?.[0]?.address === `0x${"44".repeat(32)}`) {
+      if (method === "groundhog_getTransactionsByAddress" && params?.[0]?.address === identifier(0x44)) {
         response.writeHead(200, { "content-type": "application/json" });
         response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32601, message: "Fixture address history unavailable" } }));
         return;
@@ -75,11 +75,11 @@ async function main() {
         case "groundhog_getBlockByNumber": {
           const height = params[0];
           result = ["40", "41", "42", "9007199254740993"].includes(height) ? {
-            blockHeight: height, blockHash: `0x${"bb".repeat(32)}`, prevBlockHash: `0x${"aa".repeat(32)}`,
-            protocol: 1, networkHash: `0x${"00".repeat(32)}`, proposer: `0x${"11".repeat(32)}`,
-            blockTimepoint: "1770000000000000000", txsHash: `0x${"22".repeat(32)}`,
-            storageHash: `0x${"33".repeat(32)}`, eventsHash: `0x${"44".repeat(32)}`,
-            configHash: `0x${"55".repeat(32)}`, proposalTxsHash: `0x${"66".repeat(32)}`, upgrades: [],
+            blockHeight: height, blockHash: identifier(0xbb), prevBlockHash: identifier(0xaa),
+            protocol: 1, networkHash: identifier(0), proposer: identifier(0x11),
+            blockTimepoint: "1770000000000000000", txsHash: identifier(0x22),
+            storageHash: identifier(0x33), eventsHash: identifier(0x44),
+            configHash: identifier(0x55), proposalTxsHash: identifier(0x66), upgrades: [],
           } : null;
           break;
         }
@@ -94,15 +94,15 @@ async function main() {
           break;
         }
         case "groundhog_networkInfo":
-          result = { networkHash: `0x${"00".repeat(32)}` };
+          result = { networkHash: identifier(0) };
           break;
         case "groundhog_chainTip":
-          result = { height: "42", blockHash: `0x${"bb".repeat(32)}` };
+          result = { height: "42", blockHash: identifier(0xbb) };
           break;
         case "groundhog_getTransactionStatus":
           result = statusFixtures[params?.[0]] ?? ([txHash, slowTxHash].includes(params?.[0])
             ? { status: "committed", height: "42" }
-            : { status: params?.[0] === `0x${"cc".repeat(32)}` ? "pending" : "unknown" });
+            : { status: params?.[0] === identifier(0xcc) ? "pending" : "unknown" });
           break;
         case "groundhog_getTransactionReceipt":
           if (params?.[0] === slowTxHash) receiptRequests++;
@@ -112,7 +112,7 @@ async function main() {
           break;
         case "groundhog_getEvents":
           result = {
-            events: !JSON.stringify(params).includes("33".repeat(32)) && params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
+            events: !JSON.stringify(params).includes(toHex0x(new Uint8Array(32).fill(0x33))) && params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
               ? [{ txHash, blockHeight: "42", sequenceNumber: 0, event }]
               : [],
             cursor: "0x", latestBlock: "42", oldestBlock: "42",
@@ -125,7 +125,7 @@ async function main() {
           result = { refs: [], cursor: "0x", latestBlock: "42", oldestBlock: "42" };
           break;
         default:
-          if (method === "groundhog_view" && JSON.stringify(params).includes("55".repeat(32))) {
+          if (method === "groundhog_view" && JSON.stringify(params).includes(identifier(0x55))) {
             pending++;
             try { await metadataGate; } finally { pending--; }
           }

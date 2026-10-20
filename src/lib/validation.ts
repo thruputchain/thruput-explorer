@@ -1,5 +1,4 @@
-const TX_HASH_PATTERN = /^0x[0-9a-fA-F]{64}$/;
-const CONTRACT_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{64}$/;
+import { fixedFromBase58 } from "@thruputchain/client";
 
 export function isBlockHeight(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -8,17 +7,22 @@ export function isBlockHeight(value: unknown): value is string {
 }
 
 export function isTransactionHash(value: string) {
-  return TX_HASH_PATTERN.test(value.trim());
+  try {
+    fixedFromBase58(value.trim(), 32);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function normalizeTransactionHash(value: string) {
-  return value.trim().toLowerCase();
+  return value.trim();
 }
 
 export function isContractAddress(value: string) {
-  return CONTRACT_ADDRESS_PATTERN.test(value.trim());
+  return isTransactionHash(value);
 }
 
 export function normalizeContractAddress(value: string) {
-  return value.trim().toLowerCase();
+  return value.trim();
 }

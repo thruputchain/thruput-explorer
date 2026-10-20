@@ -1,4 +1,4 @@
-import { addressFromHex, hashFromHex } from "@thruputchain/client";
+import { addressFromBase58, hashFromBase58 } from "@thruputchain/client";
 
 import { createExplorerGroundhogClient } from "@/lib/groundhog/client";
 import { getNativeBalance } from "@/lib/groundhog/native-balance";
@@ -19,14 +19,14 @@ export async function POST(request: Request) {
 
   if (!isTransactionHash(query)) {
     return Response.json(
-      { status: "malformed", message: "Enter a block height or a 0x-prefixed 32-byte transaction hash or address." },
+      { status: "malformed", message: "Enter a block height or a base58 transaction hash or address (32 bytes)." },
       { status: 400 },
     );
   }
 
   try {
     const { client } = await createExplorerGroundhogClient();
-    const txStatus = await client.getTransactionStatus(hashFromHex(query));
+    const txStatus = await client.getTransactionStatus(hashFromBase58(query));
     if (txStatus.status !== "unknown") {
       return Response.json({ status: "ok", href: `/tx/${query}` });
     }
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const [nativeBalance, txRefs, metadata] = await Promise.all([
       getNativeBalance(client, address),
       client
-        .getTransactionsByAddress({ address: addressFromHex(address), order: "descending", anchor: "end", limit: 1 })
+        .getTransactionsByAddress({ address: addressFromBase58(address), order: "descending", anchor: "end", limit: 1 })
         .then((page) => page.refs)
         .catch(() => []),
       getTokenMetadata(client, address).catch(() => undefined),

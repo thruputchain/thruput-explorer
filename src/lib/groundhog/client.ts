@@ -1,8 +1,8 @@
-import { HttpTransport, createThruputClient, toHex0x, type ThruputClient } from "@thruputchain/client";
+import { HttpTransport, createThruputClient, toBase58, type ThruputClient } from "@thruputchain/client";
 import { HOG_ADDRESS } from "@thruputchain/protocol";
 
 const DEFAULT_RPC_URL = "http://localhost:9545";
-export const NATIVE_HOG_ADDRESS = toHex0x(HOG_ADDRESS);
+export const NATIVE_HOG_ADDRESS = toBase58(HOG_ADDRESS);
 
 export type ExplorerRpcConfig = {
   rpcUrl: string;

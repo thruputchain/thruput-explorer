@@ -1,4 +1,4 @@
-import { toHex0x, type EmittedEvent } from "@thruputchain/client";
+import { toBase58, type EmittedEvent } from "@thruputchain/client";
 import { decodeERC20Event } from "@thruputchain/client/contracts";
 
 import type { TokenMetadata } from "./token-metadata";
@@ -17,8 +17,8 @@ export function decodeTokenEvent(
 
   if (decoded?.name !== "TransferEvent") return undefined;
 
-  const from = toHex0x(decoded.topics.from);
-  const to = toHex0x(decoded.topics.to);
+  const from = toBase58(decoded.topics.from);
+  const to = toBase58(decoded.topics.to);
   const rawAmount = decoded.fields.amount.toString();
   const amount = formatTokenAmount(decoded.fields.amount, metadata?.decimals);
   const symbol = metadata?.symbol;
@@ -56,7 +56,7 @@ export function decodeTokenEvent(
   };
 }
 
-const ZERO_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const ZERO_CONTRACT_ADDRESS = "11111111111111111111111111111111";
 const MAX_DISPLAY_DECIMALS = 30;
 
 function formatTokenAmount(rawAmount: bigint, decimals = 0) {

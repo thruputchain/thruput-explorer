@@ -15,11 +15,11 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@thruputchain/client':
-        specifier: 0.20.0
-        version: 0.20.0
+        specifier: 0.21.0
+        version: 0.21.0
       '@thruputchain/protocol':
-        specifier: 0.16.0
-        version: 0.16.0
+        specifier: 0.17.0
+        version: 0.17.0
       bcryptjs:
         specifier: 3.0.3
         version: 3.0.3
@@ -1476,6 +1476,9 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
+  '@scure/base@2.0.0':
+    resolution: {integrity: sha512-3E1kpuZginKkek01ovG8krQ0Z44E3DHPjc5S2rjJw9lZn3KSQOs8S7wqikF/AH7iRanHypj85uGyxk0XAyC37w==}
+
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
 
@@ -1578,20 +1581,20 @@ packages:
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
 
-  '@thruputchain/client@0.20.0':
-    resolution: {integrity: sha512-faDIF2o78Tl920P34lVYC7PgJiai5FoTnqnIFCqtdFX8r1G9uXXa/d94Ov02HPoeEGDv/Kz5hB9yRlQ/SbqRMQ==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.20.0/89880c74fce2fa23aec39acd42f5805e45fa05f6}
+  '@thruputchain/client@0.21.0':
+    resolution: {integrity: sha512-McTM5l+QFWfpRBLbJSwoadFK1pvYUqJbIbCWKy6Uqd2SwUxt0sTAVws7zxVUFWTi4FvJs53LCqWvuw2m+ab+1g==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.21.0/63160b0f822a2204041db3931f22c4fd1c26d150}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/contract-spec@0.16.0':
-    resolution: {integrity: sha512-Sq52vJ+5AnstneWmxpJJ6Y8pTwq5ldtwYuZJqJBjjjU75dROGSs/MnGBGreiJxd2i0qjmdAlhkhmvHsyeuHUYQ==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.16.0/495766c0f60041c3d75e12016d76f6fb67d53c7d}
+  '@thruputchain/contract-spec@0.17.0':
+    resolution: {integrity: sha512-f7Ufr8pDv+k6xF694PvtRn3zY+JWW6B1bC47FCKc2wU5WZbGYqVD78eLHA/QBx22HKgtTD7M0IJnZuky4S6TGw==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.17.0/d43f65747ef9db08ab0e28fed6467f4ea98808a9}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/protocol@0.16.0':
-    resolution: {integrity: sha512-+ZgihQiX2UzGMHwhjN3iRHxDhkWLE3zlzakCJdLRbIzd6S1pq14gMiiCx6ha02WN0OgmFohAuxO9O3+MH2zDRQ==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.16.0/941951058af63a615bb89fae620be41c30676f67}
+  '@thruputchain/protocol@0.17.0':
+    resolution: {integrity: sha512-HXRf/Jx0CMvRsC+Z81oZ/2i271TTqqZ63KUqLOIE3jV3fqaHzsCjCsQvcS4aft9pKaeg8SV/z1e0Kb+rUP+fQg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.17.0/5958450bd7e8464a4480ebcbcb452d9faa48693c}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/xdr@0.16.0':
-    resolution: {integrity: sha512-8OPqsEjf0nm7RTxIKslWsK6KDEF2+Qm520V5PaWa+JEHKTl1QICrIo1ukG7Gdb8ZpXFOhCK/NIY47UABRxEA8Q==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.16.0/2e6d3d481fad1e61d6e7b344f0cdf427e2161886}
+  '@thruputchain/xdr@0.17.0':
+    resolution: {integrity: sha512-zXuY1IRx1/mc+U1X91qJF3EJdkIUq0cE/yK4mG3ST8qqOF12+SdD25ICIx5P0nRGQoyQh2yp/DIARFcMC74asg==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.17.0/471e9af1cdcef1eab0c315c2443715be75c55b10}
     engines: {node: '>=22.12.0'}
 
   '@ts-morph/common@0.27.0':
@@ -5306,6 +5309,8 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
+  '@scure/base@2.0.0': {}
+
   '@sec-ant/readable-stream@0.4.1': {}
 
   '@sindresorhus/merge-streams@4.0.0': {}
@@ -5383,26 +5388,28 @@ snapshots:
       postcss: 8.5.28
       tailwindcss: 4.3.3
 
-  '@thruputchain/client@0.20.0':
+  '@thruputchain/client@0.21.0':
     dependencies:
       '@noble/ed25519': 3.2.0
       '@noble/hashes': 2.4.0
       '@noble/post-quantum': 0.7.1
-      '@thruputchain/contract-spec': 0.16.0
-      '@thruputchain/protocol': 0.16.0
-      '@thruputchain/xdr': 0.16.0
+      '@scure/base': 2.0.0
+      '@thruputchain/contract-spec': 0.17.0
+      '@thruputchain/protocol': 0.17.0
+      '@thruputchain/xdr': 0.17.0
 
-  '@thruputchain/contract-spec@0.16.0':
+  '@thruputchain/contract-spec@0.17.0':
     dependencies:
-      '@thruputchain/protocol': 0.16.0
-      '@thruputchain/xdr': 0.16.0
+      '@thruputchain/protocol': 0.17.0
+      '@thruputchain/xdr': 0.17.0
 
-  '@thruputchain/protocol@0.16.0':
+  '@thruputchain/protocol@0.17.0':
     dependencies:
       '@noble/hashes': 2.2.0
-      '@thruputchain/xdr': 0.16.0
+      '@scure/base': 2.0.0
+      '@thruputchain/xdr': 0.17.0
 
-  '@thruputchain/xdr@0.16.0': {}
+  '@thruputchain/xdr@0.17.0': {}
 
   '@ts-morph/common@0.27.0':
     dependencies:

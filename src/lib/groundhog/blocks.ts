@@ -1,4 +1,4 @@
-import { fromHex0x, toHex0x } from "@thruputchain/client";
+import { fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
 
 import { isBlockHeight } from "../validation";
 import { createExplorerGroundhogClient } from "./client";
@@ -74,7 +74,7 @@ export async function loadBlockTransactions(
     return {
       status: "ok",
       data: {
-        hashes: page.refs.map((ref) => toHex0x(ref.txHash)),
+        hashes: page.refs.map((ref) => toBase58(ref.txHash)),
         cursor: toHex0x(page.cursor),
         oldest: page.oldestBlock.toString(),
         latest: page.latestBlock.toString(),

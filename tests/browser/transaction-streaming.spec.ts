@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { identifier } from "../../src/lib/groundhog/test-fixtures";
 
 const rpcOrigin = `http://127.0.0.1:${Number(process.env.PLAYWRIGHT_PORT ?? 3100) + 1}`;
-const txHash = `0x${"dd".repeat(32)}`;
+const txHash = identifier(0xdd);
 
 test("transaction details render while optional metadata is still pending", async ({ page, request }) => {
   await request.post(`${rpcOrigin}/metadata/reset`);
