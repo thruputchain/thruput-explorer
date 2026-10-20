@@ -2,6 +2,12 @@
 
 Explore Thruput blocks, transactions, addresses, balances and token events. Built with Next.js, React and the Thruput TypeScript SDK.
 
+The interface uses the Stellar Thruput identity and follows the system's light or dark theme. Inter Variable is used for headings, body text, and actions. Inconsolata Variable is used for technical data and system labels. Both fonts are bundled locally through Fontsource.
+
+Theme tokens live in `src/app/globals.css` and match the docs, Counter, Swap, and Token Launchpad apps. `signal` stays yellow (`#FDDA24`) for filled actions; `primary` is the theme-aware accent for text and focus. This keeps yellow buttons dark-labelled and links readable in light mode.
+
+The SVGs in `public/brand/` and `src/app/icon.svg` use the official Stellar Logo Press Kit 2026 vector paths. Black and bone wordmarks are selected with a media query.
+
 ## Setup
 
 Use Node.js 22.12+ and pnpm 10.34.7. The SDK packages currently require GitHub Packages read access, even though this repository is public. Add your token to your user-level npm configuration (`~/.npmrc`):

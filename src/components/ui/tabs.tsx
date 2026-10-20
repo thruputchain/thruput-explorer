@@ -49,7 +49,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
 }
 
 function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content data-slot="tabs-content" className={cn("min-w-0 flex-1 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring", className)} {...props} />;
+  return <TabsPrimitive.Content data-slot="tabs-content" className={cn("min-w-0 flex-1 text-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring", className)} {...props} />;
 }
 
 export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };

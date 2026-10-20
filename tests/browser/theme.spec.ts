@@ -4,24 +4,34 @@ import { identifier } from "../../src/lib/thruput/test-fixtures";
 const txHash = identifier(0xab);
 const address = identifier(0x22);
 
-test("dark-only branding and bundled fonts load despite a saved light preference", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.addInitScript(() => localStorage.setItem("theme", "light"));
-  const response = await page.goto("/");
-  expect(await response!.text()).toContain('<html lang="en" class="dark">');
+test("Stellar branding follows system changes with bundled fonts and readable actions", async ({ page }) => {
+  await page.goto("/");
   await expect(page).toHaveTitle("Thruput Explorer");
-  await expect(page.locator("html")).toHaveClass("dark");
-  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(16, 17, 15)");
+  for (const theme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    await expect(page.locator("body")).toHaveCSS("background-color", theme === "dark" ? "rgb(10, 10, 10)" : "rgb(245, 245, 240)");
+    const logo = page.getByRole("img", { name: "Stellar", exact: true });
+    await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.currentSrc)).toContain(theme === "dark" ? "/brand/stellar-dark.svg" : "/brand/stellar.svg");
+    await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    const search = page.getByRole("button", { name: "Search", exact: true });
+    await expect(search).toHaveCSS("background-color", "rgb(253, 218, 36)");
+    await expect(search).toHaveCSS("color", "rgb(10, 10, 10)");
+    await page.getByRole("textbox").focus();
+    await page.keyboard.press("Tab");
+    await expect(search).toBeFocused();
+    await expect(search).toHaveCSS("outline-style", "solid");
+    await expect(search).toHaveCSS("outline-color", theme === "dark" ? "rgb(253, 218, 36)" : "rgb(112, 92, 0)");
+  }
   await page.evaluate(() => document.fonts.ready);
   expect(await page.evaluate(() => ({
-    sans: [...document.fonts].some((font) => font.family.includes("IBM Plex Sans") && font.status === "loaded"),
-    mono: [...document.fonts].some((font) => font.family.includes("IBM Plex Mono") && font.status === "loaded"),
+    sans: [...document.fonts].some((font) => font.family.includes("Inter Variable") && font.status === "loaded"),
+    mono: [...document.fonts].some((font) => font.family.includes("Inconsolata Variable") && font.status === "loaded"),
   }))).toEqual({ sans: true, mono: true });
   const icon = await page.locator('link[rel="icon"]').getAttribute("href");
   expect(icon).toContain("/icon.svg");
   const favicon = await page.request.get(icon!);
   expect(favicon.ok()).toBe(true);
-  expect(await favicon.text()).toContain("#e9ef64");
+  expect(await favicon.text()).toContain("prefers-color-scheme:dark");
 });
 
 test("Radix tabs and receipt disclosure support keyboard navigation", async ({ page, context }) => {
@@ -55,8 +65,10 @@ test("Radix tabs and receipt disclosure support keyboard navigation", async ({ p
   await expect(page).toHaveURL("/");
 });
 
+for (const theme of ["light", "dark"] as const) {
 for (const width of [320, 390, 768, 1440]) {
-  test(`explorer pages contain long data at ${width}px`, async ({ page }, testInfo) => {
+  test(`explorer pages contain long data at ${width}px in ${theme}`, async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme: theme });
     await page.setViewportSize({ width, height: 900 });
     for (const [name, path] of [
       ["home", "/"],
@@ -76,6 +88,8 @@ for (const width of [320, 390, 768, 1440]) {
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
     }
   });
+}
+
 }
 
 test("legacy wallet and contract links keep the branded address page", async ({ page }) => {
