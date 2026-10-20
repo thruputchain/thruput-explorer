@@ -6,7 +6,7 @@ The interface uses the Stellar Thruput identity and follows the system's light o
 
 Theme tokens live in `src/app/globals.css` and match the docs, Counter, Swap, and Token Launchpad apps. `signal` stays yellow (`#FDDA24`) for filled actions; `primary` is the theme-aware accent for text and focus. This keeps yellow buttons dark-labelled and links readable in light mode.
 
-The SVGs in `public/brand/` and `src/app/icon.svg` use the official Stellar Logo Press Kit 2026 vector paths. Black and bone wordmarks are selected with a media query. See [GH-533](https://linear.app/grndhg/issue/GH-533) for marketing references and the [shared brand conventions](https://github.com/thruputchain/thruput-docs/blob/main/public/brand/README.md) for asset provenance and palette values.
+The SVGs in `public/brand/` and `src/app/icon.svg` use the official Stellar Logo Press Kit 2026 vector paths. Black and bone wordmarks are selected with a media query.
 
 ## Setup
 
