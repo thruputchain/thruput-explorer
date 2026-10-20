@@ -221,7 +221,7 @@ function TransactionHistoryCard({
                       href={`/tx/${transaction.txHash}`}
                       title={transaction.txHash}
                     >
-                      {shortenHex(transaction.txHash)}
+                      {shortenValue(transaction.txHash)}
                     </Link>
                   </TableCell>
                   <TableCell>{transaction.height}</TableCell>
@@ -394,7 +394,7 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
           href={`/tx/${event.txHash}`}
           title={event.txHash}
         >
-          {shortenHex(event.txHash)}
+          {shortenValue(event.txHash)}
         </Link>
       </TableCell>
       <TableCell>{event.blockHeight}</TableCell>
@@ -418,20 +418,20 @@ function RawEventRow({ event }: { event: AddressEventView }) {
           href={`/tx/${event.txHash}`}
           title={event.txHash}
         >
-          {shortenHex(event.txHash)}
+          {shortenValue(event.txHash)}
         </Link>
       </TableCell>
       <TableCell>{event.blockHeight}</TableCell>
       <TableCell>
         <code className="font-mono text-xs" title={event.topics.join(", ")}>
           {event.topics.length > 0
-            ? event.topics.map(shortenHex).join(", ")
+            ? event.topics.map(shortenValue).join(", ")
             : "-"}
         </code>
       </TableCell>
       <TableCell>
         <code className="font-mono text-xs" title={event.data}>
-          {shortenHex(event.data)}
+          {shortenValue(event.data)}
         </code>
       </TableCell>
     </TableRow>
@@ -445,7 +445,7 @@ function AddressLink({ value }: { value?: string }) {
       href={`/address/${value}`}
       title={value}
     >
-      {shortenHex(value)}
+      {shortenValue(value)}
     </Link>
   ) : (
     <span className="text-muted-foreground">-</span>
@@ -472,7 +472,7 @@ function SummaryLabel({ children }: { children: string }) {
   );
 }
 
-function shortenHex(value: string) {
+function shortenValue(value: string) {
   return value.length <= 18
     ? value
     : `${value.slice(0, 8)}...${value.slice(-6)}`;

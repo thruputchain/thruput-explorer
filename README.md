@@ -32,7 +32,7 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://localhost:3000` and search for a decimal block height or a `0x`-prefixed 32-byte transaction hash or address.
+Open `http://localhost:3000` and search for a decimal block height or a base58 transaction hash or address (32 decoded bytes). Base58 is case-sensitive; copy the full identifier without changing its case.
 
 The app reads RPC data from server-rendered loaders. It uses `GROUNDHOG_RPC_URL` when set and otherwise defaults to `http://localhost:9545`:
 
@@ -46,7 +46,9 @@ Local development does not require Basic Auth when both `BASIC_AUTH_USER` and `B
 
 Block details are at `/block/<height>`; transaction references are at `/block/<height>/transactions`. Receipt heights link back to block details. Heights remain decimal strings or big integers, including values above JavaScript's safe integer limit.
 
-The verified block-query version set is CLI/gateway **0.31.0**, public node **0.1.31-rc.8**, client **0.20.0**, protocol **0.16.0**, and hex RPC wire **12.1.0**. The node must have a complete `block-query-v1` index. Older indexes need a separate full-history rebuild from height 1 before these pages are available. Genesis metadata is outside coverage.
+The base58 version set is CLI/gateway **0.32.2**, public node **0.1.31-rc.10**, client **0.21.0**, protocol **0.17.0**, and RPC wire **13.0.0**. Start a fresh local node with `thruput node --hog-devnode-version 0.1.31-rc.10`; do not reuse pre-base58 state. Hosted packaging qualification is separate from this local-node path. The node must have a complete `block-query-v1` index. Genesis metadata is outside coverage.
+
+Addresses, public keys and hashes use unprefixed base58 in URLs, search, links, copy actions and decoded events. Opaque event topics/data, return/abort data, storage keys and pagination cursors remain hex. Decoded token-event address topics are displayed as base58; their raw topic bytes remain hex. Historical hex identifier URLs are not supported.
 
 Transaction pages request at most 50 references in ascending hash order, not execution order. They do not infer a total transaction count. A terminal continuation can also mean a stale cursor, so the UI does not certify completeness. Repeated cursors, overlapping hashes, or lost coverage stop pagination; **Start fresh** opens a new walk. RPC failures and missing history are distinct from an empty indexed block.
 

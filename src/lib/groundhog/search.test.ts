@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
-import { addressFromHex, createThruputClient, hashFromHex, MockTransport } from "@thruputchain/client";
+import { addressFromBase58, createThruputClient, hashFromBase58, MockTransport } from "@thruputchain/client";
+import { identifier } from "./test-fixtures";
 import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { POST } from "../../app/api/search/route";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
-const hash = `0x${"ab".repeat(32)}`;
+const hash = identifier(0xab);
 const request = (query: string) => new Request("http://localhost/api/search", {
   method: "POST", body: JSON.stringify({ query }),
 });
@@ -32,7 +33,7 @@ test("search prefers known transactions and routes unknown hashes to addresses d
   t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unavailable"); });
   t.mock.method(client, "view", async () => { throw new Error("Unavailable"); });
 
-  const transaction = await POST(request(`  ${hash.toUpperCase().replace("0X", "0x")}  `));
+  const transaction = await POST(request(`  ${hash}  `));
   assert.equal(transaction.status, 200);
   assert.deepEqual(await transaction.json(), { status: "ok", href: `/tx/${hash}` });
   assert.equal(balance.mock.callCount(), 0);
@@ -52,7 +53,7 @@ test("search reports successful address context even when the available balance 
   t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getTransactionStatus", async () => ({ status: "unknown" as const }));
   const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 0n, height: 42n }));
-  const transactions = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromHex(hash), height: 42n }] }));
+  const transactions = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromBase58(hash), height: 42n }] }));
   t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "ALULA" }));
   t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "ALULA" }));
   t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => ({ value: 6n }));
@@ -63,8 +64,8 @@ test("search reports successful address context even when the available balance 
     status: "ok", href: `/address/${hash}`,
     context: { hasNativeBalance: true, hasRootTransactions: true, token: true },
   });
-  assert.deepEqual(balance.mock.calls[0].arguments, [addressFromHex(hash)]);
-  assert.deepEqual(transactions.mock.calls[0].arguments, [{ address: addressFromHex(hash), order: "descending", anchor: "end", limit: 1 }]);
+  assert.deepEqual(balance.mock.calls[0].arguments, [addressFromBase58(hash)]);
+  assert.deepEqual(transactions.mock.calls[0].arguments, [{ address: addressFromBase58(hash), order: "descending", anchor: "end", limit: 1 }]);
 });
 
 test("a failed transaction-status lookup returns 503 without guessing an address", async (t) => {
@@ -85,7 +86,7 @@ test("a failed transaction-status lookup returns 503 without guessing an address
 
 for (const status of [
   { status: "committed" as const, height: 42n },
-  { status: "recentFailure" as const, attemptHeight: 42n, cause: { kind: "dbConflict" as const, conflict: { address: addressFromHex(hash), key: hashFromHex(hash), code: "other" as const } } },
+  { status: "recentFailure" as const, attemptHeight: 42n, cause: { kind: "dbConflict" as const, conflict: { address: addressFromBase58(hash), key: hashFromBase58(hash), code: "other" as const } } },
 ]) {
   test(`search routes ${status.status} transactions without address probes`, async (t) => {
     const client = await createThruputClient({ transport: new MockTransport() });

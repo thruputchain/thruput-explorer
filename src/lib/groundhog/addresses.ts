@@ -1,4 +1,4 @@
-import { addressFromHex, toHex0x, type IdentifiedEvent } from "@thruputchain/client";
+import { addressFromBase58, toBase58, toHex0x, type IdentifiedEvent } from "@thruputchain/client";
 import { groundhog_erc20_if } from "@thruputchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
@@ -69,8 +69,8 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
 
   try {
     const { client } = await createExplorerGroundhogClient();
-    const contractAddress = addressFromHex(address);
-    const nativeTokenAddress = addressFromHex(nativeToken.address);
+    const contractAddress = addressFromBase58(address);
+    const nativeTokenAddress = addressFromBase58(nativeToken.address);
     const nativeTokenMetadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals } satisfies TokenMetadata;
     const hogTransfersRequest =
       address === nativeToken.address
@@ -127,7 +127,7 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
       hogTransfers: hogTransfersResult.events.map((entry) => formatAddressEvent(entry, nativeTokenMetadata)),
       hogTransfersError: hogTransfersResult.error,
       contractEvents: contractEventsResult.events.map((entry) =>
-        formatAddressEvent(entry, toHex0x(entry.event.contractAddress) === address ? metadata : undefined),
+        formatAddressEvent(entry, toBase58(entry.event.contractAddress) === address ? metadata : undefined),
       ),
       contractEventsError: contractEventsResult.error,
     };
@@ -143,12 +143,12 @@ function mergeTransactionHistory(
   const transactions = new Map<string, AddressTransactionRefView>();
 
   for (const transaction of rootTransactions) {
-    const txHash = toHex0x(transaction.txHash);
+    const txHash = toBase58(transaction.txHash);
     transactions.set(txHash, { txHash, height: transaction.height.toString() });
   }
 
   for (const transfer of hogTransfers) {
-    const txHash = toHex0x(transfer.txHash);
+    const txHash = toBase58(transfer.txHash);
     transactions.set(txHash, { txHash, height: transfer.blockHeight.toString() });
   }
 
@@ -165,10 +165,10 @@ function formatAddressEvent(
   entry: IdentifiedEvent,
   metadata?: TokenMetadata,
 ): AddressEventView {
-  const eventContractAddress = toHex0x(entry.event.contractAddress);
+  const eventContractAddress = toBase58(entry.event.contractAddress);
 
   return {
-    txHash: toHex0x(entry.txHash),
+    txHash: toBase58(entry.txHash),
     blockHeight: entry.blockHeight.toString(),
     sequenceNumber: entry.sequenceNumber,
     contractAddress: eventContractAddress,

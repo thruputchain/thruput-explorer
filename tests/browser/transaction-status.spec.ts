@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { identifier } from "../../src/lib/groundhog/test-fixtures";
 
 for (const { id, label, details } of [
   { id: "a1", label: "Retry", details: { "Error source": "scheduler", "Error code": "-7" } },
@@ -7,7 +8,7 @@ for (const { id, label, details } of [
   { id: "a4", label: "Committed", details: { "Block height": "Not indexed yet" } },
 ]) {
   test(`${label} displays the current gateway outcome without requiring a receipt`, async ({ page }) => {
-    await page.goto(`/tx/0x${id.repeat(32)}`);
+    await page.goto(`/tx/${identifier(Number.parseInt(id, 16))}`);
     const field = (name: string) => page.locator("dl > div").filter({ has: page.getByRole("term").filter({ hasText: new RegExp(`^${name}$`) }) }).getByRole("definition");
     await expect(field("Status")).toHaveText(label);
     await expect(field("Receipt")).toHaveText("Not available");

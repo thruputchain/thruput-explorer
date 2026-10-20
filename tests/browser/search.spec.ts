@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { identifier } from "../../src/lib/groundhog/test-fixtures";
 
-const txHash = `0x${"ab".repeat(32)}`;
+const txHash = identifier(0xab);
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -29,7 +30,7 @@ test("search uses the API and RPC, then renders the decoded transfer", async ({ 
 });
 
 test("search follows an address result and renders its balance", async ({ page }) => {
-  const address = `0x${"22".repeat(32)}`;
+  const address = identifier(0x22);
   await page.getByRole("textbox").fill(address);
   const response = page.waitForResponse("**/api/search");
   await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -50,7 +51,7 @@ test("malformed input shows validation without a search request", async ({ page 
   });
   await page.getByRole("textbox").fill("not-a-hash");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByText("Enter a block height or a 0x-prefixed 32-byte transaction hash or address.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enter a block height or a base58 transaction hash or address (32 bytes).", { exact: true })).toBeVisible();
   await expect(page.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
   expect(requests).toEqual([]);
 });

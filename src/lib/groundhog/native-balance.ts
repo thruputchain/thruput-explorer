@@ -1,4 +1,4 @@
-import { addressFromHex, type ThruputClient } from "@thruputchain/client";
+import { addressFromBase58, type ThruputClient } from "@thruputchain/client";
 
 export type NativeBalanceView = {
   rawBalance: string;
@@ -11,7 +11,7 @@ const NATIVE_HOG_DECIMALS = 7;
 
 export async function getNativeBalance(client: ThruputClient, address: string): Promise<NativeBalanceView | undefined> {
   try {
-    const balance = await client.getBalance(addressFromHex(address));
+    const balance = await client.getBalance(addressFromBase58(address));
     const rawBalance = balance.rawBalance.toString();
 
     return {
