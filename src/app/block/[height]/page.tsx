@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { toHex0x } from "@thruputchain/client";
+import { toBase58 } from "@thruputchain/client";
 
 import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
@@ -27,20 +27,20 @@ export default async function BlockPage({
   const fields = [
     ["Height", block.blockHeight.toString()],
     ["Timestamp (nanoseconds)", block.blockTimepoint.toString()],
-    ["Proposer", toHex0x(block.proposer)],
+    ["Proposer", toBase58(block.proposer)],
     ["Protocol", String(block.protocol)],
-    ["Parent hash", toHex0x(block.prevBlockHash)],
-    ["Transaction root", toHex0x(block.txsHash)],
-    ["Storage root", toHex0x(block.storageHash)],
-    ["Events root", toHex0x(block.eventsHash)],
-    ["Network hash", toHex0x(block.networkHash)],
+    ["Parent hash", toBase58(block.prevBlockHash)],
+    ["Transaction root", toBase58(block.txsHash)],
+    ["Storage root", toBase58(block.storageHash)],
+    ["Events root", toBase58(block.eventsHash)],
+    ["Network hash", toBase58(block.networkHash)],
   ];
   return (
     <main>
       <PageHeader
         eyebrow="Committed block"
         title={`Block ${height}`}
-        value={toHex0x(block.blockHash)}
+        value={toBase58(block.blockHash)}
         copyLabel="Copy block hash"
       />
       <div className="app-container flex flex-col gap-6 py-8">

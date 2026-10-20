@@ -1,4 +1,4 @@
-import { addressFromHex, toHex0x } from "@thruputchain/client";
+import { addressFromBase58, toBase58 } from "@thruputchain/client";
 import { groundhog_erc20_if } from "@thruputchain/client/contracts";
 
 import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
@@ -30,7 +30,7 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
   try {
     const { client } = await createExplorerGroundhogClient();
     const page = await client.getEvents({
-      filters: [groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromHex(nativeToken.address)] })],
+      filters: [groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(nativeToken.address)] })],
       order: "descending",
       anchor: "end",
       limit: LATEST_HOG_TRANSFER_LIMIT,
@@ -44,7 +44,7 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
         if (!decoded) return [];
 
         return [{
-          txHash: toHex0x(entry.txHash),
+          txHash: toBase58(entry.txHash),
           blockHeight: entry.blockHeight.toString(),
           sequenceNumber: entry.sequenceNumber,
           name: decoded.name,

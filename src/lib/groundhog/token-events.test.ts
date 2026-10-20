@@ -1,32 +1,32 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { addressFromHex, type EmittedEvent } from "@thruputchain/client";
+import { addressFromBase58, type EmittedEvent } from "@thruputchain/client";
 import { groundhog_erc20_if, decodeERC20Event } from "@thruputchain/client/contracts";
 import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
-import { transferEvent } from "./test-fixtures";
+import { identifier, transferEvent } from "./test-fixtures";
 import { decodeTokenEvent } from "./token-events";
 
-const from = `0x${"11".repeat(32)}`;
-const to = `0x${"22".repeat(32)}`;
-const zero = `0x${"00".repeat(32)}`;
+const from = identifier(0x11);
+const to = identifier(0x22);
+const zero = identifier(0);
 
 test("shared fixture encodes a real ERC20 TransferEvent with deterministic defaults and overrides", () => {
   const event = transferEvent();
   assert.deepEqual(event, transferEvent());
-  assert.deepEqual(event.contractAddress, addressFromHex(`0x${"cc".repeat(32)}`));
+  assert.deepEqual(event.contractAddress, addressFromBase58(identifier(0xcc)));
   assert.deepEqual(decodeERC20Event(event), {
     name: "TransferEvent",
-    topics: { from: addressFromHex(from), to: addressFromHex(to) },
+    topics: { from: addressFromBase58(from), to: addressFromBase58(to) },
     fields: { amount: 15_000_000n },
   });
 
   const overridden = transferEvent({ contractAddress: to, from: to, to: from, amount: 0n });
-  assert.deepEqual(overridden.contractAddress, addressFromHex(to));
+  assert.deepEqual(overridden.contractAddress, addressFromBase58(to));
   assert.deepEqual(decodeERC20Event(overridden), {
     name: "TransferEvent",
-    topics: { from: addressFromHex(to), to: addressFromHex(from) },
+    topics: { from: addressFromBase58(to), to: addressFromBase58(from) },
     fields: { amount: 0n },
   });
 });

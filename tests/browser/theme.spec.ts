@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { identifier } from "../../src/lib/groundhog/test-fixtures";
 
-const txHash = `0x${"ab".repeat(32)}`;
-const address = `0x${"22".repeat(32)}`;
+const txHash = identifier(0xab);
+const address = identifier(0x22);
 
 test("dark-only branding and bundled fonts load despite a saved light preference", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
@@ -34,7 +35,7 @@ test("Radix tabs and receipt disclosure support keyboard navigation", async ({ p
   await expect(page.getByRole("tabpanel")).toContainText("1.5 HOG");
   await page.keyboard.press("ArrowLeft");
   await expect(transactions).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("link", { name: /0xababab/ }).click();
+  await page.locator(`a[href="/tx/${txHash}"]`).click();
   await expect(page).toHaveURL(`/tx/${txHash}`);
 
   const toggle = page.getByRole("button", { name: "Toggle JSON" });
@@ -62,7 +63,7 @@ for (const width of [320, 390, 768, 1440]) {
       ["transaction", `/tx/${txHash}`],
       ["address", `/address/${address}`],
       ["invalid-address", "/address/invalid"],
-      ["unknown-transaction", `/tx/0x${"99".repeat(32)}`],
+      ["unknown-transaction", `/tx/${identifier(0x99)}`],
       ["not-found", "/missing-page"],
     ]) {
       await page.goto(path);
@@ -116,10 +117,10 @@ test("touch controls and 200% zoom remain usable", async ({ browser }, testInfo)
 test("empty, partial, pending, and unavailable views retain the themed shell", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const [name, path, message] of [
-    ["empty", `/address/0x${"33".repeat(32)}`, "No transactions found for this address."],
-    ["partial", `/address/0x${"44".repeat(32)}`, "Some activity sources are unavailable."],
-    ["pending", `/tx/0x${"cc".repeat(32)}`, "Pending"],
-    ["unavailable", `/tx/0x${"ee".repeat(32)}`, "Thruput RPC unavailable"],
+    ["empty", `/address/${identifier(0x33)}`, "No transactions found for this address."],
+    ["partial", `/address/${identifier(0x44)}`, "Some activity sources are unavailable."],
+    ["pending", `/tx/${identifier(0xcc)}`, "Pending"],
+    ["unavailable", `/tx/${identifier(0xee)}`, "Thruput RPC unavailable"],
   ]) {
     await page.goto(path);
     await expect(page.getByRole("main")).toContainText(message);

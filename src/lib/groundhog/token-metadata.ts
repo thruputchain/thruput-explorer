@@ -1,4 +1,4 @@
-import { addressFromHex, type ThruputClient } from "@thruputchain/client";
+import { addressFromBase58, type ThruputClient } from "@thruputchain/client";
 import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
@@ -22,7 +22,7 @@ export async function getTokenMetadata(client: ThruputClient, address: string): 
   // Native HOG is a precompile without ERC20Metadata entrypoints.
   const builtIn = getBuiltInTokenMetadata(address);
   if (builtIn) return builtIn;
-  const contract = addressFromHex(address);
+  const contract = addressFromBase58(address);
   const [name, symbol, decimals] = await Promise.all([
     viewMetadataValue(() => ERC20Metadata.v0_1.name.view({ client, contract })),
     viewMetadataValue(() => ERC20Metadata.v0_1.symbol.view({ client, contract })),
@@ -45,7 +45,7 @@ function normalizeDecimals(value: bigint | null) {
 }
 
 function normalizeAddress(address: string) {
-  return address.trim().toLowerCase();
+  return address.trim();
 }
 
 async function viewMetadataValue<T>(view: () => Promise<{ value: T }>): Promise<T | null> {

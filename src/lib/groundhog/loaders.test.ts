@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
-import { HttpTransport, MockTransport, createThruputClient, hashFromHex } from "@thruputchain/client";
+import { HttpTransport, MockTransport, createThruputClient, hashFromBase58 } from "@thruputchain/client";
+import { identifier } from "./test-fixtures";
 import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { loadAddressPageData } from "./addresses";
@@ -14,14 +15,14 @@ import { loadTransactionPageData } from "./transactions";
 // tsx runs this package as CommonJS. Mock the published factory rather than
 // replacing Explorer's modules or reaching into SDK implementation files.
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
-const hash = `0x${"ab".repeat(32)}`;
+const hash = identifier(0xab);
 
 for (const partial of [false, true]) {
   test(`address retains balance and root transactions with ${partial ? "failed" : "successful"} event RPCs`, async (t) => {
     const client = await createThruputClient({ transport: new MockTransport() });
     t.mock.method(sdk, "createThruputClient", async () => client);
     t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
-    t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromHex(hash), height: 42n }] }));
+    t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromBase58(hash), height: 42n }] }));
     t.mock.method(client, "getEvents", async () => {
       if (partial) throw new Error("Events unavailable");
       return { events: [] };
