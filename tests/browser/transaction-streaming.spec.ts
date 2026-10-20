@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { identifier } from "../../src/lib/groundhog/test-fixtures";
+import { identifier } from "../../src/lib/thruput/test-fixtures";
 
 const rpcOrigin = `http://127.0.0.1:${Number(process.env.PLAYWRIGHT_PORT ?? 3100) + 1}`;
 const txHash = identifier(0xdd);

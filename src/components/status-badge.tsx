@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { TransactionStatusView } from "@/lib/groundhog/types";
+import type { TransactionStatusView } from "@/lib/thruput/types";
 
 export function StatusBadge({ status }: { status: TransactionStatusView }) {
   if (status.status === "committed") return <Badge>Committed</Badge>;

@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { toBase58, toHex0x } from "@thruputchain/client";
 import { HOG_ADDRESS } from "@thruputchain/protocol";
 
-import { identifier, transferEvent } from "../../src/lib/groundhog/test-fixtures";
+import { identifier, transferEvent } from "../../src/lib/thruput/test-fixtures";
 
 async function main() {
   const txHash = identifier(0xab);
@@ -164,7 +164,7 @@ async function main() {
       ...process.env,
       NODE_ENV: "production",
       NEXT_TELEMETRY_DISABLED: "1",
-      GROUNDHOG_RPC_URL: `http://127.0.0.1:${address.port}`,
+      THRUPUT_RPC_URL: `http://127.0.0.1:${address.port}`,
     },
     stdio: "inherit",
   });

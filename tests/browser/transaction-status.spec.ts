@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { identifier } from "../../src/lib/groundhog/test-fixtures";
+import { identifier } from "../../src/lib/thruput/test-fixtures";
 
 for (const [id, label, detail] of [["a5", "Revert message", "Transfer exceeds available balance"], ["a6", "Execution fault", "outOfGas"]]) {
   test(`receipt shows exact gas and ${label}`, async ({ page }) => {

@@ -1,7 +1,7 @@
 import { fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
 
 import { isBlockHeight } from "../validation";
-import { createExplorerGroundhogClient } from "./client";
+import { createExplorerThruputClient } from "./client";
 import { isUnsupportedRpcError } from "./rpc";
 
 export type BlockPage = {
@@ -25,7 +25,7 @@ export async function loadBlock(height: string) {
       message: "Enter a valid non-negative block height.",
     };
   try {
-    const { client } = await createExplorerGroundhogClient();
+    const { client } = await createExplorerThruputClient();
     const block = await client.getBlockByNumber(BigInt(height));
     if (!block)
       return {
@@ -54,7 +54,7 @@ export async function loadBlockTransactions(
     };
   }
   try {
-    const { client } = await createExplorerGroundhogClient();
+    const { client } = await createExplorerThruputClient();
     const page = await client.getTransactionsByBlock({
       height: BigInt(height),
       cursor: fromHex0x(cursor),

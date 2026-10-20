@@ -3,7 +3,7 @@ import { toBase58 } from "@thruputchain/client";
 import { BlockTransactions } from "@/components/block-transactions";
 import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
-import { loadBlock, loadBlockTransactions } from "@/lib/groundhog/blocks";
+import { loadBlock, loadBlockTransactions } from "@/lib/thruput/blocks";
 
 export default async function BlockTransactionsPage({
   params,

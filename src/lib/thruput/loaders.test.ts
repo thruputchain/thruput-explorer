@@ -100,10 +100,10 @@ test("async client connection failures become unavailable for every loader", asy
 test("partial custom-token metadata preserves successful fields", async (t) => {
   const transport = new MockTransport();
   const client = await createThruputClient({ transport });
-  const request = t.mock.method(transport, "request", async () => metadataBatchResponse(["Groundhog", undefined, undefined]));
+  const request = t.mock.method(transport, "request", async () => metadataBatchResponse(["Thruput", undefined, undefined]));
 
   assert.deepEqual(await getTokenMetadata(client, hash), {
-    name: "Groundhog", symbol: undefined, decimals: undefined,
+    name: "Thruput", symbol: undefined, decimals: undefined,
   });
   assert.equal(request.mock.callCount(), 1);
   const calls = [ERC20Metadata.v0_1.name, ERC20Metadata.v0_1.symbol, ERC20Metadata.v0_1.decimals];

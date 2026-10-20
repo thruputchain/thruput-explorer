@@ -3,7 +3,7 @@ import { ExecResult } from "@thruputchain/protocol";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
-import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
+import { createExplorerThruputClient, getExplorerRpcConfig } from "./client";
 import { stringifyJson } from "./format";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
@@ -28,7 +28,7 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
   }
 
   try {
-    const { transport, client } = await createExplorerGroundhogClient();
+    const { transport, client } = await createExplorerThruputClient();
     const txHash = hashFromBase58(hash);
 
     let rawReceipt: unknown;

@@ -1,5 +1,5 @@
 import { addressFromBase58, toBase58, toHex0x, type EmittedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if } from "@thruputchain/client/contracts";
+import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
 export function identifier(byte: number): string {
@@ -33,7 +33,7 @@ export function transferEvent(options: {
   return {
     contractAddress: addressFromBase58(options.contractAddress ?? identifier(0xcc)),
     topics: [
-      groundhog_erc20_if.v0_1.events.TransferEvent.signature.slice(),
+      ERC20.v0_1.events.TransferEvent.signature.slice(),
       addressFromBase58(options.from ?? identifier(0x11)),
       addressFromBase58(options.to ?? identifier(0x22)),
     ],

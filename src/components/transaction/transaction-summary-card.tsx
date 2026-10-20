@@ -3,8 +3,8 @@ import { FieldRow } from "./field-row";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatFreshness } from "@/lib/groundhog/format";
-import type { TransactionPageData } from "@/lib/groundhog/types";
+import { formatFreshness } from "@/lib/thruput/format";
+import type { TransactionPageData } from "@/lib/thruput/types";
 
 export function TransactionSummaryCard({ data }: { data: TransactionPageData }) {
   const freshness = formatFreshness(data.status.status === "committed" ? data.status.height : undefined, data.chainTipHeight);

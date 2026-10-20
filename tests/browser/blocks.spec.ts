@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { identifier } from "../../src/lib/groundhog/test-fixtures";
+import { identifier } from "../../src/lib/thruput/test-fixtures";
 
 for (const width of [390, 1280]) {
   test(`block search, details and bounded transactions at ${width}px`, async ({

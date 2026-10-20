@@ -1,7 +1,7 @@
 import { hashFromBase58 } from "@thruputchain/client";
 
-import { createExplorerGroundhogClient } from "@/lib/groundhog/client";
-import { toRpcFailure } from "@/lib/groundhog/rpc";
+import { createExplorerThruputClient } from "@/lib/thruput/client";
+import { toRpcFailure } from "@/lib/thruput/rpc";
 import { isBlockHeight, isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { client } = await createExplorerGroundhogClient();
+    const { client } = await createExplorerThruputClient();
     const txStatus = await client.getTransactionStatus(hashFromBase58(query));
     if (txStatus.status !== "unknown") {
       return Response.json({ status: "ok", href: `/tx/${query}` });
