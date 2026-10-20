@@ -54,19 +54,37 @@ Transaction pages request at most 50 references in ascending hash order, not exe
 
 ## Local Fixtures
 
-To create repeatable local explorer fixtures after starting a fresh node, run:
+Start a local node with the version set above. In another terminal, create sample HOG transfers:
 
 ```bash
 pnpm bootstrap:local
 ```
 
-The bootstrap script builds the local ERC20 and Ticketmaster fixture contracts, deploys ALULA, USDC, and Ticketmaster, initializes metadata, mints balances, creates sample token/Ticketmaster transactions, and prints explorer URLs. ERC20 token contracts are detected through metadata view calls and standard ERC20 event signatures. Native HOG is the only built-in token metadata hint because its address is stable.
+The script uses `thruput` from `PATH`. To use a source build:
 
-The historical fixture qualification used client `0.7.0`, protocol `0.11.0`, and fixture SDK `0.32.0` (ERC20 interfaces `0.1.25`). This is separate from the released block-query version set above. Older SDK `0.19.6` fixtures emit raw spec format 1 and fail with the current CLI, which expects format 2.
+```bash
+THRUPUT_CLI="$HOME/Work/thruput-tools/target/debug/thruput" pnpm bootstrap:local
+```
 
-By default, bootstrap uses sibling projects `../groundhog-test/erc20-current` and `../groundhog-test/ticketmaster`, and the CLI at `../groundhog-rpc/target/debug/groundhog`. Override these with `ERC20_PROJECT_DIR`, `TICKETMASTER_PROJECT_DIR`, and `GROUNDHOG_CLI`. Both fixtures need their updated source and lockfiles, not just a version change. Ticketmaster's updated storage layout requires a fresh deployment.
+Each run creates fresh Alice, Bob and Carol keys in an isolated CLI configuration. It funds them from the local faucet, then sends 1 HOG and 0.25 HOG to Bob and 2.5 HOG to Carol. It copies the existing CLI configuration for local-node discovery, but does not copy user keys or change user defaults. Current local nodes use stored signing keys; deterministic `dev-*` accounts are no longer required.
 
-Bootstrap only accepts loopback RPC URLs and deterministic local dev-wallet manifests. It discovers the manifest from local CLI state, or accepts `GROUNDHOG_RUNTIME_MANIFEST`. Each run creates new contracts and transactions; it does not reset the node. ERC20 calls use the installed client bindings, so separate TypeScript binding generation is unnecessary.
+Set `GROUNDHOG_RPC_URL` for a different loopback RPC endpoint. If CLI discovery cannot find that node, set `THRUPUT_RUNTIME_MANIFEST` to the manifest path printed by `thruput node`. The script does not load `.env.local`.
+
+Keys, CLI responses, stderr diagnostics, a command journal and explorer links stay in the printed private run directory under `${XDG_DATA_HOME:-$HOME/.local/share}/thruput-explorer/bootstrap`. Set `BOOTSTRAP_OUTPUT_DIR` to change its parent directory, or `EXPLORER_URL` to change the printed link origin. On failure, inspect the journal and any reported transaction hash before retrying. The script stops on failed or unconfirmed transactions; it does not retry them or reset the node. A new run creates new accounts and activity.
+
+### Optional contract fixtures
+
+Set either project path to include its fixtures. Projects must have source and lockfiles compatible with the current CLI and node. Standalone projects and package directories within Cargo workspaces are supported.
+
+```bash
+ERC20_PROJECT_DIR="$HOME/Work/thruput-examples/contracts/erc20" pnpm bootstrap:local
+# Add Ticketmaster only when you have a current fixture project:
+TICKETMASTER_PROJECT_DIR=/path/to/current/ticketmaster pnpm bootstrap:local
+```
+
+The script builds each supplied project with `--locked` before funding accounts. ERC20 fixtures create ALULA and USDC, initialize metadata, mint balances and transfer tokens to Bob and Carol. They must implement the published `ERC20Metadata.v0_1` and `ERC20.v0_1` bindings. Ticketmaster must expose `create_event`, `mint` and `transfer` with the argument order used in the script. Each deployment receives 10 HOG for storage and execution; the minimum code-storage amount alone is not enough for these calls.
+
+The HOG and ERC20 flows were checked against CLI **0.32.2**, node **0.1.31-rc.10** and client **0.21.0**. The ERC20 check used `thruput-examples/contracts/erc20` with Rust SDK **0.51.0**. Ticketmaster command wiring has automated coverage, but its historical external project needs a source upgrade before live verification. Run `bash scripts/bootstrap-local-node.sh --help` for all settings.
 
 ## Verification
 

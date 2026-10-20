@@ -22,7 +22,7 @@ for (const { name, method, args } of [
     const result = execFileSync(process.execPath, ["--input-type=module"], {
       cwd: new URL("../../../", import.meta.url),
       input: snippets[0], encoding: "utf8",
-      env: { ...process.env, GROUNDHOG_CLIENT_CONTRACTS_MODULE: "@thruputchain/client/contracts", CONTRACT_ADDRESS: address, ADMIN_ADDRESS: address, RECEIVER_ADDRESS: address, TOKEN_NAME: "Fixture", TOKEN_SYMBOL: "FIX", TOKEN_DECIMALS: "7", RAW_AMOUNT: "123" },
+      env: { ...process.env, CONTRACT_ADDRESS: address, ADMIN_ADDRESS: address, RECEIVER_ADDRESS: address, TOKEN_NAME: "Fixture", TOKEN_SYMBOL: "FIX", TOKEN_DECIMALS: "7", RAW_AMOUNT: "123" },
     });
     const [entrypoint, calldata] = result.split("\t");
     assert.equal(entrypoint, toHex0x(method.entrypoint));
