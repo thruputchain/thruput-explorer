@@ -47,6 +47,8 @@ pnpm start
 - Token metadata uses one shared-height SDK batch per token. HOG has built-in metadata with seven decimals; custom-token display supports up to 30 decimals.
 - RPC requests have a 10-second deadline. Displayed RPC URLs omit credentials, paths and queries. Missing history and RPC errors are distinct from empty results.
 
+The home page defaults to **Recent blocks**, listing the chain tip and up to 10 previous heights from one tip query. Genesis is omitted because its metadata is unavailable. **Recent HOG transfers** keeps the existing transfer list in a second tab. Block heights in activity tables and transaction summaries link to their block details.
+
 ## Development
 
 Routes and server actions are in `src/app`. UI components are in `src/components`; RPC loaders, event decoding and their tests are in `src/lib/thruput`. Browser tests use the fixture RPC in `tests/browser/server.ts` and require no local contracts or live node.

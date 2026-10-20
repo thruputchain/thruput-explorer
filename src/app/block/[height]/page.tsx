@@ -2,6 +2,7 @@ import Link from "next/link";
 import { toBase58 } from "@thruputchain/client";
 
 import { PageHeader } from "@/components/page-header";
+import { BlockLink } from "@/components/block-link";
 import { RpcAlert } from "@/components/rpc-alert";
 import { FieldRow } from "@/components/transaction/field-row";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,6 @@ export default async function BlockPage({
     );
   const block = result.data;
   const fields = [
-    ["Height", block.blockHeight.toString()],
     ["Timestamp (nanoseconds)", block.blockTimepoint.toString()],
     ["Proposer", toBase58(block.proposer)],
     ["Protocol", String(block.protocol)],
@@ -45,6 +45,9 @@ export default async function BlockPage({
       />
       <div className="app-container flex flex-col gap-6 py-8">
         <dl>
+          <FieldRow label="Height">
+            <BlockLink height={block.blockHeight.toString()} />
+          </FieldRow>
           {fields.map(([label, value]) => (
             <FieldRow key={label} label={label}>
               <span className="break-all font-mono tabular-nums">{value}</span>

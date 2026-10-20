@@ -69,7 +69,7 @@ for (const width of [320, 390, 768, 1440]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Thruput Explorer homepage" })).toBeVisible();
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(name === "home" ? 0 : 1);
-      if (name === "home") await expect(page.getByText("1.5 HOG", { exact: true })).toBeVisible();
+      if (name === "home") await expect(page.getByRole("tabpanel", { name: "Recent blocks" })).toBeVisible();
       if (name === "transaction") await page.getByRole("button", { name: "Toggle JSON" }).click();
       await page.evaluate(() => document.fonts.ready);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
