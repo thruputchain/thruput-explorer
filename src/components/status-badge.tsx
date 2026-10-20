@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { TransactionStatusView } from "@/lib/thruput/types";
 
 export function StatusBadge({ status }: { status: TransactionStatusView }) {
-  if (status.status === "committed") return <Badge>Committed</Badge>;
+  if (status.status === "committed") return <Badge variant="success">Committed</Badge>;
   if (status.status === "pending") return <Badge variant="secondary">Pending</Badge>;
   if (status.status === "retry") return <Badge variant="secondary">Retry</Badge>;
   if (status.status === "dropped") return <Badge variant="destructive">Dropped</Badge>;

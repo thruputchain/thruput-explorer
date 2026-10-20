@@ -1,4 +1,4 @@
-import { ZapIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { WalletMenu } from "./wallet-menu";
 
@@ -7,11 +7,16 @@ export function AppHeader() {
     <header className="border-b bg-background">
       <div className="app-container flex min-h-20 flex-wrap items-center justify-between gap-3 py-3 lg:min-h-22">
         <Link href="/" aria-label="Thruput Explorer homepage" className="flex min-h-12 items-center gap-2.5">
-          <ZapIcon className="size-6 shrink-0 fill-primary text-primary" aria-hidden="true" />
-          <span className="flex flex-col gap-0.5 lg:flex-row lg:items-center lg:gap-3">
-            <span className="text-xl font-medium tracking-tight">THRUPUT</span>
-            <span className="font-mono text-xs text-muted-foreground lg:border-l lg:pl-3">Explorer</span>
-          </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3 text-sm font-medium">
+              <picture className="shrink-0">
+                <source srcSet="/brand/stellar-dark.svg" media="(prefers-color-scheme: dark)" />
+                <Image src="/brand/stellar.svg" width={100} height={25} alt="Stellar" unoptimized />
+              </picture>
+              <span className="border-l pl-3">Thruput</span>
+            </div>
+            <div className="font-mono text-xs text-muted-foreground">Explorer</div>
+          </div>
         </Link>
         <WalletMenu />
       </div>
