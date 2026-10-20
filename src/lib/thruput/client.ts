@@ -13,7 +13,7 @@ export type ExplorerRpcConfig = {
   };
 };
 
-export type ExplorerGroundhogClient = ExplorerRpcConfig & {
+export type ExplorerThruputClient = ExplorerRpcConfig & {
   transport: HttpTransport;
   client: ThruputClient;
 };
@@ -22,7 +22,7 @@ export function getExplorerRpcConfig(): ExplorerRpcConfig {
   let rpcUrl = "Configured RPC";
   try {
     // Display only the origin; RPC paths and queries can contain API keys.
-    rpcUrl = new URL(process.env.GROUNDHOG_RPC_URL?.trim() || DEFAULT_RPC_URL).origin;
+    rpcUrl = new URL(process.env.THRUPUT_RPC_URL?.trim() || DEFAULT_RPC_URL).origin;
   } catch {
     // Invalid configuration is reported by the loader, not during rendering.
   }
@@ -36,15 +36,10 @@ export function getExplorerRpcConfig(): ExplorerRpcConfig {
   };
 }
 
-export async function createExplorerGroundhogClient(): Promise<ExplorerGroundhogClient> {
+export async function createExplorerThruputClient(): Promise<ExplorerThruputClient> {
   const config = getExplorerRpcConfig();
-  const transport = new HttpTransport(process.env.GROUNDHOG_RPC_URL?.trim() || DEFAULT_RPC_URL, {
-    fetch: (input, init) => {
-      // Keep the deadline active through body decoding, not just response headers.
-      const timeout = AbortSignal.timeout(10_000);
-      const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
-      return fetch(input, { ...init, signal });
-    },
+  const transport = new HttpTransport(process.env.THRUPUT_RPC_URL?.trim() || DEFAULT_RPC_URL, {
+    timeoutMs: 10_000,
   });
 
   return {

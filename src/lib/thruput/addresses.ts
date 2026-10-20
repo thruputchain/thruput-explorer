@@ -1,9 +1,9 @@
 import { addressFromBase58, toBase58, toHex0x, type IdentifiedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if } from "@thruputchain/client/contracts";
+import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
-import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
+import { createExplorerThruputClient, getExplorerRpcConfig } from "./client";
 import { getNativeBalance, type NativeBalanceView } from "./native-balance";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
@@ -68,7 +68,7 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
   }
 
   try {
-    const { client } = await createExplorerGroundhogClient();
+    const { client } = await createExplorerThruputClient();
     const contractAddress = addressFromBase58(address);
     const nativeTokenAddress = addressFromBase58(nativeToken.address);
     const nativeTokenMetadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals } satisfies TokenMetadata;
@@ -78,11 +78,11 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
         : client
             .getEvents({
               filters: [
-                groundhog_erc20_if.v0_1.events.TransferEvent.filter({
+                ERC20.v0_1.events.TransferEvent.filter({
                   contractAddresses: [nativeTokenAddress],
                   topics: { from: contractAddress },
                 }),
-                groundhog_erc20_if.v0_1.events.TransferEvent.filter({
+                ERC20.v0_1.events.TransferEvent.filter({
                   contractAddresses: [nativeTokenAddress],
                   topics: { to: contractAddress },
                 }),

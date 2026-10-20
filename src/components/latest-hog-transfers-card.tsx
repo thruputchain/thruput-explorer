@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { loadLatestHogTransfers } from "@/lib/groundhog/latest-hog-transfers";
+import { loadLatestHogTransfers } from "@/lib/thruput/latest-hog-transfers";
 
 export async function LatestHogTransfersCard() {
   const data = await loadLatestHogTransfers();

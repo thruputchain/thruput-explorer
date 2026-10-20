@@ -1,4 +1,4 @@
-import { toBase58, type EmittedEvent } from "@thruputchain/client";
+import { formatUnits, toBase58, type EmittedEvent } from "@thruputchain/client";
 import { decodeERC20Event } from "@thruputchain/client/contracts";
 
 import type { TokenMetadata } from "./token-metadata";
@@ -20,7 +20,8 @@ export function decodeTokenEvent(
   const from = toBase58(decoded.topics.from);
   const to = toBase58(decoded.topics.to);
   const rawAmount = decoded.fields.amount.toString();
-  const amount = formatTokenAmount(decoded.fields.amount, metadata?.decimals);
+  const decimals = metadata?.decimals ?? 0;
+  const amount = formatUnits(decoded.fields.amount, decimals >= 0 && decimals <= MAX_DISPLAY_DECIMALS ? decimals : 0);
   const symbol = metadata?.symbol;
 
   if (from === ZERO_CONTRACT_ADDRESS) {
@@ -58,13 +59,3 @@ export function decodeTokenEvent(
 
 const ZERO_CONTRACT_ADDRESS = "11111111111111111111111111111111";
 const MAX_DISPLAY_DECIMALS = 30;
-
-function formatTokenAmount(rawAmount: bigint, decimals = 0) {
-  if (decimals > MAX_DISPLAY_DECIMALS) return rawAmount.toString();
-  if (decimals <= 0) return rawAmount.toString();
-
-  const raw = rawAmount.toString().padStart(decimals + 1, "0");
-  const whole = raw.slice(0, -decimals);
-  const fraction = raw.slice(-decimals).replace(/0+$/, "");
-  return fraction ? `${whole}.${fraction}` : whole;
-}

@@ -3,8 +3,8 @@ import { FieldRow } from "./field-row";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatFreshness } from "@/lib/groundhog/format";
-import type { TransactionPageData } from "@/lib/groundhog/types";
+import { formatFreshness } from "@/lib/thruput/format";
+import type { TransactionPageData } from "@/lib/thruput/types";
 
 export function TransactionSummaryCard({ data }: { data: TransactionPageData }) {
   const freshness = formatFreshness(data.status.status === "committed" ? data.status.height : undefined, data.chainTipHeight);
@@ -21,7 +21,10 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           <FieldRow label="Status">
             <StatusBadge status={data.status} />
           </FieldRow>
-          {data.receipt ? <FieldRow label="Execution">{data.receipt.execResult}</FieldRow> : null}
+          {data.receipt ? <>
+            <FieldRow label="Execution">{data.receipt.executionStatus?.result ?? data.receipt.execResult}</FieldRow>
+            <FieldRow label="Gas used">{data.receipt.gasUsed}</FieldRow>
+          </> : null}
           <FieldRow label="Block height">
             {data.status.status === "committed" ? data.status.height ? <Link className="underline underline-offset-4" href={`/block/${data.status.height}`}>{data.status.height}</Link> : "Not indexed yet" : statusLabel(data.status.status)}
           </FieldRow>
@@ -69,6 +72,13 @@ function getExecutionDetails(data: TransactionPageData) {
 
   const receipt = data.receipt;
   if (!receipt) return details;
+
+  if (receipt.executionStatus?.result === "deterministicError") {
+    details.push({ label: "Execution fault", value: receipt.executionStatus.kind });
+  }
+  if (receipt.executionStatus?.result === "reverted" && receipt.executionStatus.message) {
+    details.push({ label: "Revert message", value: receipt.executionStatus.message });
+  }
 
   if (receipt.returnData && receipt.returnData !== "0x") {
     details.push({ label: "Return data", value: receipt.returnData });

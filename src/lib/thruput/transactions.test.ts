@@ -3,11 +3,10 @@ import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
 import { HttpTransport, toBase58, toHex0x } from "@thruputchain/client";
-import { ERC20Metadata } from "@thruputchain/client/contracts";
 import { ExecResult } from "@thruputchain/protocol";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
-import { identifier, transferEvent } from "./test-fixtures";
+import { identifier, metadataBatchResponse, transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
@@ -31,11 +30,11 @@ function mockRpc(t: TestContext, overrides: Record<string, unknown> = {}) {
     groundhog_chainTip: { height: chainTipHeight, blockHash: hash },
     ...overrides,
   };
-  return t.mock.method(HttpTransport.prototype, "request", async (method: string) => {
+  return t.mock.method(HttpTransport.prototype, "request", async (method: string, params?: unknown[]) => {
     assert.ok(Object.hasOwn(responses, method), `Unexpected RPC method: ${method}`);
     const response = responses[method];
     if (response instanceof Error) throw response;
-    return typeof response === "function" ? response() : response;
+    return typeof response === "function" ? response(params) : response;
   });
 }
 
@@ -45,16 +44,13 @@ for (const status of ["pending", "unknown"]) {
       groundhog_getTransactionStatus: { status },
       groundhog_getTransactionReceipt: null,
     });
-    const metadata = t.mock.method(ERC20Metadata.v0_1.name, "view", async () => {
-      throw new Error("Unexpected metadata lookup without a receipt");
-    });
 
     const result = await loadTransactionPageData(hash);
     assert.equal(result.hash, hash);
     assert.deepEqual(result.status, { status });
     assert.equal(result.receipt, null);
     assert.equal(result.chainTipHeight, chainTipHeight);
-    assert.equal(metadata.mock.callCount(), 0);
+    assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_viewBatch").length, 0);
     assert.deepEqual(
       request.mock.calls.filter(({ arguments: [method] }) => method !== "groundhog_chainTip")
         .map(({ arguments: [, params] }) => params),
@@ -103,6 +99,8 @@ for (const execResult of ["reverted", "deterministicError", "nonDeterministicErr
       txHash: hash,
       height,
       execResult,
+      executionStatus: receipt.status,
+      gasUsed: "1000",
       returnData: receipt.returnData,
       abortData: receipt.abortData,
       events: [],
@@ -124,6 +122,7 @@ for (const [code, label] of [
       txHash: new Uint8Array(32).fill(0xab),
       height: BigInt(height),
       execResult: code,
+      gasUsed: 1000n,
       events: [],
       returnData: null,
       abortData: null,
@@ -188,31 +187,26 @@ test("core events load without metadata; enrichment queries each unique contract
     data: toHex0x(event.data),
   }));
   const receipt = { ...rawReceipt, events: wireEvents };
-  mockRpc(t, { groundhog_getTransactionReceipt: receipt });
-  const name = t.mock.method(ERC20Metadata.v0_1.name, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.name.view>[0]) => ({
-    value: toBase58(contract) === contracts[0] ? "First token" : "Second token",
-  }));
-  const symbol = t.mock.method(ERC20Metadata.v0_1.symbol, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.symbol.view>[0]) => ({
-    value: toBase58(contract) === contracts[0] ? "ONE" : "TWO",
-  }));
-  const decimals = t.mock.method(ERC20Metadata.v0_1.decimals, "view", async ({ contract }: Parameters<typeof ERC20Metadata.v0_1.decimals.view>[0]) => ({
-    value: toBase58(contract) === contracts[0] ? 2n : 3n,
-  }));
+  const metadataContracts: string[] = [];
+  mockRpc(t, {
+    groundhog_getTransactionReceipt: receipt,
+    groundhog_viewBatch: (params: [{ calls: Array<{ contract: string }> }]) => {
+      const calls = params[0].calls;
+      assert.equal(calls.length, 3);
+      assert.ok(calls.every((call) => call.contract === calls[0].contract));
+      metadataContracts.push(calls[0].contract);
+      return metadataBatchResponse(calls[0].contract === contracts[0] ? ["First token", "ONE", 2n] : ["Second token", "TWO", 3n]);
+    },
+  });
 
   const result = await loadTransactionPageData(hash);
   assert.deepEqual(result.status, { status: "committed", height });
   assert.ok(result.receipt);
-  for (const view of [name, symbol, decimals]) assert.equal(view.mock.callCount(), 0);
+  assert.deepEqual(metadataContracts, []);
   assert.equal(result.receipt.events[0].decoded, undefined);
   assert.equal(result.receipt.events[0].contractName, undefined);
   const enrichedEvents = await result.loadEnrichedEvents!();
-  for (const view of [name, symbol, decimals]) {
-    assert.equal(view.mock.callCount(), contracts.length);
-    assert.deepEqual(
-      view.mock.calls.map(({ arguments: [args] }) => toBase58(args.contract)).sort(),
-      contracts,
-    );
-  }
+  assert.deepEqual(metadataContracts.sort(), contracts);
   assert.deepEqual(enrichedEvents, wireEvents.map((event, index) => ({
     ...event,
     contractName: index === 1 ? "Second token" : "First token",
@@ -238,21 +232,18 @@ test("native HOG events have canonical metadata without any view requests", asyn
   assert.equal(result.receipt!.events[0].decoded?.amount, "1");
   assert.equal(result.receipt!.events[0].decoded?.symbol, "HOG");
   assert.deepEqual(await result.loadEnrichedEvents!(), result.receipt!.events);
-  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_view").length, 0);
+  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_view" || method === "groundhog_viewBatch").length, 0);
 });
 
-for (const decimals of [undefined, -1n, 31n, 0n]) {
+for (const decimals of [undefined, null, 31n, 0n]) {
   test(`custom-token enrichment handles ${decimals === undefined ? "unavailable" : decimals} decimals without guessing the scale`, async (t) => {
     const contractAddress = identifier(0x55);
     const event = transferEvent({ contractAddress, amount: 10000000n });
     const wireEvent = { contractAddress, topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
     const receipt = { ...rawReceipt, events: [wireEvent] };
-    mockRpc(t, { groundhog_getTransactionReceipt: receipt });
-    t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "Custom token" }));
-    t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "TOKEN" }));
-    t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => {
-      if (decimals === undefined) throw new Error("Decimals unavailable");
-      return { value: decimals };
+    mockRpc(t, {
+      groundhog_getTransactionReceipt: receipt,
+      groundhog_viewBatch: metadataBatchResponse(["Custom token", "TOKEN", decimals]),
     });
 
     const result = await loadTransactionPageData(hash);

@@ -4,7 +4,6 @@ import { test } from "node:test";
 
 import { addressFromBase58, createThruputClient, hashFromBase58, MockTransport } from "@thruputchain/client";
 import { identifier } from "./test-fixtures";
-import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { POST } from "../../app/api/search/route";
 
@@ -25,13 +24,13 @@ test("search rejects malformed input before connecting and reports factory rejec
   assert.deepEqual(await result.json(), { status: "unavailable", message: "Connection failed" });
 });
 
-test("search prefers known transactions and routes unknown hashes to addresses despite failed context RPCs", async (t) => {
+test("search prefers known transactions and routes unknown hashes to addresses", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
   const status = t.mock.method(client, "getTransactionStatus", async () => ({ status: "pending" as const }));
   const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unavailable"); });
   t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unavailable"); });
-  t.mock.method(client, "view", async () => { throw new Error("Unavailable"); });
+  t.mock.method(client, "readViews", async () => { throw new Error("Unavailable"); });
 
   const transaction = await POST(request(`  ${hash}  `));
   assert.equal(transaction.status, 200);
@@ -44,28 +43,25 @@ test("search prefers known transactions and routes unknown hashes to addresses d
   assert.equal(address.status, 200);
   assert.deepEqual(await address.json(), {
     status: "ok", href: `/address/${hash}`,
-    context: { hasNativeBalance: false, hasRootTransactions: false, token: false },
   });
 });
 
-test("search reports successful address context even when the available balance is zero", async (t) => {
+test("address search performs no unused balance, history or metadata reads", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getTransactionStatus", async () => ({ status: "unknown" as const }));
   const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 0n, height: 42n }));
   const transactions = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromBase58(hash), height: 42n }] }));
-  t.mock.method(ERC20Metadata.v0_1.name, "view", async () => ({ value: "ALULA" }));
-  t.mock.method(ERC20Metadata.v0_1.symbol, "view", async () => ({ value: "ALULA" }));
-  t.mock.method(ERC20Metadata.v0_1.decimals, "view", async () => ({ value: 6n }));
+  const metadata = t.mock.method(client, "readViews", async () => { throw new Error("Unexpected metadata query"); });
 
   const response = await POST(request(hash));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
     status: "ok", href: `/address/${hash}`,
-    context: { hasNativeBalance: true, hasRootTransactions: true, token: true },
   });
-  assert.deepEqual(balance.mock.calls[0].arguments, [addressFromBase58(hash)]);
-  assert.deepEqual(transactions.mock.calls[0].arguments, [{ address: addressFromBase58(hash), order: "descending", anchor: "end", limit: 1 }]);
+  assert.equal(balance.mock.callCount(), 0);
+  assert.equal(transactions.mock.callCount(), 0);
+  assert.equal(metadata.mock.callCount(), 0);
 });
 
 test("a failed transaction-status lookup returns 503 without guessing an address", async (t) => {
@@ -74,7 +70,7 @@ test("a failed transaction-status lookup returns 503 without guessing an address
   t.mock.method(client, "getTransactionStatus", async () => { throw new Error("Status RPC unavailable"); });
   const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
   const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
-  const view = t.mock.method(client, "view", async () => { throw new Error("Unexpected metadata lookup"); });
+  const view = t.mock.method(client, "readViews", async () => { throw new Error("Unexpected metadata lookup"); });
 
   const response = await POST(request(hash));
   assert.equal(response.status, 503);
@@ -94,7 +90,7 @@ for (const status of [
     t.mock.method(client, "getTransactionStatus", async () => status);
     const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
     const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
-    const view = t.mock.method(client, "view", async () => { throw new Error("Unexpected metadata lookup"); });
+    const view = t.mock.method(client, "readViews", async () => { throw new Error("Unexpected metadata lookup"); });
     const response = await POST(request(hash));
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { status: "ok", href: `/tx/${hash}` });

@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const groundhogPackages = [
+const thruputPackages = [
   "@thruputchain/client",
   "@thruputchain/contract-spec",
   "@thruputchain/protocol",
@@ -8,7 +8,7 @@ const groundhogPackages = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: groundhogPackages,
+  transpilePackages: thruputPackages,
 };
 
 export default nextConfig;

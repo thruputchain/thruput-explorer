@@ -17,7 +17,7 @@ const passwordHash = hashSync(password, 4);
 const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
 
 async function startProduction(t, configured) {
-  // Obtain an unused RPC port without starting a Groundhog node.
+  // Obtain an unused RPC port without starting a Thruput node.
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
   await once(reservation, "listening");
@@ -33,7 +33,7 @@ async function startProduction(t, configured) {
       ...process.env,
       NODE_ENV: "production",
       NEXT_TELEMETRY_DISABLED: "1",
-      GROUNDHOG_RPC_URL: `http://127.0.0.1:${rpcPort}`,
+      THRUPUT_RPC_URL: `http://127.0.0.1:${rpcPort}`,
       // Empty values also prevent Next from loading credentials from .env files.
       BASIC_AUTH_USER: configured ? username : "",
       BASIC_AUTH_HASH: configured ? passwordHash : "",

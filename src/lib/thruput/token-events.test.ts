@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { addressFromBase58, type EmittedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if, decodeERC20Event } from "@thruputchain/client/contracts";
+import { groundhog_erc20_if as ERC20, decodeERC20Event } from "@thruputchain/client/contracts";
 import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
 import { identifier, transferEvent } from "./test-fixtures";
@@ -105,7 +105,7 @@ test("ignores a valid ERC20 AllowanceChangeEvent", () => {
   const writer = new CxsWriter();
   Int128Codec.encode(writer, -123n);
   const event = transferEvent();
-  event.topics[0] = groundhog_erc20_if.v0_1.events.AllowanceChangeEvent.signature;
+  event.topics[0] = ERC20.v0_1.events.AllowanceChangeEvent.signature;
   event.data = writer.finish();
 
   assert.equal(decodeERC20Event(event)?.name, "AllowanceChangeEvent");

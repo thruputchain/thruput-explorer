@@ -2,6 +2,7 @@ import { addressFromBase58, type ThruputClient } from "@thruputchain/client";
 import { ERC20Metadata } from "@thruputchain/client/contracts";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
+import { normalizeContractAddress } from "../validation";
 
 export type TokenMetadata = {
   name?: string;
@@ -15,7 +16,7 @@ const BUILT_IN_TOKEN_METADATA: Record<string, TokenMetadata> = {
 };
 
 export function getBuiltInTokenMetadata(address: string): TokenMetadata | undefined {
-  return BUILT_IN_TOKEN_METADATA[normalizeAddress(address)];
+  return BUILT_IN_TOKEN_METADATA[normalizeContractAddress(address)];
 }
 
 export async function getTokenMetadata(client: ThruputClient, address: string): Promise<TokenMetadata | undefined> {
@@ -23,11 +24,16 @@ export async function getTokenMetadata(client: ThruputClient, address: string): 
   const builtIn = getBuiltInTokenMetadata(address);
   if (builtIn) return builtIn;
   const contract = addressFromBase58(address);
-  const [name, symbol, decimals] = await Promise.all([
-    viewMetadataValue(() => ERC20Metadata.v0_1.name.view({ client, contract })),
-    viewMetadataValue(() => ERC20Metadata.v0_1.symbol.view({ client, contract })),
-    viewMetadataValue(() => ERC20Metadata.v0_1.decimals.view({ client, contract })),
-  ]);
+  const response = await client.readViews({ calls: [
+    ERC20Metadata.v0_1.name.viewRequest({ contract }),
+    ERC20Metadata.v0_1.symbol.viewRequest({ contract }),
+    ERC20Metadata.v0_1.decimals.viewRequest({ contract }),
+  ] }).catch(() => undefined);
+  if (!response) return undefined;
+  const [nameResult, symbolResult, decimalsResult] = response.results;
+  const name = nameResult.kind === "return" ? nameResult.value : undefined;
+  const symbol = symbolResult.kind === "return" ? symbolResult.value : undefined;
+  const decimals = decimalsResult.kind === "return" ? decimalsResult.value : undefined;
 
   if (name == null && symbol == null && decimals == null) return undefined;
 
@@ -38,20 +44,8 @@ export async function getTokenMetadata(client: ThruputClient, address: string): 
   };
 }
 
-function normalizeDecimals(value: bigint | null) {
+function normalizeDecimals(value: bigint | null | undefined) {
   if (value == null) return undefined;
   if (value < BigInt(0) || value > BigInt(MAX_DISPLAY_DECIMALS)) return undefined;
   return Number(value);
-}
-
-function normalizeAddress(address: string) {
-  return address.trim();
-}
-
-async function viewMetadataValue<T>(view: () => Promise<{ value: T }>): Promise<T | null> {
-  try {
-    return (await view()).value;
-  } catch {
-    return null;
-  }
 }

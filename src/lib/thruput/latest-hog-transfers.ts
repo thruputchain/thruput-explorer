@@ -1,7 +1,7 @@
 import { addressFromBase58, toBase58 } from "@thruputchain/client";
-import { groundhog_erc20_if } from "@thruputchain/client/contracts";
+import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
-import { createExplorerGroundhogClient, getExplorerRpcConfig } from "./client";
+import { createExplorerThruputClient, getExplorerRpcConfig } from "./client";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import type { RpcFailure } from "./types";
@@ -28,9 +28,9 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
   const metadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals };
 
   try {
-    const { client } = await createExplorerGroundhogClient();
+    const { client } = await createExplorerThruputClient();
     const page = await client.getEvents({
-      filters: [groundhog_erc20_if.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(nativeToken.address)] })],
+      filters: [ERC20.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(nativeToken.address)] })],
       order: "descending",
       anchor: "end",
       limit: LATEST_HOG_TRANSFER_LIMIT,

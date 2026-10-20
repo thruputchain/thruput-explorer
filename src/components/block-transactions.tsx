@@ -5,8 +5,8 @@ import { useRef, useState, useTransition } from "react";
 
 import { nextBlockTransactions } from "@/app/block/[height]/actions";
 import { Button } from "@/components/ui/button";
-import type { BlockPage } from "@/lib/groundhog/blocks";
-import { checkBlockContinuation } from "@/lib/groundhog/block-pagination";
+import type { BlockPage } from "@/lib/thruput/blocks";
+import { checkBlockContinuation } from "@/lib/thruput/block-pagination";
 
 export function BlockTransactions({
   height,
