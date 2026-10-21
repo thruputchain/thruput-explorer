@@ -37,7 +37,7 @@ test("Stellar branding follows system changes with bundled fonts and readable ac
 test("Radix tabs and receipt disclosure support keyboard navigation", async ({ page, context }) => {
   await page.goto(`/address/${address}`);
   const transactions = page.getByRole("tab", { name: "Transactions", exact: true });
-  const transfers = page.getByRole("tab", { name: "HOG Transfers", exact: true });
+  const transfers = page.getByRole("tab", { name: "Token Transfers", exact: true });
   await transactions.focus();
   await page.keyboard.press("ArrowRight");
   await expect(transfers).toBeFocused();

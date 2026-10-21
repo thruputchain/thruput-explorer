@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { BoxIcon, FileTextIcon } from "lucide-react";
+import { BoxIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { TokenEventBadge } from "@/components/token-event-badge";
+import { TransactionActivityRow } from "@/components/transaction-activity-row";
+import { ActivityAge } from "@/components/activity-age";
 import { shortenIdentifier } from "@/lib/format";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadActivityTime, loadRecentActivityBlocks, loadRecentActivityTransactions } from "@/lib/thruput/recent-activity";
+import { loadRecentActivityBlocks, loadRecentActivityTransactions } from "@/lib/thruput/recent-activity";
 
 function ActivityCard({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -24,14 +25,6 @@ function IdentifierLink({ value, kind = "address" }: { value: string; kind?: "ad
   return <Link href={`/${kind}/${value}`} title={value} className="min-w-0 truncate font-mono tabular-nums hover:underline hover:underline-offset-4">{shortenIdentifier(value)}</Link>;
 }
 
-async function Age({ timestamp }: { timestamp: number | null }) {
-  if (timestamp === null) return <span>Time unavailable</span>;
-  const now = await loadActivityTime();
-  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
-  const [value, unit] = seconds < 60 ? [seconds, "second"] : seconds < 3600 ? [Math.floor(seconds / 60), "minute"] : seconds < 86400 ? [Math.floor(seconds / 3600), "hour"] : [Math.floor(seconds / 86400), "day"];
-  return <time dateTime={new Date(timestamp).toISOString()} title={new Date(timestamp).toUTCString()}>{value} {unit}{value === 1 ? "" : "s"} ago</time>;
-}
-
 export async function RecentActivityBlocks() {
   const { blocks, unavailable } = await loadRecentActivityBlocks();
   return (
@@ -45,7 +38,7 @@ export async function RecentActivityBlocks() {
             <div className="flex min-w-0 items-center gap-3 text-sm leading-5">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <Link href={`/block/${block.height}`} className="truncate font-mono font-medium tabular-nums hover:underline hover:underline-offset-4">{block.height}</Link>
-                <span className="text-xs leading-5 text-muted-foreground"><Age timestamp={block.timestamp} /></span>
+                <span className="text-xs leading-5 text-muted-foreground"><ActivityAge timestamp={block.timestamp} /></span>
               </div>
               <dl className="grid min-w-0 max-w-3/5 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-0.5 text-xs leading-5">
                 <dt className="text-muted-foreground">Proposer:</dt>
@@ -67,28 +60,7 @@ export async function RecentActivityTransactions() {
   return (
     <ActivityCard title="Recent transactions">
       <ul className="divide-y">
-        {transactions.map((transaction) => {
-          const kinds = [...new Set(transaction.events.map((event) => event.kind))];
-          return (
-            <li key={transaction.hash} className="relative flex min-h-18 items-center gap-2 py-4 pl-10 sm:gap-3 sm:pl-14">
-              <span aria-hidden="true" className="absolute left-0 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md bg-secondary text-muted-foreground sm:size-10">
-                <FileTextIcon className="size-4 sm:size-5" strokeWidth={1.5} />
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm leading-5">
-                <span className="flex min-w-0 font-medium">
-                  <IdentifierLink value={transaction.hash} kind="tx" />
-                </span>
-                <span className="text-xs leading-4 text-muted-foreground"><Age timestamp={transaction.timestamp} /></span>
-              </div>
-              {kinds.length ? <div className="flex max-w-1/3 flex-wrap justify-end gap-1">
-                {kinds.map((kind) => (
-                  <TokenEventBadge key={kind} kind={kind} />
-                ))}
-              </div> : null}
-              <Link href={`/block/${transaction.height}`} className="flex min-w-0 max-w-1/3 items-center gap-1 text-xs hover:underline hover:underline-offset-4"><span>Block</span><span className="truncate font-mono tabular-nums">{transaction.height}</span></Link>
-            </li>
-          );
-        })}
+        {transactions.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} />)}
       </ul>
       {unavailable ? <p role="status">Some recent transactions are temporarily unavailable.</p> : transactions.length === 0 ? <p role="status">No transactions in the indexed blocks yet.</p> : null}
     </ActivityCard>

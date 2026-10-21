@@ -41,9 +41,9 @@ test("address activity and transaction heights link to their blocks", async ({
 }) => {
   await page.goto(`/address/${identifier(0x22)}`);
   await expect(
-    page.getByRole("tabpanel").getByRole("link", { name: "42", exact: true }),
+    page.getByRole("tabpanel").getByRole("link", { name: "Block 42", exact: true }),
   ).toHaveAttribute("href", "/block/42");
-  await page.getByRole("tab", { name: "HOG Transfers", exact: true }).click();
+  await page.getByRole("tab", { name: "Token Transfers", exact: true }).click();
   await expect(
     page.getByRole("tabpanel").getByRole("link", { name: "42", exact: true }),
   ).toHaveAttribute("href", "/block/42");

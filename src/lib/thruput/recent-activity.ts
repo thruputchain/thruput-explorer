@@ -1,14 +1,12 @@
 import { cache } from "react";
-import { hashFromBase58, toBase58 } from "@thruputchain/client";
+import { toBase58 } from "@thruputchain/client";
 
 import { loadBlock, loadBlockTransactions } from "./blocks";
 import { checkBlockContinuation } from "./block-pagination";
 import { createExplorerThruputClient } from "./client";
-import { decodeTokenEvent } from "./token-events";
-import { getBuiltInTokenMetadata } from "./token-metadata";
+import { loadTransactionActivity } from "./transaction-activity";
 
 const readBlock = cache(loadBlock);
-export const loadActivityTime = cache(async () => Date.now());
 
 export async function readActivityBlock(height: string) {
   const [metadata, first] = await Promise.all([readBlock(height), loadBlockTransactions(height)]);
@@ -79,20 +77,6 @@ export async function loadRecentActivityTransactions() {
   } catch {
     unavailable = true;
   }
-  const connection = await createExplorerThruputClient().catch(() => null);
-  const transactions = await Promise.all(refs.map(async (ref) => {
-    try {
-      const receipt = await connection?.client.getTransactionReceipt(hashFromBase58(ref.hash));
-      if (!receipt || receipt.height.toString() !== ref.height) return { ...ref, result: null, events: [] };
-      const events = receipt.events.flatMap((event) => {
-        const metadata = getBuiltInTokenMetadata(toBase58(event.contractAddress));
-        const decoded = decodeTokenEvent(event, metadata);
-        return decoded ? [decoded] : [];
-      });
-      return { ...ref, result: receipt.executionStatus?.result ?? null, events };
-    } catch {
-      return { ...ref, result: null, events: [] };
-    }
-  }));
+  const transactions = await loadTransactionActivity(refs);
   return { transactions, unavailable };
 }

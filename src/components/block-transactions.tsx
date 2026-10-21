@@ -50,17 +50,13 @@ export function BlockTransactions({
       aria-label="Block transactions"
       aria-busy={pending}
     >
-      <p className="text-base text-muted-foreground sm:text-sm">
-        Up to 50 transaction references per page, in ascending hash order. This
-        is not execution order.
-      </p>
       <ul role="list" className="divide-y divide-foreground/10">
         {page.hashes.map((hash) => (
           <li
-            className="break-all py-3 font-mono text-base sm:text-sm"
+            className="break-all py-3 font-mono text-sm"
             key={hash}
           >
-            <Link className="underline underline-offset-4" href={`/tx/${hash}`}>
+            <Link className="underline-offset-4 hover:underline" href={`/tx/${hash}`}>
               {hash}
             </Link>
           </li>

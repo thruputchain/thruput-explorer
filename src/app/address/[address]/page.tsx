@@ -1,6 +1,10 @@
 import { AlertCircleIcon } from "lucide-react";
 import Link from "next/link";
 import { BlockLink } from "@/components/block-link";
+import { FieldRow } from "@/components/transaction/field-row";
+import { shortenIdentifier } from "@/lib/format";
+import { TransactionActivityRow } from "@/components/transaction-activity-row";
+import { loadTransactionActivity } from "@/lib/thruput/transaction-activity";
 
 import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
@@ -8,7 +12,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -104,7 +107,7 @@ function AddressActivityTabs({
     <Tabs defaultValue="transactions" className="w-full">
       <TabsList variant="line" aria-label="Address activity">
         <TabsTrigger value="transactions">Transactions</TabsTrigger>
-        <TabsTrigger value="transfers">HOG Transfers</TabsTrigger>
+        <TabsTrigger value="transfers">Token Transfers</TabsTrigger>
       </TabsList>
       <TabsContent value="transactions">
         <TransactionHistoryCard
@@ -135,41 +138,33 @@ function AddressSummaryCard({
     <Card>
       <CardHeader>
         <CardTitle>Summary</CardTitle>
-        <CardDescription>
-          Current public RPC view of this Thruput address.
-        </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 text-sm sm:grid-cols-[180px_minmax(0,1fr)]">
-        <SummaryLabel>Address</SummaryLabel>
-        <code className="break-all text-xs">{data.address}</code>
-        <SummaryLabel>Native balance</SummaryLabel>
-        <p className="font-mono tabular-nums wrap-anywhere">
-          {data.nativeBalance
-            ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}`
-            : "Not available"}
-        </p>
-        <SummaryLabel>Raw native balance</SummaryLabel>
-        <code className="break-all text-xs">
-          {data.nativeBalance?.rawBalance ?? "Not available"}
-        </code>
-        {data.metadata ? (
-          <>
-            <SummaryLabel>Token name</SummaryLabel>
-            <p className="wrap-anywhere">{data.metadata.name}</p>
-            <SummaryLabel>Token symbol</SummaryLabel>
-            <p className="font-mono wrap-anywhere">{data.metadata.symbol}</p>
-            <SummaryLabel>Token decimals</SummaryLabel>
-            <p className="font-mono tabular-nums">{data.metadata.decimals}</p>
-          </>
-        ) : null}
-        <SummaryLabel>RPC URL</SummaryLabel>
-        <span className="break-all font-mono text-xs">{data.rpcUrl}</span>
+      <CardContent>
+        <dl>
+          <FieldRow label="Address"><span className="break-all">{data.address}</span></FieldRow>
+          <FieldRow label="Native balance">
+            {data.nativeBalance
+              ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}`
+              : "Not available"}
+          </FieldRow>
+          <FieldRow label="Raw native balance">
+            {data.nativeBalance?.rawBalance ?? "Not available"}
+          </FieldRow>
+          {data.metadata ? (
+            <>
+              <FieldRow label="Token name">{data.metadata.name}</FieldRow>
+              <FieldRow label="Token symbol">{data.metadata.symbol}</FieldRow>
+              <FieldRow label="Token decimals">{data.metadata.decimals}</FieldRow>
+            </>
+          ) : null}
+          <FieldRow label="RPC URL"><span className="break-all">{data.rpcUrl}</span></FieldRow>
+        </dl>
       </CardContent>
     </Card>
   );
 }
 
-function TransactionHistoryCard({
+async function TransactionHistoryCard({
   transactions,
   error,
   partial,
@@ -178,21 +173,14 @@ function TransactionHistoryCard({
   error?: RpcFailure;
   partial: boolean;
 }) {
+  const activity = error ? [] : await loadTransactionActivity(transactions.map((transaction) => ({ hash: transaction.txHash, height: transaction.height })));
   return (
     <Card>
       <CardHeader>
         <CardTitle>Transaction History</CardTitle>
-        <CardDescription>
-          {error
-            ? "This RPC could not provide address transaction history."
-            : transactions.length === 0
-              ? partial
-                ? "No transactions found in the available activity sources. Some sources are unavailable."
-                : "No transactions found for this address."
-              : `${transactions.length} recent transaction${transactions.length === 1 ? "" : "s"} for this address.${partial ? " Some activity sources are unavailable." : ""}`}
-        </CardDescription>
       </CardHeader>
       <CardContent>
+        {partial && !error ? <p role="status" className="mb-4 text-sm text-muted-foreground">Some activity sources are unavailable.</p> : null}
         {error ? (
           <RpcAlert
             title="Transaction history unavailable"
@@ -201,34 +189,12 @@ function TransactionHistoryCard({
           />
         ) : transactions.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Transactions will appear here when the RPC has indexed activity for
-            this address.
+            {partial ? "No transactions found in the available activity sources." : "No transactions found for this address."}
           </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Transaction</TableHead>
-                <TableHead>Block</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.txHash}>
-                  <TableCell>
-                    <Link
-                      className="font-mono underline underline-offset-4"
-                      href={`/tx/${transaction.txHash}`}
-                      title={transaction.txHash}
-                    >
-                      {shortenValue(transaction.txHash)}
-                    </Link>
-                  </TableCell>
-                  <TableCell><BlockLink height={transaction.height} /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ul className="divide-y">
+            {activity.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} showIcon={false} />)}
+          </ul>
         )}
       </CardContent>
     </Card>
@@ -247,25 +213,18 @@ function HogTransfersCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>HOG Transfers</CardTitle>
-        <CardDescription>
-          {error
-            ? "This RPC could not provide HOG transfer history."
-            : transfers.length === 0
-              ? "No recent HOG transfers found for this address."
-              : `${transfers.length} recent HOG transfer${transfers.length === 1 ? "" : "s"} involving this address.`}
-        </CardDescription>
+        <CardTitle>Token Transfers</CardTitle>
       </CardHeader>
       <CardContent>
         {error ? (
           <RpcAlert
-            title="HOG transfers unavailable"
+            title="Token transfers unavailable"
             description="The rest of the address page can still render with partial data."
             error={error}
           />
         ) : transfers.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Recent sent and received HOG transfers will appear here.
+            Recent sent and received token transfers will appear here.
           </p>
         ) : (
           <Table>
@@ -294,17 +253,6 @@ function ContractEventsCard({
         <CardTitle>
           {token ? "Token Transfer History" : "Contract Events"}
         </CardTitle>
-        <CardDescription>
-          {error
-            ? "This RPC could not provide event history for this address."
-            : visibleEvents.length === 0
-              ? token
-                ? "No ERC20 transfer events found for this token contract."
-                : "No events found where this address emitted the event."
-              : token
-                ? `${visibleEvents.length} recent token transfer${visibleEvents.length === 1 ? "" : "s"} emitted by this token contract.`
-                : `${visibleEvents.length} recent event${visibleEvents.length === 1 ? "" : "s"} emitted by this address.`}
-        </CardDescription>
       </CardHeader>
       <CardContent>
         {error ? (
@@ -390,11 +338,11 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
     <TableRow>
       <TableCell>
         <Link
-          className="font-mono underline underline-offset-4"
+          className="font-mono underline-offset-4 hover:underline"
           href={`/tx/${event.txHash}`}
           title={event.txHash}
         >
-          {shortenValue(event.txHash)}
+          {shortenIdentifier(event.txHash)}
         </Link>
       </TableCell>
       <TableCell><BlockLink height={event.blockHeight} /></TableCell>
@@ -414,24 +362,24 @@ function RawEventRow({ event }: { event: AddressEventView }) {
     <TableRow>
       <TableCell>
         <Link
-          className="font-mono underline underline-offset-4"
+          className="font-mono underline-offset-4 hover:underline"
           href={`/tx/${event.txHash}`}
           title={event.txHash}
         >
-          {shortenValue(event.txHash)}
+          {shortenIdentifier(event.txHash)}
         </Link>
       </TableCell>
       <TableCell><BlockLink height={event.blockHeight} /></TableCell>
       <TableCell>
-        <code className="font-mono text-xs" title={event.topics.join(", ")}>
+        <code title={event.topics.join(", ")}>
           {event.topics.length > 0
-            ? event.topics.map(shortenValue).join(", ")
+            ? event.topics.map(shortenIdentifier).join(", ")
             : "-"}
         </code>
       </TableCell>
       <TableCell>
-        <code className="font-mono text-xs" title={event.data}>
-          {shortenValue(event.data)}
+        <code title={event.data}>
+          {shortenIdentifier(event.data)}
         </code>
       </TableCell>
     </TableRow>
@@ -441,11 +389,11 @@ function RawEventRow({ event }: { event: AddressEventView }) {
 function AddressLink({ value }: { value?: string }) {
   return value ? (
     <Link
-      className="font-mono underline underline-offset-4"
+      className="font-mono underline-offset-4 hover:underline"
       href={`/address/${value}`}
       title={value}
     >
-      {shortenValue(value)}
+      {shortenIdentifier(value)}
     </Link>
   ) : (
     <span className="text-muted-foreground">-</span>
@@ -462,18 +410,4 @@ function isTokenTransferEvent(
     event.decoded?.kind === "token-mint" ||
     event.decoded?.kind === "token-burn"
   );
-}
-
-function SummaryLabel({ children }: { children: string }) {
-  return (
-    <p className="font-mono text-xs uppercase text-muted-foreground">
-      {children}
-    </p>
-  );
-}
-
-function shortenValue(value: string) {
-  return value.length <= 18
-    ? value
-    : `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
