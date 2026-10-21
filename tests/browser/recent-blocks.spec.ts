@@ -2,48 +2,36 @@ import { expect, test } from "@playwright/test";
 import { identifier } from "../../src/lib/thruput/test-fixtures";
 
 for (const width of [320, 1280]) {
-  test(`home defaults to 11 recent blocks with accessible activity tabs at ${width}px`, async ({
+  test(`home shows both activity cards without overflow at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    const blocksTab = page.getByRole("tab", {
+    const blocks = page.getByRole("region", {
       name: "Recent blocks",
       exact: true,
     });
-    const transfersTab = page.getByRole("tab", {
-      name: "Recent HOG transfers",
-      exact: true,
-    });
-    const blocks = page.getByRole("tabpanel", {
-      name: "Recent blocks",
-      exact: true,
-    });
-    await expect(blocksTab).toHaveAttribute("aria-selected", "true");
-    await expect(blocks.getByRole("link")).toHaveText(
-      Array.from({ length: 11 }, (_, i) => String(42 - i)),
-    );
+    await expect(blocks.getByRole("listitem")).toHaveCount(3);
     await expect(
       blocks.getByRole("link", { name: "42", exact: true }),
     ).toHaveAttribute("href", "/block/42");
     await expect(
-      blocks.getByRole("link", { name: "32", exact: true }),
-    ).toHaveAttribute("href", "/block/32");
+      blocks.getByRole("link", { name: "40", exact: true }),
+    ).toHaveAttribute("href", "/block/40");
+    await expect(blocks.getByRole("link", { name: "2 transactions →", exact: true })).toHaveAttribute("href", "/block/42/transactions");
+    const transactions = page.getByRole("region", { name: "Recent transactions", exact: true });
+    await expect(transactions.getByRole("listitem")).toHaveCount(2);
+    await expect(transactions.getByText("1.5 HOG", { exact: true })).toBeVisible();
+    const blocksBox = await blocks.boundingBox();
+    const transactionsBox = await transactions.boundingBox();
+    if (width === 1280) expect(blocksBox?.y).toBe(transactionsBox?.y);
+    else expect(transactionsBox!.y).toBeGreaterThan(blocksBox!.y);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await blocksTab.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(transfersTab).toBeFocused();
-    await expect(transfersTab).toHaveAttribute("aria-selected", "true");
-    const transfers = page.getByRole("tabpanel", {
-      name: "Recent HOG transfers",
-      exact: true,
-    });
-    await expect(transfers.getByText("1.5 HOG", { exact: true })).toBeVisible();
-    await transfers.getByRole("link", { name: "42", exact: true }).click();
+    await blocks.getByRole("link", { name: "42", exact: true }).click();
     await expect(page).toHaveURL("/block/42");
   });
 }
