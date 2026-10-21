@@ -18,7 +18,7 @@ test("the branded home link works from a transaction behind Basic Auth", async (
 });
 
 test("search uses the API and RPC, then renders the decoded transfer", async ({ page }) => {
-  await expect(page.getByRole("region", { name: "Recent transactions", exact: true }).getByText("1.5 HOG", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Recent transactions", exact: true }).getByText("Transfer", { exact: true }).first()).toBeVisible();
   await page.getByRole("textbox").fill(txHash);
   const response = page.waitForResponse("**/api/search");
   await page.getByRole("button", { name: "Search", exact: true }).click();

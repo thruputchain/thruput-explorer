@@ -86,7 +86,7 @@ export async function loadRecentActivityTransactions() {
       if (!receipt || receipt.height.toString() !== ref.height) return { ...ref, result: null, events: [] };
       const events = receipt.events.flatMap((event) => {
         const metadata = getBuiltInTokenMetadata(toBase58(event.contractAddress));
-        const decoded = metadata?.decimals !== undefined ? decodeTokenEvent(event, metadata) : undefined;
+        const decoded = decodeTokenEvent(event, metadata);
         return decoded ? [decoded] : [];
       });
       return { ...ref, result: receipt.executionStatus?.result ?? null, events };

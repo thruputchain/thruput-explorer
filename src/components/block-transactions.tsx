@@ -31,7 +31,7 @@ export function BlockTransactions({
         }
         if (!checkBlockContinuation(page, result.data, seen.current)) {
           setMessage(
-            "Index coverage or continuation changed. Start a fresh list.",
+            "The transaction index changed. Reload transactions to return to the first page.",
           );
           return;
         }
@@ -39,7 +39,7 @@ export function BlockTransactions({
         setPage(result.data);
         setContinued(true);
       } catch {
-        setMessage("The request failed. Start a fresh list or retry shortly.");
+        setMessage("The request failed. Reload transactions or try again shortly.");
       }
     });
   }
@@ -85,7 +85,7 @@ export function BlockTransactions({
           Next page
         </Button>
         <Button asChild variant="outline">
-          <a href={`/block/${height}/transactions`}>Start fresh</a>
+          <a href={`/block/${height}/transactions`}>Reload transactions</a>
         </Button>
       </nav>
     </section>

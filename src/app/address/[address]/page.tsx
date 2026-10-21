@@ -41,7 +41,6 @@ export default async function AddressPage({
   return (
     <main className="min-w-0 flex-1">
       <PageHeader
-        eyebrow="Address"
         title={data.status === "ok" && data.label ? data.label : "Address"}
         value={data.address}
         badges={data.status === "ok" ? data.badges : []}

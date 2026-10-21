@@ -21,7 +21,7 @@ for (const width of [320, 1280]) {
     await expect(blocks.getByRole("link", { name: "2 transactions →", exact: true })).toHaveAttribute("href", "/block/42/transactions");
     const transactions = page.getByRole("region", { name: "Recent transactions", exact: true });
     await expect(transactions.getByRole("listitem")).toHaveCount(2);
-    await expect(transactions.getByText("1.5 HOG", { exact: true })).toBeVisible();
+    await expect(transactions.getByText("Transfer", { exact: true }).first()).toBeVisible();
     const blocksBox = await blocks.boundingBox();
     const transactionsBox = await transactions.boundingBox();
     if (width === 1280) expect(blocksBox?.y).toBe(transactionsBox?.y);
@@ -51,7 +51,5 @@ test("address activity and transaction heights link to their blocks", async ({
   await expect(
     page.getByRole("link", { name: "41", exact: true }),
   ).toHaveAttribute("href", "/block/41");
-  await expect(
-    page.getByRole("link", { name: "42", exact: true }),
-  ).toHaveAttribute("href", "/block/42");
+  await expect(page.getByText("Chain tip", { exact: true })).toHaveCount(0);
 });

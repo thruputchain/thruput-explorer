@@ -8,6 +8,8 @@ test("transaction details render while optional metadata is still pending", asyn
   await request.post(`${rpcOrigin}/metadata/reset`);
   try {
     await page.goto("/");
+    await expect(page.getByRole("region", { name: "Recent transactions", exact: true }).getByRole("listitem")).toHaveCount(2);
+    const initialState = await (await request.get(`${rpcOrigin}/metadata/state`)).json();
     // Exercise client navigation, the path used when selecting a transaction.
     await page.getByRole("textbox").fill(txHash);
     await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -17,10 +19,17 @@ test("transaction details render while optional metadata is still pending", asyn
     await expect(page.getByText("Raw transaction receipt", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Toggle JSON" }).click();
     await expect(page.locator('pre[aria-label="Raw transaction receipt JSON"]')).toContainText(txHash);
+    const receiptCode = page.locator('pre[aria-label="Raw transaction receipt JSON"]');
+    expect(JSON.parse(await receiptCode.innerText()).txHash).toBe(txHash);
+    const colors = await receiptCode.locator(".json-token").evaluateAll((tokens) =>
+      [...new Set(tokens.filter((token) => token.textContent?.trim()).map((token) => getComputedStyle(token).color))],
+    );
+    expect(colors.length).toBeGreaterThan(1);
     await expect(page.getByText("Amount", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Topics", { exact: true })).toBeVisible();
     const state = await (await request.get(`${rpcOrigin}/metadata/state`)).json();
-    expect(state).toEqual({ pending: 1, receiptRequests: 1, released: false });
+    // The home activity feed also reads receipts; navigation adds exactly one.
+    expect(state).toEqual({ pending: 1, receiptRequests: initialState.receiptRequests + 1, released: false });
 
     // Metadata failures leave the receipt and raw events available.
     await request.post(`${rpcOrigin}/metadata/release`);

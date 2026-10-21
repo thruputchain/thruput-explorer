@@ -29,7 +29,6 @@ export default async function BlockTransactionsPage({
   return (
     <main>
       <PageHeader
-        eyebrow="Block transactions"
         title={`Transactions in block ${height}`}
         value={toBase58(block.data.blockHash)}
         copyLabel="Copy block hash"

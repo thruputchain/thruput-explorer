@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BoxIcon, FileTextIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { TokenEventBadge } from "@/components/token-event-badge";
 import { shortenIdentifier } from "@/lib/format";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,12 +42,12 @@ export async function RecentActivityBlocks() {
             <span aria-hidden="true" className="absolute left-0 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md bg-secondary text-muted-foreground sm:size-10">
               <BoxIcon className="size-4 sm:size-5" strokeWidth={1.5} />
             </span>
-            <div className="flex min-w-0 items-start gap-3 text-sm leading-5">
+            <div className="flex min-w-0 items-center gap-3 text-sm leading-5">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <Link href={`/block/${block.height}`} className="truncate font-mono font-medium tabular-nums hover:underline hover:underline-offset-4">{block.height}</Link>
-                <span className="text-xs leading-4 text-muted-foreground"><Age timestamp={block.timestamp} /></span>
+                <span className="text-xs leading-5 text-muted-foreground"><Age timestamp={block.timestamp} /></span>
               </div>
-              <dl className="grid min-w-0 max-w-3/5 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-0.5 text-xs leading-4">
+              <dl className="grid min-w-0 max-w-3/5 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-0.5 text-xs leading-5">
                 <dt className="text-muted-foreground">Proposer:</dt>
                 <dd className="flex min-w-0">{block.proposer ? <IdentifierLink value={block.proposer} /> : <span className="text-muted-foreground">Unavailable</span>}</dd>
                 <dt className="text-muted-foreground">Transactions:</dt>
@@ -67,27 +68,24 @@ export async function RecentActivityTransactions() {
     <ActivityCard title="Recent transactions">
       <ul className="divide-y">
         {transactions.map((transaction) => {
-          const event = transaction.events.length === 1 ? transaction.events[0] : null;
+          const kinds = [...new Set(transaction.events.map((event) => event.kind))];
           return (
-            <li key={transaction.hash} className="relative flex min-h-18 flex-col justify-center gap-0.5 py-4 pl-10 sm:pl-14">
+            <li key={transaction.hash} className="relative flex min-h-18 items-center gap-2 py-4 pl-10 sm:gap-3 sm:pl-14">
               <span aria-hidden="true" className="absolute left-0 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md bg-secondary text-muted-foreground sm:size-10">
                 <FileTextIcon className="size-4 sm:size-5" strokeWidth={1.5} />
               </span>
-              <div className="flex min-w-0 items-center gap-2 text-sm leading-5 sm:gap-3">
-                <span className="flex min-w-0 flex-1 font-medium">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm leading-5">
+                <span className="flex min-w-0 font-medium">
                   <IdentifierLink value={transaction.hash} kind="tx" />
                 </span>
-                <Link href={`/block/${transaction.height}`} className="flex min-w-0 max-w-1/4 items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline hover:underline-offset-4"><span>Block</span><span className="truncate font-mono tabular-nums">{transaction.height}</span></Link>
-                {event ? <>
-                  <span className="flex min-w-0 flex-1 items-center justify-end gap-1 text-xs text-muted-foreground" aria-label={event.name}>
-                    {event.from ? <IdentifierLink value={event.from} /> : null}
-                    {event.from && event.to ? <span>→</span> : null}
-                    {event.to ? <IdentifierLink value={event.to} /> : null}
-                  </span>
-                  <span title={`${event.amount} ${event.symbol ?? ""}`} className="max-w-1/4 truncate whitespace-nowrap font-mono text-xs tabular-nums">{event.amount} {event.symbol}</span>
-                </> : null}
+                <span className="text-xs leading-4 text-muted-foreground"><Age timestamp={transaction.timestamp} /></span>
               </div>
-              <span className="text-xs leading-4 text-muted-foreground"><Age timestamp={transaction.timestamp} /></span>
+              {kinds.length ? <div className="flex max-w-1/3 flex-wrap justify-end gap-1">
+                {kinds.map((kind) => (
+                  <TokenEventBadge key={kind} kind={kind} />
+                ))}
+              </div> : null}
+              <Link href={`/block/${transaction.height}`} className="flex min-w-0 max-w-1/3 items-center gap-1 text-xs hover:underline hover:underline-offset-4"><span>Block</span><span className="truncate font-mono tabular-nums">{transaction.height}</span></Link>
             </li>
           );
         })}

@@ -30,7 +30,7 @@ export function WalletMenu() {
         </DropdownMenu>
       ) : wallet.providers.length > 1 ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline" disabled={wallet.busy}>{wallet.busy ? "Please wait…" : "Connect"}</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild><Button variant="outline" disabled={wallet.busy}>{wallet.busy ? "Please wait…" : "Connect wallet"}</Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuGroup>
               {wallet.providers.map((provider) => <DropdownMenuItem key={provider.info.id} onSelect={() => void wallet.connect(provider)}>{provider.info.name}</DropdownMenuItem>)}
@@ -39,7 +39,7 @@ export function WalletMenu() {
         </DropdownMenu>
       ) : (
         <Button variant="outline" disabled={wallet.busy} onClick={() => void wallet.connect(wallet.providers[0])}>
-          <WalletIcon data-icon="inline-start" />{wallet.busy ? "Please wait…" : "Connect"}
+          <WalletIcon data-icon="inline-start" />{wallet.busy ? "Please wait…" : "Connect wallet"}
         </Button>
       )}
       {wallet.error ? <Alert className="max-w-sm"><AlertDescription>{wallet.error}</AlertDescription></Alert> : null}

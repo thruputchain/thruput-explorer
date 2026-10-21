@@ -36,13 +36,13 @@ for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await installWallet(page);
     await page.goto("/");
-    await page.getByRole("button", { name: "Connect", exact: true }).click();
+    await page.getByRole("button", { name: "Connect wallet", exact: true }).click();
     await page.getByRole("button", { name: "Wallet menu" }).click();
     await page.getByRole("menuitem", { name: "View wallet" }).click();
     await expect(page).toHaveURL(`/address/${account.address}`);
     await page.getByRole("button", { name: "Wallet menu" }).click();
     await page.getByRole("menuitem", { name: "Disconnect", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Connect", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Connect wallet", exact: true })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
@@ -50,19 +50,19 @@ for (const width of [320, 1280]) {
 test("wallet-side revocation clears the shortcut", async ({ page }) => {
   await installWallet(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("button", { name: "Connect wallet", exact: true }).click();
   await expect(page.getByRole("button", { name: "Wallet menu" })).toBeVisible();
   await page.evaluate(() => window.dispatchEvent(new Event("test:wallet-disconnect")));
-  await expect(page.getByRole("button", { name: "Connect", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Connect wallet", exact: true })).toBeEnabled();
 });
 
 test("missing and rejected wallets leave a retryable connection", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("button", { name: "Connect wallet", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "No Thruput wallet found" })).toBeVisible();
   await installWallet(page, true);
   await page.reload();
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("button", { name: "Connect wallet", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Could not connect" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Connect wallet", exact: true })).toBeEnabled();
 });

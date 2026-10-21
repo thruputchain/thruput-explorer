@@ -52,7 +52,9 @@ export function SearchHero() {
 
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6">
-      <h1 className="text-center text-3xl leading-tight tracking-tight text-foreground sm:text-4xl">Search blocks, transactions, contracts, and addresses on Thruput.</h1>
+      <h1 className="text-center text-3xl leading-tight tracking-tight text-foreground sm:text-4xl">
+        Search <span className="text-primary">blocks</span>, <span className="text-primary">transactions</span>, <span className="text-primary">contracts</span>, and <span className="text-primary">addresses</span> on Thruput.
+      </h1>
 
       <form onSubmit={submit} aria-label="Explorer search">
         <FieldGroup>
