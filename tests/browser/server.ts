@@ -26,6 +26,10 @@ async function main() {
   const paginatedTxHash = identifier(0xdd);
   const slowTxHash = identifier(0xde);
   const slowEvent = { ...event, contractAddress: identifier(0x55) };
+  const addressActivityTxHash = identifier(0xdf);
+  let releaseActivity = () => {};
+  let activityGate = Promise.resolve();
+  let pendingActivity = 0;
   let releaseMetadata = () => {};
   let metadataGate = Promise.resolve();
   let pending = 0;
@@ -33,6 +37,17 @@ async function main() {
   let released = true;
   const rpc = createServer(async (request, response) => {
     try {
+      if (request.url?.startsWith("/activity/")) {
+        if (request.url === "/activity/reset" && request.method === "POST") {
+          releaseActivity();
+          activityGate = new Promise<void>((resolve) => { releaseActivity = resolve; });
+        } else if (request.url === "/activity/release" && request.method === "POST") {
+          releaseActivity();
+        }
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ pending: pendingActivity }));
+        return;
+      }
       // Local fixture controls let the browser prove ordering without a sleep.
       if (request.url?.startsWith("/metadata/")) {
         if (request.url === "/metadata/reset" && request.method === "POST") {
@@ -108,6 +123,12 @@ async function main() {
             : { status: params?.[0] === identifier(0xcc) ? "pending" : "unknown" });
           break;
         case "groundhog_getTransactionReceipt":
+          if (params?.[0] === addressActivityTxHash) {
+            pendingActivity++;
+            try { await activityGate; } finally { pendingActivity--; }
+            result = { txHash: addressActivityTxHash, height: "42", gasUsed: "1000", status: { result: "ok" }, events: [event], returnData: null, abortData: null };
+            break;
+          }
           if ([identifier(0xa5), identifier(0xa6)].includes(params?.[0])) {
             result = {
               txHash: params[0], height: "42", gasUsed: "9007199254740993", events: [], returnData: null, abortData: null,
@@ -132,7 +153,7 @@ async function main() {
           result = { address: params?.[0], rawBalance: "25000000", height: "42" };
           break;
         case "groundhog_getTransactionsByAddress":
-          result = { refs: [], cursor: "0x", latestBlock: "42", oldestBlock: "42" };
+          result = { refs: params?.[0]?.address === identifier(0x66) ? [{ txHash: addressActivityTxHash, height: "42" }] : [], cursor: "0x", latestBlock: "42", oldestBlock: "42" };
           break;
         case "groundhog_viewBatch":
           if (JSON.stringify(params).includes(identifier(0x55))) {
@@ -174,6 +195,7 @@ async function main() {
     if (stopping) return;
     stopping = true;
     releaseMetadata();
+    releaseActivity();
     child.kill("SIGTERM");
     setTimeout(() => child.kill("SIGKILL"), 5_000).unref();
   };

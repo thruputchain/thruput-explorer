@@ -1,4 +1,5 @@
 import { AlertCircleIcon } from "lucide-react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { BlockLink } from "@/components/block-link";
 import { FieldRow } from "@/components/transaction/field-row";
@@ -164,7 +165,7 @@ function AddressSummaryCard({
   );
 }
 
-async function TransactionHistoryCard({
+function TransactionHistoryCard({
   transactions,
   error,
   partial,
@@ -173,7 +174,6 @@ async function TransactionHistoryCard({
   error?: RpcFailure;
   partial: boolean;
 }) {
-  const activity = error ? [] : await loadTransactionActivity(transactions.map((transaction) => ({ hash: transaction.txHash, height: transaction.height })));
   return (
     <Card>
       <CardHeader>
@@ -192,13 +192,34 @@ async function TransactionHistoryCard({
             {partial ? "No transactions found in the available activity sources." : "No transactions found for this address."}
           </p>
         ) : (
-          <ul className="divide-y">
-            {activity.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} showIcon={false} />)}
-          </ul>
+          <Suspense fallback={<TransactionHistoryFallback transactions={transactions} />}>
+            <TransactionHistoryList transactions={transactions} />
+          </Suspense>
         )}
       </CardContent>
     </Card>
   );
+}
+
+async function TransactionHistoryList({ transactions }: { transactions: AddressTransactionRefView[] }) {
+  const activity = await loadTransactionActivity(transactions.map((transaction) => ({ hash: transaction.txHash, height: transaction.height })));
+  return <ul className="divide-y">
+    {activity.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} showIcon={false} />)}
+  </ul>;
+}
+
+function TransactionHistoryFallback({ transactions }: { transactions: AddressTransactionRefView[] }) {
+  return <ul className="divide-y" aria-busy="true" aria-label="Loading transaction details">
+    {transactions.map((transaction) => (
+      <li key={transaction.txHash} className="app-activity-row flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <Link href={`/tx/${transaction.txHash}`} title={transaction.txHash} className="truncate font-mono text-sm font-medium hover:underline hover:underline-offset-4">{shortenIdentifier(transaction.txHash)}</Link>
+          <span className="text-xs leading-5 text-muted-foreground">Loading details…</span>
+        </div>
+        <Link href={`/block/${transaction.height}`} className="text-xs hover:underline hover:underline-offset-4">Block <span className="font-mono">{transaction.height}</span></Link>
+      </li>
+    ))}
+  </ul>;
 }
 
 function HogTransfersCard({

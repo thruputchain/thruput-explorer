@@ -45,7 +45,7 @@ test("Radix tabs and receipt disclosure support keyboard navigation", async ({ p
   await expect(page.getByRole("tabpanel")).toContainText("1.5 HOG");
   await page.keyboard.press("ArrowLeft");
   await expect(transactions).toHaveAttribute("aria-selected", "true");
-  await page.locator(`a[href="/tx/${txHash}"]`).click();
+  await page.getByRole("tabpanel", { name: "Transactions", exact: true }).locator(`a[href="/tx/${txHash}"]:visible`).click();
   await expect(page).toHaveURL(`/tx/${txHash}`);
 
   const toggle = page.getByRole("button", { name: "Toggle JSON" });
