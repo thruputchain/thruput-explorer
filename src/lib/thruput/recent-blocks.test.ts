@@ -15,8 +15,8 @@ for (const height of [0n, 3n, 42n, 9_007_199_254_740_993n]) {
       transport: new MockTransport(),
     });
     t.mock.method(sdk, "createThruputClient", async () => client);
-    const tip = t.mock.method(client, "getChainTip", async () => ({ height }));
-    const details = t.mock.method(client, "getBlockByNumber", async () => {
+    const tip = t.mock.method(client, "getChainTip", async () => ({ blockHeight: height }));
+    const details = t.mock.method(client, "getBlockByHeight", async () => {
       throw new Error("Unexpected block scan");
     });
     const result = await loadRecentBlocks();

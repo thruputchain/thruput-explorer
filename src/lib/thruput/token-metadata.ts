@@ -25,9 +25,9 @@ export async function getTokenMetadata(client: ThruputClient, address: string): 
   if (builtIn) return builtIn;
   const contract = addressFromBase58(address);
   const response = await client.readViews({ calls: [
-    ERC20Metadata.v0_1.name.viewRequest({ contract }),
-    ERC20Metadata.v0_1.symbol.viewRequest({ contract }),
-    ERC20Metadata.v0_1.decimals.viewRequest({ contract }),
+    ERC20Metadata.v0_1.name.viewRequest({ address: contract }),
+    ERC20Metadata.v0_1.symbol.viewRequest({ address: contract }),
+    ERC20Metadata.v0_1.decimals.viewRequest({ address: contract }),
   ] }).catch(() => undefined);
   if (!response) return undefined;
   const [nameResult, symbolResult, decimalsResult] = response.results;

@@ -6,7 +6,7 @@ export function StatusBadge({ status }: { status: TransactionStatusView }) {
   if (status.status === "pending") return <Badge variant="secondary">Pending</Badge>;
   if (status.status === "retry") return <Badge variant="secondary">Retry</Badge>;
   if (status.status === "dropped") return <Badge variant="destructive">Dropped</Badge>;
-  if (status.status === "invalid") return <Badge variant="destructive">Invalid</Badge>;
+  if (status.status === "unsupported") return <Badge variant="outline">Unsupported status</Badge>;
   if (status.status === "recentFailure") return <Badge variant="destructive">Recent failure</Badge>;
   if (status.status === "other") return <Badge variant="outline">Other</Badge>;
   if (status.status === "unavailable") return <Badge variant="destructive">RPC unavailable</Badge>;

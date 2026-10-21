@@ -26,7 +26,7 @@ pnpm dev
 
 Open <http://localhost:3000>. Set `THRUPUT_RPC_URL` in `.env.local` to select a node; the default is `http://localhost:9545`. Restart the server after changing it. This replaces the old `GROUNDHOG_RPC_URL` setting; update existing deployment variables when upgrading.
 
-The tested node version set is CLI/gateway **0.32.2**, public node **0.1.31-rc.10**, client **0.21.0**, protocol **0.17.0**, and RPC wire **13.0.0**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.10` in another terminal. Use fresh base58-compatible state. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
+The explorer uses client **0.22.1**, protocol **0.18.0**, and RPC wire **14.0.0**. The SDK-qualified runtime is CLI/gateway **0.33.0** with public node **0.1.31-rc.11**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.11` in another terminal. The client checks the wire version and advertised methods when connecting. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
 
 ## Configuration and deployment
 
@@ -54,12 +54,12 @@ The shortcut follows wallet account changes and revocation. It lasts across in-a
 ## Data behavior
 
 - Search accepts a decimal block height or a base58 transaction hash or address. Base58 is case-sensitive. Opaque payloads and pagination cursors remain hex.
-- Block heights and amounts retain integer precision. Block transaction pages fetch up to 50 references in ascending hash order, not execution order. Pagination stops on repeated cursors, overlapping hashes or lost coverage; **Start fresh** starts a new walk.
-- SDK receipt APIs preserve execution results, gas usage and available fault details. ERC20 events use generated decoders. Other contract events show raw topics and data.
-- Token metadata uses one shared-height SDK batch per token. HOG has built-in metadata with seven decimals; custom-token display supports up to 30 decimals.
+- Block heights and amounts retain integer precision. Block transaction pages fetch up to 50 references, capped by the server limit, in unsigned hash-byte order. This is not execution order. A null next cursor ends the list. Invalid cursors, overlapping hashes and lost coverage require **Reload transactions**.
+- Commitment and execution are separate. Receipts show native execution outcomes, exact gas usage and return or abort data. A receipt error does not erase known commitment. Unknown outcomes retain their raw data. ERC20 events use generated decoders; other events show raw topics and data.
+- Token metadata uses one shared-state SDK batch per token. Balances use the returned state height. HOG has built-in metadata with seven decimals; custom-token display supports up to 30 decimals.
 - RPC requests have a 10-second deadline. Displayed RPC URLs omit credentials, paths and queries. Missing history and RPC errors are distinct from empty results.
 
-The home page defaults to **Recent blocks**, listing the chain tip and up to 10 previous heights from one tip query. Genesis is omitted because its metadata is unavailable. **Recent HOG transfers** keeps the existing transfer list in a second tab. Block heights in activity tables and transaction summaries link to their block details.
+The home page shows recent blocks and transactions within indexed coverage. Transaction scans stop after 50 blocks, and block counts stop after four pages. Limited results are labelled. Genesis is omitted because its metadata is unavailable. Block heights in activity tables and transaction summaries link to their block details.
 
 ## Development
 

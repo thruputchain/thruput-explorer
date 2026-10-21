@@ -1,12 +1,12 @@
-import { fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
+import { toBase58 } from "@thruputchain/client";
 
 import { isBlockHeight } from "../validation";
-import { createExplorerThruputClient } from "./client";
-import { isUnsupportedRpcError } from "./rpc";
+import { createExplorerThruputClient, historyPageLimit } from "./client";
+import { isUnsupportedRpcError, rpcErrorKind } from "./rpc";
 
 export type BlockPage = {
   hashes: string[];
-  cursor: string;
+  cursor: string | null;
   oldest: string;
   latest: string;
 };
@@ -26,7 +26,7 @@ export async function loadBlock(height: string) {
     };
   try {
     const { client } = await createExplorerThruputClient();
-    const block = await client.getBlockByNumber(BigInt(height));
+    const block = await client.getBlockByHeight({ blockHeight: BigInt(height) });
     if (!block)
       return {
         status: "missing" as const,
@@ -41,12 +41,11 @@ export async function loadBlock(height: string) {
 
 export async function loadBlockTransactions(
   height: string,
-  cursor = "0x",
+  cursor?: string,
 ): Promise<BlockResult<BlockPage>> {
   if (
     !isBlockHeight(height) ||
-    typeof cursor !== "string" ||
-    !/^0x(?:[0-9a-f]{2}){0,4096}$/.test(cursor)
+    (cursor !== undefined && (typeof cursor !== "string" || !/^0x(?:[0-9a-f]{2})+$/.test(cursor)))
   ) {
     return {
       status: "invalid",
@@ -56,14 +55,13 @@ export async function loadBlockTransactions(
   try {
     const { client } = await createExplorerThruputClient();
     const page = await client.getTransactionsByBlock({
-      height: BigInt(height),
-      cursor: fromHex0x(cursor),
-      limit: 50,
-      order: "ascending",
+      blockHeight: BigInt(height),
+      ...(cursor === undefined ? { start: { order: "ascending" as const } } : { cursor }),
+      limit: historyPageLimit(client, "transactions", 50),
     });
     if (
-      BigInt(height) < page.oldestBlock ||
-      BigInt(height) > page.latestBlock
+      BigInt(height) < page.oldestIndexedBlockHeight ||
+      BigInt(height) > page.latestIndexedBlockHeight
     ) {
       return {
         status: "missing",
@@ -74,10 +72,10 @@ export async function loadBlockTransactions(
     return {
       status: "ok",
       data: {
-        hashes: page.refs.map((ref) => toBase58(ref.txHash)),
-        cursor: toHex0x(page.cursor),
-        oldest: page.oldestBlock.toString(),
-        latest: page.latestBlock.toString(),
+        hashes: page.transactions.map((ref) => toBase58(ref.transactionHash)),
+        cursor: page.nextCursor,
+        oldest: page.oldestIndexedBlockHeight.toString(),
+        latest: page.latestIndexedBlockHeight.toString(),
       },
     };
   } catch (error) {
@@ -86,6 +84,13 @@ export async function loadBlockTransactions(
 }
 
 function blockFailure(error: unknown) {
+  const kind = rpcErrorKind(error);
+  if (kind === "invalidCursor") {
+    return { status: "invalid" as const, message: "This continuation is no longer valid. Reload transactions to start a fresh list." };
+  }
+  if (kind === "historyUnavailable") {
+    return { status: "missing" as const, message: "This height is outside the current index coverage. Reload to check available history." };
+  }
   // Do not expose transport errors: they can include private RPC paths or keys.
   return isUnsupportedRpcError(error)
     ? {

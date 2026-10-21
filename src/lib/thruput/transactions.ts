@@ -1,5 +1,4 @@
-import { getTransactionReceipt, hashFromBase58, toBase58, toHex0x, type EmittedEvent, type ThruputClient, type TransactionStatus as SdkTransactionStatus } from "@thruputchain/client";
-import { ExecResult } from "@thruputchain/protocol";
+import { hashFromBase58, toBase58, toHex0x, NativeRpcError, type EmittedEvent, type ThruputClient, type TransactionFailureCause, type TransactionStatus as SdkTransactionStatus } from "@thruputchain/client";
 
 import { isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
@@ -8,7 +7,7 @@ import { stringifyJson } from "./format";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import { getBuiltInTokenMetadata, getTokenMetadata, type TokenMetadata } from "./token-metadata";
-import type { EventView, TransactionPageData } from "./types";
+import type { EventView, TransactionFailureCauseView, TransactionPageData, TransactionStatusView } from "./types";
 
 export type LoadedTransactionPage = TransactionPageData & {
   loadEnrichedEvents?: () => Promise<EventView[]>;
@@ -19,123 +18,116 @@ export async function loadTransactionPageData(hashInput: string): Promise<Loaded
   const { rpcUrl } = getExplorerRpcConfig();
 
   if (!isTransactionHash(hash)) {
-    return {
-      hash,
-      rpcUrl,
-      status: { status: "malformed", reason: "Malformed transaction hash" },
-      receipt: null,
-    };
+    return { hash, rpcUrl, status: { status: "malformed", reason: "Malformed transaction hash" }, receipt: null };
   }
 
   try {
-    const { transport, client } = await createExplorerThruputClient();
-    const txHash = hashFromBase58(hash);
-
     let rawReceipt: unknown;
-    // Capture the response consumed by the SDK validator, rather than issue a
-    // second request that could observe a different receipt.
-    const receiptRequest = getTransactionReceipt({
-      async request<T>(method: string, params?: unknown[]) {
-        const response = await transport.request<T>(method, params);
-        rawReceipt = response;
-        return response;
-      },
-    }, txHash);
-    const [status, receipt, chainTip] = await Promise.all([
-      client.getTransactionStatus(txHash),
-      receiptRequest,
-      client.getChainTip().catch(() => undefined),
+    // Capture the same response the native client validates, including future fields.
+    const { client } = await createExplorerThruputClient((method, response) => {
+      if (method === "getTransactionReceipt") rawReceipt = response;
+    });
+    const request = { transactionHash: hashFromBase58(hash) };
+    const [statusResult, receiptResult, tipResult] = await Promise.allSettled([
+      client.getTransactionStatus(request),
+      client.getTransactionReceipt(request),
+      client.getChainTip(),
     ]);
+    const receipt = receiptResult.status === "fulfilled" ? receiptResult.value : null;
+    let status: TransactionStatusView = statusResult.status === "fulfilled"
+      ? formatTransactionStatus(statusResult.value)
+      : { status: "unavailable", error: toRpcFailure(statusResult.reason) };
 
+    // A receipt is commitment evidence even if the parallel status read failed or lagged.
+    if (receipt) status = { status: "committed", height: receipt.blockHeight.toString() };
+    if (receiptResult.status === "rejected" && receiptResult.reason instanceof NativeRpcError) {
+      const decoded = receiptResult.reason.decoded;
+      if (decoded.classification === "known" && decoded.data.kind === "backendDataInvalid" && decoded.data.observation) {
+        status = { status: "committed", height: decoded.data.observation.blockHeight.toString() };
+      }
+    }
+
+    const execution = receipt?.execution;
     return {
       hash,
       rpcUrl,
-      status: formatTransactionStatus(status),
-      chainTipHeight: chainTip?.height.toString(),
-      loadEnrichedEvents: receipt?.events.length
-        ? () => enrichTransactionEvents(client, receipt.events)
-        : undefined,
-      receipt: receipt
+      status,
+      chainTipHeight: tipResult.status === "fulfilled" ? tipResult.value.blockHeight.toString() : undefined,
+      receiptError: receiptResult.status === "rejected" ? toRpcFailure(receiptResult.reason) : undefined,
+      loadEnrichedEvents: receipt?.events.length ? () => enrichTransactionEvents(client, receipt.events) : undefined,
+      receipt: receipt && execution
         ? {
-            txHash: toBase58(receipt.txHash),
-            height: receipt.height.toString(),
-            execResult: formatExecResult(receipt.execResult),
-            executionStatus: receipt.executionStatus,
+            txHash: toBase58(receipt.transactionHash),
+            height: receipt.blockHeight.toString(),
+            execution: "result" in execution ? execution.result : "unsupported",
             gasUsed: receipt.gasUsed.toString(),
-            returnData: receipt.returnData ? toHex0x(receipt.returnData) : null,
-            abortData: receipt.abortData ? toHex0x(receipt.abortData) : null,
-            events: receipt.events.map((event) => formatEvent(event, getBuiltInTokenMetadata(toBase58(event.contractAddress)))),
+            returnData: "returnData" in execution ? toHex0x(execution.returnData) : null,
+            abortData: "abortData" in execution ? toHex0x(execution.abortData) : null,
+            events: receipt.events.map((event) => formatEvent(event, getBuiltInTokenMetadata(toBase58(event.address)))),
             rawJson: rawReceipt == null ? undefined : stringifyJson(rawReceipt),
           }
         : null,
     };
   } catch (error) {
-    return {
-      hash,
-      rpcUrl,
-      status: { status: "unavailable", error: toRpcFailure(error) },
-      receipt: null,
-    };
+    return { hash, rpcUrl, status: { status: "unavailable", error: toRpcFailure(error) }, receipt: null };
   }
 }
 
 async function enrichTransactionEvents(client: ThruputClient, events: EmittedEvent[]): Promise<EventView[]> {
   const metadataByAddress = new Map<string, TokenMetadata | undefined>();
-  await Promise.all(Array.from(new Set(events.map((event) => toBase58(event.contractAddress)))).map(async (address) => {
+  await Promise.all(Array.from(new Set(events.map((event) => toBase58(event.address)))).map(async (address) => {
     metadataByAddress.set(address, await getTokenMetadata(client, address));
   }));
-  return events.map((event) => formatEvent(event, metadataByAddress.get(toBase58(event.contractAddress))));
+  return events.map((event) => formatEvent(event, metadataByAddress.get(toBase58(event.address))));
 }
 
 function formatEvent(event: EmittedEvent, metadata?: TokenMetadata): EventView {
   return {
-    contractAddress: toBase58(event.contractAddress),
+    contractAddress: toBase58(event.address),
     contractName: metadata?.name,
     topics: event.topics.map(toHex0x),
     data: toHex0x(event.data),
-    // Names and symbols alone cannot establish the token amount scale.
     decoded: metadata?.decimals !== undefined ? decodeTokenEvent(event, metadata) : undefined,
   };
 }
 
-function formatTransactionStatus(status: SdkTransactionStatus) {
-  if (status.status === "committed") return { status: "committed" as const, height: status.height?.toString() };
+function formatTransactionStatus(status: SdkTransactionStatus): TransactionStatusView {
+  if (!("status" in status)) return { status: "unsupported", rawJson: stringifyJson(status.raw) };
+  if (status.status === "committed") return { status: "committed", height: status.blockHeight.toString() };
   if (status.status === "recentFailure") {
-    return {
-      status: "recentFailure" as const,
-      attemptHeight: status.attemptHeight.toString(),
-      cause: status.cause.kind === "dbConflict"
-        ? { kind: "dbConflict" as const, conflict: {
-            address: toBase58(status.cause.conflict.address),
-            key: toHex0x(status.cause.conflict.key),
-            code: status.cause.conflict.code,
-          } }
-        : status.cause,
-    };
+    return { status: "recentFailure", attemptHeight: status.attemptBlockHeight.toString(), cause: formatFailureCause(status.cause) };
   }
-
+  if (status.status === "pending" || status.status === "retry" || status.status === "dropped") {
+    const recentFailure = status.recentFailure ? {
+      recentFailure: {
+        attemptHeight: status.recentFailure.attemptBlockHeight.toString(),
+        cause: formatFailureCause(status.recentFailure.cause),
+      },
+    } : {};
+    if (status.status === "pending") return { status: "pending", ...recentFailure };
+    return { status: status.status, error: { code: status.error.code, source: formatDiagnostic(status.error.source) }, ...recentFailure };
+  }
   return status;
 }
 
-function formatExecResult(value: number) {
-  switch (value) {
-    case ExecResult.ExecResultOK:
-      return "ok";
-    case ExecResult.ExecResultTxDeterministicError:
-      return "deterministicError";
-    case ExecResult.ExecResultTxRootFrameReverted:
-      return "reverted";
-    case ExecResult.ExecResultTxNonDeterministicError:
-      return "nonDeterministicError";
-    case ExecResult.ExecResultFailedGasSponsorship:
-      return "failedGasSponsorship";
-    case ExecResult.ExecResultTxValidationFailure:
-      return "validationFailure";
-    case ExecResult.ExecResultSystemError:
-      return "systemError";
-    case ExecResult.ExecResultUnrecoverable:
-      return "unrecoverable";
-    default:
-      return `unknown (${value})`;
+function formatDiagnostic(value: string | { raw: unknown }) {
+  return typeof value === "string" ? value : `Unsupported: ${stringifyJson(value.raw)}`;
+}
+
+function formatFailureCause(cause: TransactionFailureCause): TransactionFailureCauseView {
+  if (!("kind" in cause)) return { kind: "unsupported", rawJson: stringifyJson(cause.raw) };
+  if (cause.kind === "dbConflict") {
+    return {
+      kind: "dbConflict",
+      conflict: {
+        address: toBase58(cause.conflict.address),
+        key: toHex0x(cause.conflict.key),
+        code: formatDiagnostic(cause.conflict.code),
+      },
+    };
   }
+  if (cause.kind === "contractRejected") {
+    return { kind: "contractRejected", contractIndex: cause.contractIndex, code: formatDiagnostic(cause.code) };
+  }
+  return cause;
 }

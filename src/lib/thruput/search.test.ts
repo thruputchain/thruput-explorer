@@ -29,7 +29,7 @@ test("search prefers known transactions and routes unknown hashes to addresses",
   t.mock.method(sdk, "createThruputClient", async () => client);
   const status = t.mock.method(client, "getTransactionStatus", async () => ({ status: "pending" as const }));
   const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unavailable"); });
-  t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unavailable"); });
+  t.mock.method(client, "getTransactionsByRootAddress", async () => { throw new Error("Unavailable"); });
   t.mock.method(client, "readViews", async () => { throw new Error("Unavailable"); });
 
   const transaction = await POST(request(`  ${hash}  `));
@@ -50,8 +50,8 @@ test("address search performs no unused balance, history or metadata reads", asy
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getTransactionStatus", async () => ({ status: "unknown" as const }));
-  const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 0n, height: 42n }));
-  const transactions = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromBase58(hash), height: 42n }] }));
+  const balance = t.mock.method(client, "getBalance", async () => ({ rawBalance: 0n, stateBlockHeight: 42n }));
+  const transactions = t.mock.method(client, "getTransactionsByRootAddress", async () => ({ transactions: [{ transactionHash: hashFromBase58(hash), blockHeight: 42n }] }));
   const metadata = t.mock.method(client, "readViews", async () => { throw new Error("Unexpected metadata query"); });
 
   const response = await POST(request(hash));
@@ -69,7 +69,7 @@ test("a failed transaction-status lookup returns 503 without guessing an address
   t.mock.method(sdk, "createThruputClient", async () => client);
   t.mock.method(client, "getTransactionStatus", async () => { throw new Error("Status RPC unavailable"); });
   const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
-  const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
+  const history = t.mock.method(client, "getTransactionsByRootAddress", async () => { throw new Error("Unexpected history lookup"); });
   const view = t.mock.method(client, "readViews", async () => { throw new Error("Unexpected metadata lookup"); });
 
   const response = await POST(request(hash));
@@ -81,15 +81,15 @@ test("a failed transaction-status lookup returns 503 without guessing an address
 });
 
 for (const status of [
-  { status: "committed" as const, height: 42n },
-  { status: "recentFailure" as const, attemptHeight: 42n, cause: { kind: "dbConflict" as const, conflict: { address: addressFromBase58(hash), key: hashFromBase58(hash), code: "other" as const } } },
+  { status: "committed" as const, blockHeight: 42n },
+  { status: "recentFailure" as const, attemptBlockHeight: 42n, cause: { kind: "dbConflict" as const, conflict: { address: addressFromBase58(hash), key: hashFromBase58(hash), code: "other" as const } } },
 ]) {
   test(`search routes ${status.status} transactions without address probes`, async (t) => {
     const client = await createThruputClient({ transport: new MockTransport() });
     t.mock.method(sdk, "createThruputClient", async () => client);
     t.mock.method(client, "getTransactionStatus", async () => status);
     const balance = t.mock.method(client, "getBalance", async () => { throw new Error("Unexpected address lookup"); });
-    const history = t.mock.method(client, "getTransactionsByAddress", async () => { throw new Error("Unexpected history lookup"); });
+    const history = t.mock.method(client, "getTransactionsByRootAddress", async () => { throw new Error("Unexpected history lookup"); });
     const view = t.mock.method(client, "readViews", async () => { throw new Error("Unexpected metadata lookup"); });
     const response = await POST(request(hash));
     assert.equal(response.status, 200);

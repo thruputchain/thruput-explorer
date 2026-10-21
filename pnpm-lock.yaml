@@ -15,11 +15,11 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@thruputchain/client':
-        specifier: 0.21.0
-        version: 0.21.0
+        specifier: 0.22.1
+        version: 0.22.1
       '@thruputchain/protocol':
-        specifier: 0.17.0
-        version: 0.17.0
+        specifier: 0.18.0
+        version: 0.18.0
       bcryptjs:
         specifier: 3.0.3
         version: 3.0.3
@@ -1520,20 +1520,20 @@ packages:
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
 
-  '@thruputchain/client@0.21.0':
-    resolution: {integrity: sha512-McTM5l+QFWfpRBLbJSwoadFK1pvYUqJbIbCWKy6Uqd2SwUxt0sTAVws7zxVUFWTi4FvJs53LCqWvuw2m+ab+1g==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.21.0/63160b0f822a2204041db3931f22c4fd1c26d150}
+  '@thruputchain/client@0.22.1':
+    resolution: {integrity: sha512-WWaXAhTVypi9niIlRpm6Lqj3TCNQh3B1cysZUoeri3rvn07hT80TBxbZ3mjS3uOIP1QXhU4szekp3CRdnfb/Vg==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.22.1/aca91e98078cac60ba445482a93b3a187f377393}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/contract-spec@0.17.0':
-    resolution: {integrity: sha512-f7Ufr8pDv+k6xF694PvtRn3zY+JWW6B1bC47FCKc2wU5WZbGYqVD78eLHA/QBx22HKgtTD7M0IJnZuky4S6TGw==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.17.0/d43f65747ef9db08ab0e28fed6467f4ea98808a9}
+  '@thruputchain/contract-spec@0.18.0':
+    resolution: {integrity: sha512-tnfrH6E89d+VmrEYpaPwpijjDDGKrqCEEG1n3kruSpeH5UNON9RxeRrlesRv9bCuXJFifFF3jYUdcAvepFzTLA==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.18.0/df0bd406f92c7d0892bcb1e4e45b8a4385a2941f}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/protocol@0.17.0':
-    resolution: {integrity: sha512-HXRf/Jx0CMvRsC+Z81oZ/2i271TTqqZ63KUqLOIE3jV3fqaHzsCjCsQvcS4aft9pKaeg8SV/z1e0Kb+rUP+fQg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.17.0/5958450bd7e8464a4480ebcbcb452d9faa48693c}
+  '@thruputchain/protocol@0.18.0':
+    resolution: {integrity: sha512-EzH8erwQlULsM5JaDjj++hmokiNzbgBOvXRxFO7eA0qtbx9442wYxF77Z5DAzXliNYQqvr0NJrpiFbOyHRthlg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.18.0/8c155de27b2b8842d2a8fc61a0ce9f04d12efe46}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/xdr@0.17.0':
-    resolution: {integrity: sha512-zXuY1IRx1/mc+U1X91qJF3EJdkIUq0cE/yK4mG3ST8qqOF12+SdD25ICIx5P0nRGQoyQh2yp/DIARFcMC74asg==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.17.0/471e9af1cdcef1eab0c315c2443715be75c55b10}
+  '@thruputchain/xdr@0.18.0':
+    resolution: {integrity: sha512-dnqqP9+ByRyIahQdipxqri0+GM+MK6HMQFHEMtaqIUEKO8uKohB0Khuqd5iT7r1ScN7cpRe+UFsvSBfkmInklQ==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.18.0/20434cb9d01fbad218561008bc6b823c31ae8b3d}
     engines: {node: '>=22.12.0'}
 
   '@tybys/wasm-util@0.10.4':
@@ -4595,28 +4595,28 @@ snapshots:
       postcss: 8.5.31
       tailwindcss: 4.3.3
 
-  '@thruputchain/client@0.21.0':
+  '@thruputchain/client@0.22.1':
     dependencies:
       '@noble/ed25519': 3.2.0
       '@noble/hashes': 2.4.0
       '@noble/post-quantum': 0.7.1
       '@scure/base': 2.0.0
-      '@thruputchain/contract-spec': 0.17.0
-      '@thruputchain/protocol': 0.17.0
-      '@thruputchain/xdr': 0.17.0
+      '@thruputchain/contract-spec': 0.18.0
+      '@thruputchain/protocol': 0.18.0
+      '@thruputchain/xdr': 0.18.0
 
-  '@thruputchain/contract-spec@0.17.0':
+  '@thruputchain/contract-spec@0.18.0':
     dependencies:
-      '@thruputchain/protocol': 0.17.0
-      '@thruputchain/xdr': 0.17.0
+      '@thruputchain/protocol': 0.18.0
+      '@thruputchain/xdr': 0.18.0
 
-  '@thruputchain/protocol@0.17.0':
+  '@thruputchain/protocol@0.18.0':
     dependencies:
       '@noble/hashes': 2.2.0
       '@scure/base': 2.0.0
-      '@thruputchain/xdr': 0.17.0
+      '@thruputchain/xdr': 0.18.0
 
-  '@thruputchain/xdr@0.17.0': {}
+  '@thruputchain/xdr@0.18.0': {}
 
   '@tybys/wasm-util@0.10.4':
     dependencies:

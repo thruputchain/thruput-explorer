@@ -16,15 +16,16 @@ export function BlockTransactions({
   initial: BlockPage;
 }) {
   const [page, setPage] = useState(initial);
-  const [continued, setContinued] = useState(false);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
   const seen = useRef(new Set([initial.cursor]));
 
   function next() {
+    const cursor = page.cursor;
+    if (cursor === null) return;
     startTransition(async () => {
       try {
-        const result = await nextBlockTransactions(height, page.cursor);
+        const result = await nextBlockTransactions(height, cursor);
         if (result.status !== "ok") {
           setMessage(result.message);
           return;
@@ -37,7 +38,6 @@ export function BlockTransactions({
         }
         seen.current.add(result.data.cursor);
         setPage(result.data);
-        setContinued(true);
       } catch {
         setMessage("The request failed. Reload transactions or try again shortly.");
       }
@@ -64,10 +64,8 @@ export function BlockTransactions({
       </ul>
       <div role="status" className="text-base text-muted-foreground sm:text-sm">
         {message ||
-          (page.cursor === "0x"
-            ? continued
-              ? "No further references returned. A stale cursor can also end a list; completeness is not verified."
-              : page.hashes.length === 0
+          (page.cursor === null
+            ? page.hashes.length === 0
                 ? "No transactions in this indexed block."
                 : "No further references returned."
             : `${page.hashes.length} references on this page.`)}
@@ -75,7 +73,7 @@ export function BlockTransactions({
       <nav aria-label="Transaction pagination" className="flex flex-wrap gap-4">
         <Button
           variant="outline"
-          disabled={pending || page.cursor === "0x" || Boolean(message)}
+          disabled={pending || page.cursor === null || Boolean(message)}
           onClick={next}
         >
           Next page
