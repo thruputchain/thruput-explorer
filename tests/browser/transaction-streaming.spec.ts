@@ -2,14 +2,13 @@ import { expect, test } from "@playwright/test";
 import { identifier } from "../../src/lib/thruput/test-fixtures";
 
 const rpcOrigin = `http://127.0.0.1:${Number(process.env.PLAYWRIGHT_PORT ?? 3100) + 1}`;
-const txHash = identifier(0xdd);
+const txHash = identifier(0xde);
 
 test("transaction details render while optional metadata is still pending", async ({ page, request }) => {
   await request.post(`${rpcOrigin}/metadata/reset`);
   try {
     await page.goto("/");
     await expect(page.getByRole("region", { name: "Recent transactions", exact: true }).getByRole("listitem")).toHaveCount(2);
-    const initialState = await (await request.get(`${rpcOrigin}/metadata/state`)).json();
     // Exercise client navigation, the path used when selecting a transaction.
     await page.getByRole("textbox").fill(txHash);
     await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -28,8 +27,8 @@ test("transaction details render while optional metadata is still pending", asyn
     await expect(page.getByText("Amount", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Topics", { exact: true })).toBeVisible();
     const state = await (await request.get(`${rpcOrigin}/metadata/state`)).json();
-    // The home activity feed also reads receipts; navigation adds exactly one.
-    expect(state).toEqual({ pending: 1, receiptRequests: initialState.receiptRequests + 1, released: false });
+    // This transaction is exclusive to this test, including during parallel runs.
+    expect(state).toEqual({ pending: 1, receiptRequests: 1, released: false });
 
     // Metadata failures leave the receipt and raw events available.
     await request.post(`${rpcOrigin}/metadata/release`);

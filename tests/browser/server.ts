@@ -23,7 +23,8 @@ async function main() {
     topics: transfer.topics.map(toHex0x),
     data: toHex0x(transfer.data),
   };
-  const slowTxHash = identifier(0xdd);
+  const paginatedTxHash = identifier(0xdd);
+  const slowTxHash = identifier(0xde);
   const slowEvent = { ...event, contractAddress: identifier(0x55) };
   let releaseMetadata = () => {};
   let metadataGate = Promise.resolve();
@@ -89,7 +90,7 @@ async function main() {
           const { height, cursor, limit, order } = params[0];
           if (limit !== 50 || order !== "ascending") throw new Error("Unexpected block page parameters");
           result = {
-            refs: height === "42" && cursor !== "0xbb" ? [{ txHash: cursor === "0x" ? txHash : slowTxHash, height }] : [],
+            refs: height === "42" && cursor !== "0xbb" ? [{ txHash: cursor === "0x" ? txHash : paginatedTxHash, height }] : [],
             cursor: height === "42" ? cursor === "0x" ? "0xaa" : cursor === "0xaa" ? "0xbb" : "0x" : "0x",
             oldestBlock: "40", latestBlock: "9007199254740993",
           };
@@ -102,7 +103,7 @@ async function main() {
           result = { height: "42", blockHash: identifier(0xbb) };
           break;
         case "groundhog_getTransactionStatus":
-          result = statusFixtures[params?.[0]] ?? ([txHash, slowTxHash].includes(params?.[0])
+          result = statusFixtures[params?.[0]] ?? ([txHash, paginatedTxHash, slowTxHash].includes(params?.[0])
             ? { status: "committed", height: "42" }
             : { status: params?.[0] === identifier(0xcc) ? "pending" : "unknown" });
           break;
@@ -115,7 +116,7 @@ async function main() {
             break;
           }
           if (params?.[0] === slowTxHash) receiptRequests++;
-          result = [txHash, slowTxHash].includes(params?.[0])
+          result = [txHash, paginatedTxHash, slowTxHash].includes(params?.[0])
             ? { txHash: params[0], height: "42", gasUsed: "1000", status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
             : null;
           break;

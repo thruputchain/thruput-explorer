@@ -119,7 +119,8 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
   const request = await startProduction(t, true);
   const headers = { authorization };
   const home = await request("/", 200, { headers });
-  assert.match(home.body, /HOG transfer history is temporarily unavailable\./);
+  assert.match(home.body, /Some recent blocks are temporarily unavailable\./);
+  assert.match(home.body, /Some recent transactions are temporarily unavailable\./);
   const asset = home.body.match(/<script\b[^>]*\bsrc="(\/_next\/static\/[^"?]+\.js(?:\?[^" ]*)?)"/)?.[1];
   assert.ok(asset, "Authenticated homepage must reference a built JavaScript asset");
   const assetPath = asset.replaceAll("&amp;", "&");
