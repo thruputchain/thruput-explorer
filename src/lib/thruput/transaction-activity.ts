@@ -19,16 +19,16 @@ export async function loadTransactionActivity(refs: { hash: string; height: stri
     if (!timestamps.has(ref.height)) timestamps.set(ref.height, ref.timestamp === undefined ? readTimestamp(ref.height) : Promise.resolve(ref.timestamp));
   }
   return Promise.all(refs.map(async (ref) => {
-    const receiptRequest = connection?.client.getTransactionReceipt(hashFromBase58(ref.hash)).catch(() => null);
+    const receiptRequest = connection?.client.getTransactionReceipt({ transactionHash: hashFromBase58(ref.hash) }).catch(() => null);
     const [timestamp, receipt] = await Promise.all([timestamps.get(ref.height), receiptRequest]);
     const base = { hash: ref.hash, height: ref.height, timestamp: timestamp ?? null };
-    if (!receipt || receipt.height.toString() !== ref.height) return { ...base, result: null, events: [] };
+    if (!receipt || receipt.blockHeight.toString() !== ref.height) return { ...base, result: null, events: [] };
     const events = receipt.events.flatMap((event) => {
-      const metadata = getBuiltInTokenMetadata(toBase58(event.contractAddress));
+      const metadata = getBuiltInTokenMetadata(toBase58(event.address));
       const decoded = decodeTokenEvent(event, metadata);
       return decoded ? [decoded] : [];
     });
-    return { ...base, result: receipt.executionStatus?.result ?? null, events };
+    return { ...base, result: "result" in receipt.execution ? receipt.execution.result : "unsupported", events };
   }));
 }
 

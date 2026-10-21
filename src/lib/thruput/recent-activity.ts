@@ -1,9 +1,9 @@
 import { cache } from "react";
-import { toBase58 } from "@thruputchain/client";
+import { NativeRpcError, toBase58 } from "@thruputchain/client";
 
 import { loadBlock, loadBlockTransactions } from "./blocks";
 import { checkBlockContinuation } from "./block-pagination";
-import { createExplorerThruputClient } from "./client";
+import { createExplorerThruputClient, historyPageLimit } from "./client";
 import { loadTransactionActivity } from "./transaction-activity";
 
 const readBlock = cache(loadBlock);
@@ -19,7 +19,7 @@ async function readTransactionPages(height: string, maxHashes = Infinity) {
   const seenHashes = new Set(hashes);
   const cursors = new Set<string>();
   let pages = 1;
-  while (page.cursor !== "0x" && hashes.length < maxHashes && pages < ACTIVITY_BLOCK_PAGE_LIMIT) {
+  while (page.cursor !== null && hashes.length < maxHashes && pages < ACTIVITY_BLOCK_PAGE_LIMIT) {
     cursors.add(page.cursor);
     const next = await readPage(height, page.cursor);
     if (next.status !== "ok" || !checkBlockContinuation(page, next.data, cursors) || next.data.hashes.some((hash) => seenHashes.has(hash))) {
@@ -30,7 +30,7 @@ async function readTransactionPages(height: string, maxHashes = Infinity) {
     page = next.data;
     pages++;
   }
-  return { hashes: hashes.slice(0, maxHashes), oldest: BigInt(page.oldest), complete: page.cursor === "0x" };
+  return { hashes: hashes.slice(0, maxHashes), oldest: BigInt(page.oldest), complete: page.cursor === null };
 }
 
 export async function readActivityBlock(height: string) {
@@ -46,10 +46,19 @@ export async function readActivityBlock(height: string) {
 const readIndexedBlock = cache(readActivityBlock);
 const readTip = cache(async () => {
   const { client } = await createExplorerThruputClient();
-  const { height } = await client.getChainTip();
+  const { blockHeight: height } = await client.getChainTip();
   if (height < 1n) return height;
-  const coverage = await client.getTransactionsByBlock({ height, cursor: new Uint8Array(), limit: 50, order: "ascending" });
-  return coverage.latestBlock < height ? coverage.latestBlock : height;
+  try {
+    const coverage = await client.getTransactionsByBlock({ blockHeight: height, start: { order: "ascending" }, limit: historyPageLimit(client, "transactions", 50) });
+    return coverage.latestIndexedBlockHeight < height ? coverage.latestIndexedBlockHeight : height;
+  } catch (error) {
+    // The committed tip can be ahead of the history index. Use only typed coverage evidence.
+    if (error instanceof NativeRpcError && error.decoded.classification === "known") {
+      const data = error.decoded.data;
+      if (data.kind === "historyUnavailable" && data.latestIndexedBlockHeight !== undefined && data.latestIndexedBlockHeight < height) return data.latestIndexedBlockHeight;
+    }
+    throw error;
+  }
 });
 
 export async function loadRecentActivityBlocks() {

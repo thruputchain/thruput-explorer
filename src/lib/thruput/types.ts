@@ -1,5 +1,3 @@
-import type { ExecutionStatus, SchedulerTransactionError } from "@thruputchain/client";
-
 export type RpcFailure = {
   message: string;
   code?: number;
@@ -11,8 +9,7 @@ export type TransactionStatusView = TransactionStatus | { status: "malformed"; r
 export type TransactionReceiptView = {
   txHash: string;
   height: string;
-  execResult: string;
-  executionStatus?: ExecutionStatus;
+  execution: "return" | "abort" | "fault" | "nonDeterministicError" | "failedGasSponsorship" | "other" | "unsupported";
   gasUsed: string;
   events: EventView[];
   returnData: string | null;
@@ -21,14 +18,16 @@ export type TransactionReceiptView = {
 };
 
 export type TransactionStatus =
-  | { status: "pending" }
-  | { status: "committed"; height?: string }
-  | { status: "retry"; error: SchedulerTransactionError }
-  | { status: "dropped"; error: SchedulerTransactionError }
-  | { status: "invalid"; reason: string }
+  | { status: "pending"; recentFailure?: RecentFailureView }
+  | { status: "committed"; height: string }
+  | { status: "retry"; error: { source: string; code: number }; recentFailure?: RecentFailureView }
+  | { status: "dropped"; error: { source: string; code: number }; recentFailure?: RecentFailureView }
   | { status: "recentFailure"; attemptHeight: string; cause: TransactionFailureCauseView }
   | { status: "other" }
-  | { status: "unknown" };
+  | { status: "unknown" }
+  | { status: "unsupported"; rawJson: string };
+
+export type RecentFailureView = { attemptHeight: string; cause: TransactionFailureCauseView };
 
 export type EventView = {
   contractAddress: string;
@@ -54,9 +53,11 @@ export type TransactionPageData = {
   status: TransactionStatusView;
   chainTipHeight?: string;
   receipt: TransactionReceiptView | null;
+  receiptError?: RpcFailure;
 };
 
 export type TransactionFailureCauseView =
   | { kind: "dbConflict"; conflict: { address: string; key: string; code: string } }
   | { kind: "contractRejected"; contractIndex: number; code: string }
-  | { kind: "other" };
+  | { kind: "other" }
+  | { kind: "unsupported"; rawJson: string };

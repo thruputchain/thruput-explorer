@@ -21,11 +21,11 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
             <StatusBadge status={data.status} />
           </FieldRow>
           {data.receipt ? <>
-            <FieldRow label="Execution">{data.receipt.executionStatus?.result ?? data.receipt.execResult}</FieldRow>
+            <FieldRow label="Execution">{data.receipt.execution}</FieldRow>
             <FieldRow label="Gas used">{data.receipt.gasUsed}</FieldRow>
           </> : null}
           <FieldRow label="Block height">
-            {data.status.status === "committed" ? data.status.height ? <BlockLink height={data.status.height} /> : "Not indexed yet" : statusLabel(data.status.status)}
+            {data.status.status === "committed" ? <BlockLink height={data.status.height} /> : statusLabel(data.status.status)}
           </FieldRow>
           {data.status.status === "recentFailure" ? <FieldRow label="Attempt height"><BlockLink height={data.status.attemptHeight} /></FieldRow> : null}
           {executionDetails.map((detail) => (
@@ -35,6 +35,7 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           ))}
           <FieldRow label="Freshness">{freshness ?? "-"}</FieldRow>
           <FieldRow label="Receipt">{data.receipt ? "Available" : "Not available"}</FieldRow>
+          {data.receiptError ? <FieldRow label="Receipt error">{data.receiptError.message}</FieldRow> : null}
           <FieldRow label="RPC URL"><span className="font-mono">{data.rpcUrl}</span></FieldRow>
         </dl>
       </CardContent>
@@ -45,12 +46,11 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
 function getExecutionDetails(data: TransactionPageData) {
   const details: Array<{ label: string; value: string }> = [];
 
-  if (data.status.status === "invalid") {
-    details.push({ label: "Invalid reason", value: data.status.reason });
-  }
-
-  if (data.status.status === "recentFailure") {
-    const cause = data.status.cause;
+  if (data.status.status === "unsupported") details.push({ label: "Unsupported status", value: data.status.rawJson });
+  const failure = data.status.status === "recentFailure" ? data.status : "recentFailure" in data.status ? data.status.recentFailure : undefined;
+  if (failure) {
+    if (data.status.status !== "recentFailure") details.push({ label: "Recent attempt height", value: failure.attemptHeight });
+    const cause = failure.cause;
     if (cause.kind === "dbConflict") {
       details.push({ label: "Conflict address", value: cause.conflict.address });
       details.push({ label: "Conflict key", value: cause.conflict.key });
@@ -59,7 +59,7 @@ function getExecutionDetails(data: TransactionPageData) {
       details.push({ label: "Rejected contract index", value: String(cause.contractIndex) });
       details.push({ label: "Rejection code", value: cause.code });
     } else {
-      details.push({ label: "Failure cause", value: "Other" });
+      details.push({ label: "Failure cause", value: cause.kind === "unsupported" ? cause.rawJson : "Other" });
     }
   }
 
@@ -70,13 +70,6 @@ function getExecutionDetails(data: TransactionPageData) {
 
   const receipt = data.receipt;
   if (!receipt) return details;
-
-  if (receipt.executionStatus?.result === "deterministicError") {
-    details.push({ label: "Execution fault", value: receipt.executionStatus.kind });
-  }
-  if (receipt.executionStatus?.result === "reverted" && receipt.executionStatus.message) {
-    details.push({ label: "Revert message", value: receipt.executionStatus.message });
-  }
 
   if (receipt.returnData && receipt.returnData !== "0x") {
     details.push({ label: "Return data", value: receipt.returnData });
@@ -97,8 +90,8 @@ function statusLabel(status: TransactionPageData["status"]["status"]) {
       return "Retry";
     case "dropped":
       return "Dropped";
-    case "invalid":
-      return "Invalid";
+    case "unsupported":
+      return "Unsupported status";
     case "malformed":
       return "Malformed";
     case "unavailable":

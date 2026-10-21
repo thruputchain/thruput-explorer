@@ -3,7 +3,7 @@ import { createExplorerThruputClient } from "./client";
 export async function loadRecentBlocks() {
   try {
     const { client } = await createExplorerThruputClient();
-    const { height } = await client.getChainTip();
+    const { blockHeight: height } = await client.getChainTip();
     const heights: string[] = [];
     // Genesis has no block-query metadata. Keep large heights exact.
     for (

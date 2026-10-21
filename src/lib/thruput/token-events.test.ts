@@ -15,7 +15,7 @@ const zero = identifier(0);
 test("shared fixture encodes a real ERC20 TransferEvent with deterministic defaults and overrides", () => {
   const event = transferEvent();
   assert.deepEqual(event, transferEvent());
-  assert.deepEqual(event.contractAddress, addressFromBase58(identifier(0xcc)));
+  assert.deepEqual(event.address, addressFromBase58(identifier(0xcc)));
   assert.deepEqual(decodeERC20Event(event), {
     name: "TransferEvent",
     topics: { from: addressFromBase58(from), to: addressFromBase58(to) },
@@ -23,7 +23,7 @@ test("shared fixture encodes a real ERC20 TransferEvent with deterministic defau
   });
 
   const overridden = transferEvent({ contractAddress: to, from: to, to: from, amount: 0n });
-  assert.deepEqual(overridden.contractAddress, addressFromBase58(to));
+  assert.deepEqual(overridden.address, addressFromBase58(to));
   assert.deepEqual(decodeERC20Event(overridden), {
     name: "TransferEvent",
     topics: { from: addressFromBase58(to), to: addressFromBase58(from) },

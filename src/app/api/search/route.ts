@@ -24,7 +24,8 @@ export async function POST(request: Request) {
 
   try {
     const { client } = await createExplorerThruputClient();
-    const txStatus = await client.getTransactionStatus(hashFromBase58(query));
+    const txStatus = await client.getTransactionStatus({ transactionHash: hashFromBase58(query) });
+    if (!("status" in txStatus)) return Response.json({ status: "unavailable", message: "The RPC returned an unsupported transaction status." }, { status: 503 });
     if (txStatus.status !== "unknown") {
       return Response.json({ status: "ok", href: `/tx/${query}` });
     }

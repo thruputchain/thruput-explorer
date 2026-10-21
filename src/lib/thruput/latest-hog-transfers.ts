@@ -1,7 +1,7 @@
 import { addressFromBase58, toBase58 } from "@thruputchain/client";
 import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
-import { createExplorerThruputClient, getExplorerRpcConfig } from "./client";
+import { createExplorerThruputClient, getExplorerRpcConfig, historyPageLimit } from "./client";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import type { RpcFailure } from "./types";
@@ -30,10 +30,9 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
   try {
     const { client } = await createExplorerThruputClient();
     const page = await client.getEvents({
-      filters: [ERC20.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(nativeToken.address)] })],
-      order: "descending",
-      anchor: "end",
-      limit: LATEST_HOG_TRANSFER_LIMIT,
+      filters: [ERC20.v0_1.events.TransferEvent.filter({ addresses: [addressFromBase58(nativeToken.address)] })],
+      start: { order: "descending", anchor: { kind: "atEnd" } },
+      limit: historyPageLimit(client, "events", LATEST_HOG_TRANSFER_LIMIT),
     });
 
     return {
@@ -44,7 +43,7 @@ export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> 
         if (!decoded) return [];
 
         return [{
-          txHash: toBase58(entry.txHash),
+          txHash: toBase58(entry.transactionHash),
           blockHeight: entry.blockHeight.toString(),
           sequenceNumber: entry.sequenceNumber,
           name: decoded.name,

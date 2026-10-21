@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { createThruputClient, MockTransport } from "@thruputchain/client";
+import { createThruputClient, MockTransport, NativeRpcError, JsonRpcError } from "@thruputchain/client";
 
 import { POST } from "../../app/api/search/route";
 import { isBlockHeight } from "../validation";
@@ -40,22 +40,22 @@ test("height search preserves large integers and rejects malformed and out-of-ra
 test("block loaders separate missing metadata, index gaps, malformed responses and unavailable RPC", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
-  t.mock.method(client, "getBlockByNumber", async () => null);
+  t.mock.method(client, "getBlockByHeight", async () => null);
   const transactions = t.mock.method(
     client,
     "getTransactionsByBlock",
     async () => ({
-      refs: [],
-      cursor: new Uint8Array(),
-      oldestBlock: 1n,
-      latestBlock: 42n,
+      transactions: [],
+      nextCursor: null,
+      oldestIndexedBlockHeight: 1n,
+      latestIndexedBlockHeight: 42n,
     }),
   );
   assert.equal((await loadBlock("0")).status, "missing");
   assert.equal((await loadBlockTransactions("43")).status, "missing");
   assert.equal((await loadBlockTransactions("42")).status, "ok");
   assert.deepEqual(transactions.mock.calls[1].arguments, [
-    { height: 42n, cursor: new Uint8Array(), limit: 50, order: "ascending" },
+    { blockHeight: 42n, start: { order: "ascending" }, limit: 50 },
   ]);
   assert.equal(
     (await loadBlockTransactions("42", "not-hex")).status,
@@ -92,7 +92,7 @@ test("pagination detects whole-walk cycles, overlapping hashes and coverage loss
   assert.equal(
     checkBlockContinuation(
       page,
-      { ...page, hashes: [], cursor: "0x", oldest: "2" },
+      { ...page, hashes: [], cursor: null, oldest: "2" },
       seen,
     ),
     false,
@@ -100,7 +100,7 @@ test("pagination detects whole-walk cycles, overlapping hashes and coverage loss
   assert.equal(
     checkBlockContinuation(
       page,
-      { ...page, hashes: [], cursor: "0x", latest: "41" },
+      { ...page, hashes: [], cursor: null, latest: "41" },
       seen,
     ),
     false,
@@ -114,7 +114,44 @@ test("pagination detects whole-walk cycles, overlapping hashes and coverage loss
     true,
   );
   assert.equal(
-    checkBlockContinuation(page, { ...page, hashes: [], cursor: "0x" }, seen),
+    checkBlockContinuation(page, { ...page, hashes: [], cursor: null }, seen),
     true,
   );
+});
+
+test("pagination orders decoded hashes rather than base58 text", () => {
+  // These fixed-width hashes sort in the opposite order as base58 strings.
+  const first = identifier(14);
+  const second = identifier(15);
+  assert.ok(first > second);
+  const page = { hashes: [first], cursor: "0xaa", oldest: "1", latest: "42" };
+  assert.equal(checkBlockContinuation(page, { ...page, hashes: [second], cursor: null }, new Set()), true);
+});
+
+for (const [kind, code, expected] of [["invalidCursor", -32602, "invalid"], ["historyUnavailable", -32013, "missing"]] as const) {
+  test(`block pagination distinguishes ${kind} from empty history`, async (t) => {
+    const client = await createThruputClient({ transport: new MockTransport() });
+    t.mock.method(sdk, "createThruputClient", async () => client);
+    t.mock.method(client, "getTransactionsByBlock", async () => {
+      throw new NativeRpcError(new JsonRpcError(code, "Private upstream diagnostics", { kind }), "getTransactionsByBlock");
+    });
+    const result = await loadBlockTransactions("42", "0xaa");
+    assert.equal(result.status, expected);
+    assert.equal(JSON.stringify(result).includes("Private upstream"), false);
+  });
+}
+
+test("block requests respect advertised endpoint page limits", async (t) => {
+  const transport = new MockTransport();
+  const request = transport.request.bind(transport);
+  t.mock.method(transport, "request", async (...args: Parameters<typeof transport.request>) => {
+    const [method] = args;
+    const result = await request(...args);
+    return method === "getServerLimits" ? { ...result as object, maxTransactionsPerPage: 3 } : result;
+  });
+  const client = await createThruputClient({ transport });
+  t.mock.method(sdk, "createThruputClient", async () => client);
+  const pages = t.mock.method(client, "getTransactionsByBlock", async () => ({ transactions: [], nextCursor: null, oldestIndexedBlockHeight: 1n, latestIndexedBlockHeight: 42n }));
+  assert.equal((await loadBlockTransactions("42")).status, "ok");
+  assert.equal(pages.mock.calls[0].arguments[0]?.limit, 3);
 });

@@ -9,7 +9,7 @@ export function identifier(byte: number): string {
 /** Wire results for the generated optional name, symbol and u32 decimals views. */
 export function metadataBatchResponse(values: [string | null | undefined, string | null | undefined, bigint | null | undefined]) {
   return {
-    height: "42",
+    stateBlockHeight: "42",
     results: values.map((value) => {
       if (value === undefined) return { output: { result: "fault" }, events: [], gasUsed: "1" };
       const writer = new CxsWriter();
@@ -31,7 +31,7 @@ export function transferEvent(options: {
   Int128Codec.encode(writer, options.amount ?? 15_000_000n);
 
   return {
-    contractAddress: addressFromBase58(options.contractAddress ?? identifier(0xcc)),
+    address: addressFromBase58(options.contractAddress ?? identifier(0xcc)),
     topics: [
       ERC20.v0_1.events.TransferEvent.signature.slice(),
       addressFromBase58(options.from ?? identifier(0x11)),

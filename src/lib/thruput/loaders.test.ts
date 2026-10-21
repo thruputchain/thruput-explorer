@@ -22,8 +22,8 @@ for (const partial of [false, true]) {
   test(`address retains balance and root transactions with ${partial ? "failed" : "successful"} event RPCs`, async (t) => {
     const client = await createThruputClient({ transport: new MockTransport() });
     t.mock.method(sdk, "createThruputClient", async () => client);
-    t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
-    t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromBase58(hash), height: 42n }] }));
+    t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, stateBlockHeight: 42n }));
+    t.mock.method(client, "getTransactionsByRootAddress", async () => ({ transactions: [{ transactionHash: hashFromBase58(hash), blockHeight: 42n }] }));
     t.mock.method(client, "getEvents", async () => {
       if (partial) throw new Error("Events unavailable");
       return { events: [] };
@@ -108,8 +108,8 @@ test("partial custom-token metadata preserves successful fields", async (t) => {
   assert.equal(request.mock.callCount(), 1);
   const calls = [ERC20Metadata.v0_1.name, ERC20Metadata.v0_1.symbol, ERC20Metadata.v0_1.decimals];
   const [method, params] = request.mock.calls[0].arguments;
-  assert.equal(method, "groundhog_viewBatch");
-  assert.equal((params?.[0] as { calls: unknown[] }).calls.length, calls.length);
+  assert.equal(method, "simulateInvocations");
+  assert.equal((params as { invocations: unknown[] }).invocations.length, calls.length);
 });
 
 test("latest feed reports RPC failure instead of an empty successful feed", async (t) => {
@@ -139,7 +139,7 @@ test("unavailable metadata falls back for HOG but does not label other contracts
 test("invalid custom-token decimals are omitted without replacing a successful symbol", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
   for (const decimals of [-1n, 31n]) {
-    const view = t.mock.method(client, "readViews", async () => ({ height: 42n, results: [
+    const view = t.mock.method(client, "readViews", async () => ({ stateBlockHeight: 42n, results: [
       { kind: "fault" }, { kind: "return", value: "LIVE" }, { kind: "return", value: decimals },
     ] }));
     assert.deepEqual(await getTokenMetadata(client, hash), {
@@ -150,14 +150,16 @@ test("invalid custom-token decimals are omitted without replacing a successful s
 });
 
 test("chain tip failure does not erase a committed transaction receipt", async (t) => {
-  const rawReceipt = { txHash: hash, height: "42", gasUsed: "1000", status: { result: "ok" }, events: [], returnData: "0x1234", abortData: null };
+  const rawReceipt = { transactionHash: hash, blockHeight: "42", gasUsed: "1000", execution: { result: "return", returnData: "0x1234" }, events: [] };
   const methods: string[] = [];
+  const discovery = new MockTransport();
   t.mock.method(HttpTransport.prototype, "request", async (method: string) => {
     methods.push(method);
     switch (method) {
-      case "groundhog_getTransactionStatus": return { status: "committed", height: "42" };
-      case "groundhog_getTransactionReceipt": return rawReceipt;
-      case "groundhog_chainTip": throw new Error("Chain tip unavailable");
+      case "getVersionInfo": case "getNetworkInfo": case "getServerLimits": return discovery.request(method);
+      case "getTransactionStatus": return { status: "committed", blockHeight: "42" };
+      case "getTransactionReceipt": return rawReceipt;
+      case "getChainTip": throw new Error("Chain tip unavailable");
       default: throw new Error(`Unexpected RPC method: ${method}`);
     }
   });
@@ -168,9 +170,9 @@ test("chain tip failure does not erase a committed transaction receipt", async (
   assert.ok(result.receipt);
   assert.equal(result.receipt.txHash, hash);
   assert.equal(result.receipt.height, "42");
-  assert.equal(result.receipt.execResult, "ok");
+  assert.equal(result.receipt.execution, "return");
   assert.equal(result.receipt.returnData, "0x1234");
   assert.deepEqual(result.receipt.events, []);
   assert.deepEqual(JSON.parse(result.receipt.rawJson!), rawReceipt);
-  assert.ok(methods.includes("groundhog_chainTip"));
+  assert.ok(methods.includes("getChainTip"));
 });
