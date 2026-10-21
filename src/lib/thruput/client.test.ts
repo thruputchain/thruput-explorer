@@ -55,8 +55,7 @@ test("the SDK's 10000ms RPC deadline remains active while reading a delayed body
     return response;
   });
 
-  const { transport } = await createExplorerThruputClient();
-  await assert.rejects(transport.request("groundhog_chainTip"), (error: unknown) => {
+  await assert.rejects(createExplorerThruputClient(), (error: unknown) => {
     assert.ok(error instanceof Error);
     assert.match(error.name, /^(AbortError|TimeoutError)$/);
     return true;

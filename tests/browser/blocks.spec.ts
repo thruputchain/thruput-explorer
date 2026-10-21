@@ -23,9 +23,8 @@ for (const width of [390, 1280]) {
     await expect(
       page.getByRole("link", { name: identifier(0xdd), exact: true }),
     ).toHaveAttribute("href", `/tx/${identifier(0xdd)}`);
-    await page.getByRole("button", { name: "Next page" }).click();
     await expect(page.getByRole("status")).toContainText(
-      "completeness is not verified",
+      "No further references returned.",
     );
     await expect(
       page.getByRole("button", { name: "Next page" }),

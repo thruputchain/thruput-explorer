@@ -3,7 +3,7 @@ import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
 import { isContractAddress, normalizeContractAddress } from "@/lib/validation";
 
-import { createExplorerThruputClient, getExplorerRpcConfig } from "./client";
+import { createExplorerThruputClient, getExplorerRpcConfig, historyPageLimit } from "./client";
 import { getNativeBalance, type NativeBalanceView } from "./native-balance";
 import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
@@ -79,17 +79,16 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
             .getEvents({
               filters: [
                 ERC20.v0_1.events.TransferEvent.filter({
-                  contractAddresses: [nativeTokenAddress],
+                  addresses: [nativeTokenAddress],
                   topics: { from: contractAddress },
                 }),
                 ERC20.v0_1.events.TransferEvent.filter({
-                  contractAddresses: [nativeTokenAddress],
+                  addresses: [nativeTokenAddress],
                   topics: { to: contractAddress },
                 }),
               ],
-              order: "descending",
-              anchor: "end",
-              limit: ADDRESS_EVENT_LIMIT,
+              start: { order: "descending", anchor: { kind: "atEnd" } },
+              limit: historyPageLimit(client, "events", ADDRESS_EVENT_LIMIT),
             })
             .then((page) => ({ events: page.events, error: undefined }))
             .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) }));
@@ -98,12 +97,12 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
       getNativeBalance(client, address),
       getTokenMetadata(client, address).catch(() => undefined),
       client
-        .getTransactionsByAddress({ address: contractAddress, order: "descending", anchor: "end", limit: ADDRESS_TX_LIMIT })
-        .then((page) => ({ refs: page.refs, error: undefined }))
+        .getTransactionsByRootAddress({ address: contractAddress, start: { order: "descending", anchor: { kind: "atEnd" } }, limit: historyPageLimit(client, "transactions", ADDRESS_TX_LIMIT) })
+        .then((page) => ({ refs: page.transactions, error: undefined }))
         .catch((error: unknown) => ({ refs: [], error: toRpcFailure(error) })),
       hogTransfersRequest,
       client
-        .getEvents({ filters: [{ contractAddresses: [contractAddress] }], order: "descending", anchor: "end", limit: ADDRESS_EVENT_LIMIT })
+        .getEvents({ filters: [{ addresses: [contractAddress] }], start: { order: "descending", anchor: { kind: "atEnd" } }, limit: historyPageLimit(client, "events", ADDRESS_EVENT_LIMIT) })
         .then((page) => ({ events: page.events, error: undefined }))
         .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) })),
     ]);
@@ -127,7 +126,7 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
       hogTransfers: hogTransfersResult.events.map((entry) => formatAddressEvent(entry, nativeTokenMetadata)),
       hogTransfersError: hogTransfersResult.error,
       contractEvents: contractEventsResult.events.map((entry) =>
-        formatAddressEvent(entry, toBase58(entry.event.contractAddress) === address ? metadata : undefined),
+        formatAddressEvent(entry, toBase58(entry.event.address) === address ? metadata : undefined),
       ),
       contractEventsError: contractEventsResult.error,
     };
@@ -137,18 +136,18 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
 }
 
 function mergeTransactionHistory(
-  rootTransactions: Array<{ txHash: Uint8Array; height: bigint }>,
+  rootTransactions: Array<{ transactionHash: Uint8Array; blockHeight: bigint }>,
   hogTransfers: IdentifiedEvent[],
 ): AddressTransactionRefView[] {
   const transactions = new Map<string, AddressTransactionRefView>();
 
   for (const transaction of rootTransactions) {
-    const txHash = toBase58(transaction.txHash);
-    transactions.set(txHash, { txHash, height: transaction.height.toString() });
+    const txHash = toBase58(transaction.transactionHash);
+    transactions.set(txHash, { txHash, height: transaction.blockHeight.toString() });
   }
 
   for (const transfer of hogTransfers) {
-    const txHash = toBase58(transfer.txHash);
+    const txHash = toBase58(transfer.transactionHash);
     transactions.set(txHash, { txHash, height: transfer.blockHeight.toString() });
   }
 
@@ -165,10 +164,10 @@ function formatAddressEvent(
   entry: IdentifiedEvent,
   metadata?: TokenMetadata,
 ): AddressEventView {
-  const eventContractAddress = toBase58(entry.event.contractAddress);
+  const eventContractAddress = toBase58(entry.event.address);
 
   return {
-    txHash: toBase58(entry.txHash),
+    txHash: toBase58(entry.transactionHash),
     blockHeight: entry.blockHeight.toString(),
     sequenceNumber: entry.sequenceNumber,
     contractAddress: eventContractAddress,

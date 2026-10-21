@@ -22,27 +22,27 @@ for (const populated of [false, true]) {
     const page: EventPage = {
       events: populated ? [
         {
-          txHash: hashFromBase58(identifier(0xab)), blockHeight: 9_007_199_254_740_993n, sequenceNumber: 19,
+          transactionHash: hashFromBase58(identifier(0xab)), blockHeight: 9_007_199_254_740_993n, sequenceNumber: 19,
           event: transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, amount: 9_007_199_254_740_993n }),
         },
         {
-          txHash: hashFromBase58(identifier(0xcd)), blockHeight: 42n, sequenceNumber: 18,
+          transactionHash: hashFromBase58(identifier(0xcd)), blockHeight: 42n, sequenceNumber: 18,
           event: { ...transferEvent({ contractAddress: NATIVE_HOG_ADDRESS }), data: new Uint8Array() },
         },
         {
-          txHash: hashFromBase58(identifier(0xef)), blockHeight: 41n, sequenceNumber: 17,
+          transactionHash: hashFromBase58(identifier(0xef)), blockHeight: 41n, sequenceNumber: 17,
           event: transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, from: zero, amount: 1n }),
         },
         {
-          txHash: hashFromBase58(identifier(0xde)), blockHeight: 40n, sequenceNumber: 16,
+          transactionHash: hashFromBase58(identifier(0xde)), blockHeight: 40n, sequenceNumber: 16,
           event: { ...transferEvent({ contractAddress: NATIVE_HOG_ADDRESS }), topics: [new Uint8Array(32)] },
         },
         {
-          txHash: hashFromBase58(identifier(0xfa)), blockHeight: 0n, sequenceNumber: 0,
+          transactionHash: hashFromBase58(identifier(0xfa)), blockHeight: 0n, sequenceNumber: 0,
           event: transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, to: zero, amount: 0n }),
         },
       ] : [],
-      cursor: new Uint8Array([1]), latestBlock: 9_007_199_254_740_993n, oldestBlock: 0n,
+      nextCursor: "0x01", latestIndexedBlockHeight: 9_007_199_254_740_993n, oldestIndexedBlockHeight: 0n,
     };
     const getEvents = t.mock.method(client, "getEvents", async () => page);
 
@@ -67,11 +67,10 @@ for (const populated of [false, true]) {
     assert.equal(getEvents.mock.callCount(), 1);
     assert.deepEqual(getEvents.mock.calls[0].arguments, [{
       filters: [{
-        contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)],
+        addresses: [addressFromBase58(NATIVE_HOG_ADDRESS)],
         topics: { topic0: [ERC20.v0_1.events.TransferEvent.signature] },
       }],
-      order: "descending",
-      anchor: "end",
+      start: { order: "descending", anchor: { kind: "atEnd" } },
       limit: 6,
     }]);
   });

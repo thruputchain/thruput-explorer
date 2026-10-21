@@ -1,36 +1,34 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
-import { HttpTransport, toBase58, toHex0x } from "@thruputchain/client";
-import { ExecResult } from "@thruputchain/protocol";
+import { HttpTransport, MockTransport, JsonRpcError, toBase58, toHex0x } from "@thruputchain/client";
 
 import { NATIVE_HOG_ADDRESS } from "./client";
 import { identifier, metadataBatchResponse, transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
 
-const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 const hash = identifier(0xab);
 const height = "9007199254740993";
 const chainTipHeight = "9007199254740994";
 const rawReceipt = {
-  txHash: hash,
-  height,
+  transactionHash: hash,
+  blockHeight: height,
   gasUsed: "1000",
-  status: { result: "ok" },
+  execution: { result: "return", returnData: "0x" },
   events: [],
-  returnData: null,
-  abortData: null,
 };
 
 function mockRpc(t: TestContext, overrides: Record<string, unknown> = {}) {
   const responses: Record<string, unknown> = {
-    groundhog_getTransactionStatus: { status: "committed", height },
-    groundhog_getTransactionReceipt: rawReceipt,
-    groundhog_chainTip: { height: chainTipHeight, blockHash: hash },
+    getTransactionStatus: { status: "committed", blockHeight: height },
+    getTransactionReceipt: rawReceipt,
+    getChainTip: { blockHeight: chainTipHeight, blockHash: hash },
     ...overrides,
   };
-  return t.mock.method(HttpTransport.prototype, "request", async (method: string, params?: unknown[]) => {
+  const discovery = new MockTransport();
+  return t.mock.method(HttpTransport.prototype, "request", async (method: string, params?: Record<string, unknown>) => {
+    assert.ok(!Array.isArray(params), "Native requests must use named parameters");
+    if (["getVersionInfo", "getNetworkInfo", "getServerLimits"].includes(method)) return discovery.request(method);
     assert.ok(Object.hasOwn(responses, method), `Unexpected RPC method: ${method}`);
     const response = responses[method];
     if (response instanceof Error) throw response;
@@ -41,8 +39,8 @@ function mockRpc(t: TestContext, overrides: Record<string, unknown> = {}) {
 for (const status of ["pending", "unknown"]) {
   test(`${status} transactions without a receipt retain their status and chain tip`, async (t) => {
     const request = mockRpc(t, {
-      groundhog_getTransactionStatus: { status },
-      groundhog_getTransactionReceipt: null,
+      getTransactionStatus: { status },
+      getTransactionReceipt: null,
     });
 
     const result = await loadTransactionPageData(hash);
@@ -50,11 +48,11 @@ for (const status of ["pending", "unknown"]) {
     assert.deepEqual(result.status, { status });
     assert.equal(result.receipt, null);
     assert.equal(result.chainTipHeight, chainTipHeight);
-    assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_viewBatch").length, 0);
+    assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "simulateInvocations").length, 0);
     assert.deepEqual(
-      request.mock.calls.filter(({ arguments: [method] }) => method !== "groundhog_chainTip")
+      request.mock.calls.filter(({ arguments: [method] }) => ["getTransactionStatus", "getTransactionReceipt"].includes(method))
         .map(({ arguments: [, params] }) => params),
-      [[hash], [hash]],
+      [{ transactionHash: hash }, { transactionHash: hash }],
     );
   });
 }
@@ -63,12 +61,12 @@ test("recentFailure converts the conflict bytes and attempt height without losin
   const address = identifier(0xcd);
   const key = "0x00deadbeef";
   mockRpc(t, {
-    groundhog_getTransactionStatus: {
+    getTransactionStatus: {
       status: "recentFailure",
-      attemptHeight: height,
+      attemptBlockHeight: height,
       cause: { kind: "dbConflict", conflict: { address, key, code: "valueMismatch" } },
     },
-    groundhog_getTransactionReceipt: null,
+    getTransactionReceipt: null,
   });
 
   const result = await loadTransactionPageData(hash);
@@ -81,15 +79,13 @@ test("recentFailure converts the conflict bytes and attempt height without losin
   assert.equal(result.chainTipHeight, chainTipHeight);
 });
 
-for (const execResult of ["reverted", "deterministicError", "nonDeterministicError", "failedGasSponsorship"]) {
-  test(`committed ${execResult} receipts retain return and abort data`, async (t) => {
+for (const outcome of ["return", "abort", "fault", "nonDeterministicError", "failedGasSponsorship", "other"]) {
+  test(`committed ${outcome} receipts retain execution and its payload`, async (t) => {
     const receipt = {
       ...rawReceipt,
-      status: execResult === "deterministicError" ? { result: execResult, kind: "fixtureFailure" } : { result: execResult },
-      returnData: "0x00abcd",
-      abortData: "0x00deadbeef",
+      execution: { result: outcome, ...(outcome === "return" ? { returnData: "0x00abcd" } : outcome === "abort" ? { abortData: "0x00deadbeef" } : {}) },
     };
-    mockRpc(t, { groundhog_getTransactionReceipt: receipt });
+    mockRpc(t, { getTransactionReceipt: receipt });
 
     const result = await loadTransactionPageData(hash);
     assert.deepEqual(result.status, { status: "committed", height });
@@ -98,79 +94,51 @@ for (const execResult of ["reverted", "deterministicError", "nonDeterministicErr
     assert.deepEqual(result.receipt, {
       txHash: hash,
       height,
-      execResult,
-      executionStatus: receipt.status,
+      execution: outcome,
       gasUsed: "1000",
-      returnData: receipt.returnData,
-      abortData: receipt.abortData,
+      returnData: outcome === "return" ? "0x00abcd" : null,
+      abortData: outcome === "abort" ? "0x00deadbeef" : null,
       events: [],
       rawJson: JSON.stringify(receipt, null, 2),
     });
   });
 }
 
-for (const [code, label] of [
-  [ExecResult.ExecResultTxValidationFailure, "validationFailure"],
-  [ExecResult.ExecResultSystemError, "systemError"],
-  [ExecResult.ExecResultUnrecoverable, "unrecoverable"],
-  [999, "unknown (999)"],
-] as const) {
-  test(`typed receipt execution code ${code} is displayed as ${label}`, async (t) => {
-    mockRpc(t);
-    // These numeric codes cannot be represented by the SDK's wire status parser.
-    t.mock.method(sdk, "getTransactionReceipt", async () => ({
-      txHash: new Uint8Array(32).fill(0xab),
-      height: BigInt(height),
-      execResult: code,
-      gasUsed: 1000n,
-      events: [],
-      returnData: null,
-      abortData: null,
-    }));
-
-    const result = await loadTransactionPageData(hash);
-    assert.deepEqual(result.status, { status: "committed", height });
-    assert.ok(result.receipt);
-    assert.equal(result.receipt.execResult, label);
-    assert.equal(result.receipt.returnData, null);
-    assert.equal(result.receipt.abortData, null);
-  });
-}
-
-test("one receipt response supplies both validated fields and exact raw JSON", async (t) => {
-  const receipt = { ...rawReceipt, futureField: { extra: "preserved" } };
-  const request = mockRpc(t, { groundhog_getTransactionReceipt: receipt });
+test("future execution variants retain commitment and exact raw evidence", async (t) => {
+  const receipt = { ...rawReceipt, execution: { result: "future", detail: 7 } };
+  mockRpc(t, { getTransactionReceipt: receipt });
   const result = await loadTransactionPageData(hash);
-  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_getTransactionReceipt").length, 1);
+  assert.deepEqual(result.status, { status: "committed", height });
+  assert.equal(result.receipt?.execution, "unsupported");
   assert.deepEqual(JSON.parse(result.receipt!.rawJson!), receipt);
 });
 
-test("malformed receipt data is rejected by the SDK validator", async (t) => {
-  mockRpc(t, { groundhog_getTransactionReceipt: { ...rawReceipt, events: "invalid" } });
+test("one receipt response supplies both validated fields and exact raw JSON", async (t) => {
+  const receipt = { ...rawReceipt, futureField: { extra: "preserved" } };
+  const request = mockRpc(t, { getTransactionReceipt: receipt });
   const result = await loadTransactionPageData(hash);
-  assert.equal(result.status.status, "unavailable");
-  assert.equal(result.receipt, null);
+  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "getTransactionReceipt").length, 1);
+  assert.deepEqual(JSON.parse(result.receipt!.rawJson!), receipt);
 });
 
-for (const method of ["groundhog_getTransactionStatus", "groundhog_getTransactionReceipt"]) {
-  test(`required ${method} rejection makes the transaction unavailable`, async (t) => {
-    let receiptRequests = 0;
+test("malformed receipt data retains independently observed commitment", async (t) => {
+  mockRpc(t, { getTransactionReceipt: { ...rawReceipt, events: "invalid" } });
+  const result = await loadTransactionPageData(hash);
+  assert.deepEqual(result.status, { status: "committed", height });
+  assert.equal(result.receipt, null);
+  assert.ok(result.receiptError);
+});
+
+for (const method of ["getTransactionStatus", "getTransactionReceipt"]) {
+  test(`${method} rejection preserves independent commitment evidence`, async (t) => {
     const error = new Error(`${method} unavailable`);
-    mockRpc(t, {
-      [method]: method === "groundhog_getTransactionReceipt"
-        ? () => {
-            // The one receipt request is required.
-            receiptRequests++;
-            throw error;
-          }
-        : error,
-    });
+    const request = mockRpc(t, { [method]: error });
 
     const result = await loadTransactionPageData(hash);
-    assert.deepEqual(result.status, { status: "unavailable", error: { message: error.message } });
-    assert.equal(result.receipt, null);
-    assert.equal(result.chainTipHeight, undefined);
-    if (method === "groundhog_getTransactionReceipt") assert.equal(receiptRequests, 1);
+    assert.deepEqual(result.status, { status: "committed", height });
+    assert.equal(result.receipt === null, method === "getTransactionReceipt");
+    assert.equal(result.chainTipHeight, chainTipHeight);
+    assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "getTransactionReceipt").length, 1);
   });
 }
 
@@ -182,20 +150,20 @@ test("core events load without metadata; enrichment queries each unique contract
     transferEvent({ contractAddress, from, to, amount: BigInt(index + 1) * 125n }),
   );
   const wireEvents = events.map((event) => ({
-    contractAddress: toBase58(event.contractAddress),
+    address: toBase58(event.address),
     topics: event.topics.map(toHex0x),
     data: toHex0x(event.data),
   }));
   const receipt = { ...rawReceipt, events: wireEvents };
   const metadataContracts: string[] = [];
   mockRpc(t, {
-    groundhog_getTransactionReceipt: receipt,
-    groundhog_viewBatch: (params: [{ calls: Array<{ contract: string }> }]) => {
-      const calls = params[0].calls;
+    getTransactionReceipt: receipt,
+    simulateInvocations: (params: { invocations: Array<{ address: string }> }) => {
+      const calls = params.invocations;
       assert.equal(calls.length, 3);
-      assert.ok(calls.every((call) => call.contract === calls[0].contract));
-      metadataContracts.push(calls[0].contract);
-      return metadataBatchResponse(calls[0].contract === contracts[0] ? ["First token", "ONE", 2n] : ["Second token", "TWO", 3n]);
+      assert.ok(calls.every((call) => call.address === calls[0].address));
+      metadataContracts.push(calls[0].address);
+      return metadataBatchResponse(calls[0].address === contracts[0] ? ["First token", "ONE", 2n] : ["Second token", "TWO", 3n]);
     },
   });
 
@@ -208,7 +176,7 @@ test("core events load without metadata; enrichment queries each unique contract
   const enrichedEvents = await result.loadEnrichedEvents!();
   assert.deepEqual(metadataContracts.sort(), contracts);
   assert.deepEqual(enrichedEvents, wireEvents.map((event, index) => ({
-    ...event,
+    contractAddress: event.address, topics: event.topics, data: event.data,
     contractName: index === 1 ? "Second token" : "First token",
     decoded: {
       kind: "token-transfer",
@@ -226,30 +194,30 @@ test("core events load without metadata; enrichment queries each unique contract
 
 test("native HOG events have canonical metadata without any view requests", async (t) => {
   const event = transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, from: identifier(0x11), to: identifier(0x22), amount: 10000000n });
-  const request = mockRpc(t, { groundhog_getTransactionReceipt: { ...rawReceipt, events: [{ contractAddress: NATIVE_HOG_ADDRESS, topics: event.topics.map(toHex0x), data: toHex0x(event.data) }] } });
+  const request = mockRpc(t, { getTransactionReceipt: { ...rawReceipt, events: [{ address: NATIVE_HOG_ADDRESS, topics: event.topics.map(toHex0x), data: toHex0x(event.data) }] } });
   const result = await loadTransactionPageData(hash);
   assert.equal(result.receipt!.events[0].contractName, "HOG");
   assert.equal(result.receipt!.events[0].decoded?.amount, "1");
   assert.equal(result.receipt!.events[0].decoded?.symbol, "HOG");
   assert.deepEqual(await result.loadEnrichedEvents!(), result.receipt!.events);
-  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "groundhog_view" || method === "groundhog_viewBatch").length, 0);
+  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "simulateInvocation" || method === "simulateInvocations").length, 0);
 });
 
 for (const decimals of [undefined, null, 31n, 0n]) {
   test(`custom-token enrichment handles ${decimals === undefined ? "unavailable" : decimals} decimals without guessing the scale`, async (t) => {
     const contractAddress = identifier(0x55);
     const event = transferEvent({ contractAddress, amount: 10000000n });
-    const wireEvent = { contractAddress, topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
+    const wireEvent = { address: contractAddress, topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
     const receipt = { ...rawReceipt, events: [wireEvent] };
     mockRpc(t, {
-      groundhog_getTransactionReceipt: receipt,
-      groundhog_viewBatch: metadataBatchResponse(["Custom token", "TOKEN", decimals]),
+      getTransactionReceipt: receipt,
+      simulateInvocations: metadataBatchResponse(["Custom token", "TOKEN", decimals]),
     });
 
     const result = await loadTransactionPageData(hash);
     const [enriched] = await result.loadEnrichedEvents!();
     assert.equal(enriched.contractName, "Custom token");
-    assert.equal(enriched.contractAddress, wireEvent.contractAddress);
+    assert.equal(enriched.contractAddress, wireEvent.address);
     assert.deepEqual(enriched.topics, wireEvent.topics);
     assert.equal(enriched.data, wireEvent.data);
     assert.deepEqual(JSON.parse(result.receipt!.rawJson!), receipt);
@@ -265,7 +233,7 @@ for (const decimals of [undefined, null, 31n, 0n]) {
 for (const status of ["retry", "dropped"] as const) {
   test(`${status} preserves the scheduler diagnostic without a receipt`, async (t) => {
     const error = { source: "scheduler", code: -7 };
-    mockRpc(t, { groundhog_getTransactionStatus: { status, error }, groundhog_getTransactionReceipt: null });
+    mockRpc(t, { getTransactionStatus: { status, error }, getTransactionReceipt: null });
     const result = await loadTransactionPageData(hash);
     assert.deepEqual(result.status, { status, error });
     assert.equal(result.receipt, null);
@@ -274,15 +242,55 @@ for (const status of ["retry", "dropped"] as const) {
 
 for (const cause of [{ kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" }, { kind: "other" }]) {
   test(`recent failure retains ${cause.kind} rather than inventing a storage conflict`, async (t) => {
-    mockRpc(t, { groundhog_getTransactionStatus: { status: "recentFailure", attemptHeight: height, cause }, groundhog_getTransactionReceipt: null });
+    mockRpc(t, { getTransactionStatus: { status: "recentFailure", attemptBlockHeight: height, cause }, getTransactionReceipt: null });
     const result = await loadTransactionPageData(hash);
     assert.deepEqual(result.status, { status: "recentFailure", attemptHeight: height, cause });
   });
 }
 
-test("known commitment without indexed height remains committed", async (t) => {
-  mockRpc(t, { groundhog_getTransactionStatus: { status: "committed" }, groundhog_getTransactionReceipt: null });
+test("known commitment without a receipt retains its block height", async (t) => {
+  mockRpc(t, { getTransactionStatus: { status: "committed", blockHeight: height }, getTransactionReceipt: null });
   const result = await loadTransactionPageData(hash);
   assert.equal(result.status.status, "committed");
   assert.equal(result.receipt, null);
+});
+
+for (const status of ["pending", "retry", "dropped"]) {
+  test(`${status} retains recent failure without replacing scheduler state`, async (t) => {
+    const cause = { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" };
+    mockRpc(t, { getTransactionStatus: { status, ...(status === "pending" ? {} : { error: { source: "scheduler", code: -7 } }), recentFailure: { attemptBlockHeight: height, cause } }, getTransactionReceipt: null });
+    const result = await loadTransactionPageData(hash);
+    assert.equal(result.status.status, status);
+    assert.ok("recentFailure" in result.status);
+    assert.deepEqual(result.status.recentFailure, { attemptHeight: height, cause });
+  });
+}
+
+test("unknown transaction status remains visible with raw evidence", async (t) => {
+  const status = { status: "future", diagnostic: "retained" };
+  mockRpc(t, { getTransactionStatus: status, getTransactionReceipt: null });
+  const result = await loadTransactionPageData(hash);
+  assert.deepEqual(result.status, { status: "unsupported", rawJson: JSON.stringify(status, null, 2) });
+});
+
+test("receipt error observation preserves commitment even when status is unavailable", async (t) => {
+  mockRpc(t, {
+    getTransactionStatus: new Error("Status unavailable"),
+    getTransactionReceipt: new JsonRpcError(-32054, "Invalid backend data", { kind: "backendDataInvalid", observation: { transactionHash: hash, blockHeight: height } }, "getTransactionReceipt"),
+  });
+  const result = await loadTransactionPageData(hash);
+  assert.deepEqual(result.status, { status: "committed", height });
+  assert.equal(result.receipt, null);
+  assert.ok(result.receiptError);
+});
+
+test("receipt errors cannot establish commitment for a different transaction", async (t) => {
+  mockRpc(t, {
+    getTransactionStatus: { status: "unknown" },
+    getTransactionReceipt: new JsonRpcError(-32054, "Invalid backend data", { kind: "backendDataInvalid", observation: { transactionHash: identifier(1), blockHeight: height } }, "getTransactionReceipt"),
+  });
+  const result = await loadTransactionPageData(hash);
+  assert.equal(result.status.status, "unknown");
+  assert.equal(result.receipt, null);
+  assert.ok(result.receiptError);
 });

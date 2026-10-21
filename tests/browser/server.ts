@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
-import { toBase58, toHex0x } from "@thruputchain/client";
+import { MockTransport, fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
 import { HOG_ADDRESS } from "@thruputchain/protocol";
 
 import { identifier, transferEvent } from "../../src/lib/thruput/test-fixtures";
@@ -12,20 +12,20 @@ async function main() {
   const statusFixtures: Record<string, unknown> = {
     [identifier(0xa1)]: { status: "retry", error: { source: "scheduler", code: -7 } },
     [identifier(0xa2)]: { status: "dropped", error: { source: "auth", code: -3 } },
-    [identifier(0xa3)]: { status: "recentFailure", attemptHeight: "41", cause: { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" } },
-    [identifier(0xa4)]: { status: "committed" },
-    [identifier(0xa5)]: { status: "committed", height: "42" },
-    [identifier(0xa6)]: { status: "committed", height: "42" },
+    [identifier(0xa3)]: { status: "recentFailure", attemptBlockHeight: "41", cause: { kind: "contractRejected", contractIndex: 1, code: "memoryTooLarge" } },
+    [identifier(0xa4)]: { status: "committed", blockHeight: "42" },
+    [identifier(0xa5)]: { status: "committed", blockHeight: "42" },
+    [identifier(0xa6)]: { status: "committed", blockHeight: "42" },
   };
   const transfer = transferEvent({ contractAddress: toBase58(HOG_ADDRESS) });
   const event = {
-    contractAddress: toBase58(transfer.contractAddress),
+    address: toBase58(transfer.address),
     topics: transfer.topics.map(toHex0x),
     data: toHex0x(transfer.data),
   };
   const paginatedTxHash = identifier(0xdd);
   const slowTxHash = identifier(0xde);
-  const slowEvent = { ...event, contractAddress: identifier(0x55) };
+  const slowEvent = { ...event, address: identifier(0x55) };
   const addressActivityTxHash = identifier(0xdf);
   let releaseActivity = () => {};
   let activityGate = Promise.resolve();
@@ -35,6 +35,7 @@ async function main() {
   let pending = 0;
   let receiptRequests = 0;
   let released = true;
+  const discovery = new MockTransport();
   const rpc = createServer(async (request, response) => {
     try {
       if (request.url?.startsWith("/activity/")) {
@@ -66,8 +67,9 @@ async function main() {
       let body = "";
       for await (const chunk of request) body += chunk;
       const { id, method, params } = JSON.parse(body);
-      if (["groundhog_getBlockByNumber", "groundhog_getTransactionsByBlock"].includes(method)) {
-        const height = method === "groundhog_getBlockByNumber" ? params?.[0] : params?.[0]?.height;
+      if (!params || Array.isArray(params)) throw new Error("Expected native named parameters");
+      if (["getBlockByHeight", "getTransactionsByBlock"].includes(method)) {
+        const height = params.blockHeight;
         if (height === "43" || height === "45") {
           response.writeHead(200, { "content-type": "application/json" });
           response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: height === "45" ? -32601 : -32603, message: "Private upstream diagnostics" } }));
@@ -79,19 +81,22 @@ async function main() {
           return;
         }
       }
-      if (method === "groundhog_getTransactionStatus" && params?.[0] === identifier(0xee)) {
+      if (method === "getTransactionStatus" && params.transactionHash === identifier(0xee)) {
         response.writeHead(503).end("Fixture transaction RPC unavailable");
         return;
       }
-      if (method === "groundhog_getTransactionsByAddress" && params?.[0]?.address === identifier(0x44)) {
+      if (method === "getTransactionsByRootAddress" && params.address === identifier(0x44)) {
         response.writeHead(200, { "content-type": "application/json" });
         response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32601, message: "Fixture address history unavailable" } }));
         return;
       }
       let result: unknown;
       switch (method) {
-        case "groundhog_getBlockByNumber": {
-          const height = params[0];
+        case "getVersionInfo": case "getNetworkInfo": case "getServerLimits":
+          result = await discovery.request(method);
+          break;
+        case "getBlockByHeight": {
+          const height = params.blockHeight;
           result = ["40", "41", "42", "9007199254740993"].includes(height) ? {
             blockHeight: height, blockHash: identifier(0xbb), prevBlockHash: identifier(0xaa),
             protocol: 1, networkHash: identifier(0), proposer: identifier(0x11),
@@ -101,70 +106,75 @@ async function main() {
           } : null;
           break;
         }
-        case "groundhog_getTransactionsByBlock": {
-          const { height, cursor, limit, order } = params[0];
-          if (limit !== 50 || order !== "ascending") throw new Error("Unexpected block page parameters");
+        case "getTransactionsByBlock": {
+          const { blockHeight: height, cursor, limit, start } = params;
+          if (limit !== 50 || (cursor ? start !== undefined : start?.order !== "ascending")) throw new Error("Unexpected block page parameters");
           result = {
-            refs: height === "42" && cursor !== "0xbb" ? [{ txHash: cursor === "0x" ? txHash : paginatedTxHash, height }] : [],
-            cursor: height === "42" ? cursor === "0x" ? "0xaa" : cursor === "0xaa" ? "0xbb" : "0x" : "0x",
-            oldestBlock: "40", latestBlock: "9007199254740993",
+            transactions: height === "42" ? [{ transactionHash: cursor ? paginatedTxHash : txHash, blockHeight: height }] : [],
+            nextCursor: height === "42" && !cursor ? "0xaa" : null,
+            oldestIndexedBlockHeight: "40", latestIndexedBlockHeight: "9007199254740993",
           };
           break;
         }
-        case "groundhog_networkInfo":
-          result = { networkHash: identifier(0) };
+        case "getChainTip":
+          result = { blockHeight: "42", blockHash: identifier(0xbb) };
           break;
-        case "groundhog_chainTip":
-          result = { height: "42", blockHash: identifier(0xbb) };
+        case "getTransactionStatus":
+          result = statusFixtures[params.transactionHash] ?? ([txHash, paginatedTxHash, slowTxHash].includes(params.transactionHash)
+            ? { status: "committed", blockHeight: "42" }
+            : { status: params.transactionHash === identifier(0xcc) ? "pending" : "unknown" });
           break;
-        case "groundhog_getTransactionStatus":
-          result = statusFixtures[params?.[0]] ?? ([txHash, paginatedTxHash, slowTxHash].includes(params?.[0])
-            ? { status: "committed", height: "42" }
-            : { status: params?.[0] === identifier(0xcc) ? "pending" : "unknown" });
-          break;
-        case "groundhog_getTransactionReceipt":
-          if (params?.[0] === addressActivityTxHash) {
+        case "getTransactionReceipt":
+          if (params.transactionHash === addressActivityTxHash) {
             pendingActivity++;
             try { await activityGate; } finally { pendingActivity--; }
-            result = { txHash: addressActivityTxHash, height: "42", gasUsed: "1000", status: { result: "ok" }, events: [event], returnData: null, abortData: null };
+            result = { transactionHash: addressActivityTxHash, blockHeight: "42", gasUsed: "1000", execution: { result: "return", returnData: "0x" }, events: [event] };
             break;
           }
-          if ([identifier(0xa5), identifier(0xa6)].includes(params?.[0])) {
+          if ([identifier(0xa5), identifier(0xa6)].includes(params.transactionHash)) {
             result = {
-              txHash: params[0], height: "42", gasUsed: "9007199254740993", events: [], returnData: null, abortData: null,
-              status: params[0] === identifier(0xa5) ? { result: "reverted", message: "Transfer exceeds available balance" } : { result: "deterministicError", kind: "outOfGas" },
+              transactionHash: params.transactionHash, blockHeight: "42", gasUsed: "9007199254740993", events: [],
+              execution: params.transactionHash === identifier(0xa5) ? { result: "abort", abortData: "0xdeadbeef" } : { result: "fault" },
             };
             break;
           }
-          if (params?.[0] === slowTxHash) receiptRequests++;
-          result = [txHash, paginatedTxHash, slowTxHash].includes(params?.[0])
-            ? { txHash: params[0], height: "42", gasUsed: "1000", status: { result: "ok" }, events: [params[0] === slowTxHash ? slowEvent : event], returnData: null, abortData: null }
+          if (params.transactionHash === slowTxHash) receiptRequests++;
+          result = [txHash, paginatedTxHash, slowTxHash].includes(params.transactionHash)
+            ? { transactionHash: params.transactionHash, blockHeight: "42", gasUsed: "1000", execution: { result: "return", returnData: "0x" }, events: [params.transactionHash === slowTxHash ? slowEvent : event] }
             : null;
           break;
-        case "groundhog_getEvents":
+        case "getEvents": {
+          const filter = params.filters.find((filter: { addresses: string[] }) => filter.addresses.includes(event.address));
+          const matchingTransfer = transferEvent({
+            contractAddress: event.address,
+            from: filter?.topics?.topic1?.[0] ? toBase58(fromHex0x(filter.topics.topic1[0])) : undefined,
+            to: filter?.topics?.topic2?.[0] ? toBase58(fromHex0x(filter.topics.topic2[0])) : undefined,
+          });
+          const matchingEvent = { address: event.address, topics: matchingTransfer.topics.map(toHex0x), data: toHex0x(matchingTransfer.data) };
           result = {
-            events: !JSON.stringify(params).includes(toHex0x(new Uint8Array(32).fill(0x33))) && params?.[0]?.filters?.some((filter: { contractAddresses?: string[] }) => filter.contractAddresses?.includes(event.contractAddress))
-              ? [{ txHash, blockHeight: "42", sequenceNumber: 0, event }]
+            events: !JSON.stringify(params).includes(toHex0x(new Uint8Array(32).fill(0x33))) && filter
+              ? [{ transactionHash: txHash, blockHeight: "42", sequenceNumber: 0, event: matchingEvent }]
               : [],
-            cursor: "0x", latestBlock: "42", oldestBlock: "42",
+            nextCursor: null, latestIndexedBlockHeight: "42", oldestIndexedBlockHeight: "42",
           };
           break;
-        case "groundhog_getBalance":
-          result = { address: params?.[0], rawBalance: "25000000", height: "42" };
+        }
+        case "getBalance":
+          result = { address: params.address, rawBalance: "25000000", stateBlockHeight: "42" };
           break;
-        case "groundhog_getTransactionsByAddress":
-          result = { refs: params?.[0]?.address === identifier(0x66) ? [{ txHash: addressActivityTxHash, height: "42" }] : [], cursor: "0x", latestBlock: "42", oldestBlock: "42" };
+        case "getTransactionsByRootAddress":
+          result = { transactions: params.address === identifier(0x66) ? [{ transactionHash: addressActivityTxHash, blockHeight: "42" }] : [], nextCursor: null, latestIndexedBlockHeight: "42", oldestIndexedBlockHeight: "42" };
           break;
-        case "groundhog_viewBatch":
+        case "simulateInvocations":
           if (JSON.stringify(params).includes(identifier(0x55))) {
             pending++;
             try { await metadataGate; } finally { pending--; }
           }
-          result = { height: "42", results: params[0].calls.map(() => ({ output: { result: "fault" }, gasUsed: "1", events: [] })) };
+          result = { stateBlockHeight: "42", results: params.invocations.map(() => ({ output: { result: "fault" }, gasUsed: "1", events: [] })) };
           break;
         default:
           // Metadata errors exercise the application's fallback rendering.
-          if (method !== "groundhog_view") console.error(`Unexpected fixture RPC method: ${method}`);
+          console.error(`Unexpected fixture RPC method: ${method}`);
           response.writeHead(200, { "content-type": "application/json" });
           response.end(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32601, message: "Fixture method unavailable" } }));
           return;

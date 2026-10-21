@@ -19,7 +19,7 @@ test("transaction details render while optional metadata is still pending", asyn
     await page.getByRole("button", { name: "Toggle JSON" }).click();
     await expect(page.locator('pre[aria-label="Raw transaction receipt JSON"]')).toContainText(txHash);
     const receiptCode = page.locator('pre[aria-label="Raw transaction receipt JSON"]');
-    expect(JSON.parse(await receiptCode.innerText()).txHash).toBe(txHash);
+    expect(JSON.parse(await receiptCode.innerText()).transactionHash).toBe(txHash);
     const colors = await receiptCode.locator(".json-token").evaluateAll((tokens) =>
       [...new Set(tokens.filter((token) => token.textContent?.trim()).map((token) => getComputedStyle(token).color))],
     );

@@ -18,7 +18,7 @@ const hash = (id: number) => toBase58(new Uint8Array([...new Uint8Array(31), id]
 
 function event(id: number, blockHeight: bigint, options: Parameters<typeof transferEvent>[0] = {}): IdentifiedEvent {
   return {
-    txHash: hashFromBase58(hash(id)), blockHeight, sequenceNumber: id,
+    transactionHash: hashFromBase58(hash(id)), blockHeight, sequenceNumber: id,
     event: transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, from: peer, to: address, amount: 15_000_000n, ...options }),
   };
 }
@@ -26,7 +26,7 @@ function event(id: number, blockHeight: bigint, options: Parameters<typeof trans
 async function mockClient(t: TestContext) {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(sdk, "createThruputClient", async () => client);
-  t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, height: 42n }));
+  t.mock.method(client, "getBalance", async () => ({ rawBalance: 15_000_000n, stateBlockHeight: 42n }));
   t.mock.method(client, "readViews", async () => { throw new Error("Metadata unavailable"); });
   return client;
 }
@@ -35,11 +35,11 @@ test("address merges incoming and outgoing HOG history with roots and deduplicat
   const client = await mockClient(t);
   const incoming = event(2, 42n);
   const outgoing = event(3, 43n, { from: address, to: peer });
-  const repeated = { ...incoming, txHash: hashFromBase58(hash(2)), sequenceNumber: 4 };
+  const repeated = { ...incoming, transactionHash: hashFromBase58(hash(2)), sequenceNumber: 4 };
   const emitted = event(4, 44n, { contractAddress: address });
-  const roots = t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [
-    { txHash: hashFromBase58(hash(1)), height: 41n },
-    { txHash: hashFromBase58(hash(2)), height: 42n },
+  const roots = t.mock.method(client, "getTransactionsByRootAddress", async () => ({ transactions: [
+    { transactionHash: hashFromBase58(hash(1)), blockHeight: 41n },
+    { transactionHash: hashFromBase58(hash(2)), blockHeight: 42n },
   ] }));
   const events = t.mock.method(client, "getEvents", async (query: EventQuery) => ({
     events: query.filters.length === 2 ? [outgoing, incoming, repeated] : [emitted],
@@ -67,24 +67,24 @@ test("address merges incoming and outgoing HOG history with roots and deduplicat
   assert.equal(result.hogTransfersError, undefined);
   assert.equal(result.contractEventsError, undefined);
   assert.deepEqual(roots.mock.calls.map(({ arguments: args }) => args), [[{
-    address: addressFromBase58(address), order: "descending", anchor: "end", limit: 25,
+    address: addressFromBase58(address), start: { order: "descending", anchor: { kind: "atEnd" } }, limit: 25,
   }]]);
   assert.deepEqual(events.mock.calls.map(({ arguments: args }) => args[0]), [
     {
       filters: [
-        ERC20.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { from: addressFromBase58(address) } }),
-        ERC20.v0_1.events.TransferEvent.filter({ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { to: addressFromBase58(address) } }),
+        ERC20.v0_1.events.TransferEvent.filter({ addresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { from: addressFromBase58(address) } }),
+        ERC20.v0_1.events.TransferEvent.filter({ addresses: [addressFromBase58(NATIVE_HOG_ADDRESS)], topics: { to: addressFromBase58(address) } }),
       ],
-      order: "descending", anchor: "end", limit: 25,
+      start: { order: "descending", anchor: { kind: "atEnd" } }, limit: 25,
     },
-    { filters: [{ contractAddresses: [addressFromBase58(address)] }], order: "descending", anchor: "end", limit: 25 },
+    { filters: [{ addresses: [addressFromBase58(address)] }], start: { order: "descending", anchor: { kind: "atEnd" } }, limit: 25 },
   ]);
 });
 
 test("address orders adjacent heights beyond safe integers without rounding", async (t) => {
   const client = await mockClient(t);
-  t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [
-    { txHash: hashFromBase58(hash(1)), height: 9_007_199_254_740_992n },
+  t.mock.method(client, "getTransactionsByRootAddress", async () => ({ transactions: [
+    { transactionHash: hashFromBase58(hash(1)), blockHeight: 9_007_199_254_740_992n },
   ] }));
   t.mock.method(client, "getEvents", async (query: EventQuery) => ({
     events: query.filters.length === 2 ? [event(2, 9_007_199_254_740_993n)] : [],
@@ -100,8 +100,8 @@ test("address orders adjacent heights beyond safe integers without rounding", as
 
 test("address keeps the newest 25 transactions after combining and deduplicating both sources", async (t) => {
   const client = await mockClient(t);
-  t.mock.method(client, "getTransactionsByAddress", async () => ({
-    refs: Array.from({ length: 20 }, (_, i) => ({ txHash: hashFromBase58(hash(40 - i * 2)), height: BigInt(40 - i * 2) })),
+  t.mock.method(client, "getTransactionsByRootAddress", async () => ({
+    transactions: Array.from({ length: 20 }, (_, i) => ({ transactionHash: hashFromBase58(hash(40 - i * 2)), blockHeight: BigInt(40 - i * 2) })),
   }));
   t.mock.method(client, "getEvents", async (query: EventQuery) => ({
     events: query.filters.length === 2 ? [
@@ -127,9 +127,9 @@ for (const failure of ["roots", "hog", "both histories", "contract events", "bal
     if (failure === "balance") {
       t.mock.method(client, "getBalance", async () => { throw new Error("Balance unavailable"); });
     }
-    t.mock.method(client, "getTransactionsByAddress", async () => {
+    t.mock.method(client, "getTransactionsByRootAddress", async () => {
       if (rootsFail) throw new Error("Root history unavailable");
-      return { refs: [{ txHash: hashFromBase58(hash(1)), height: 41n }] };
+      return { transactions: [{ transactionHash: hashFromBase58(hash(1)), blockHeight: 41n }] };
     });
     t.mock.method(client, "getEvents", async (query: EventQuery) => {
       if (query.filters.length === 2) {
@@ -159,14 +159,14 @@ for (const failure of ["roots", "hog", "both histories", "contract events", "bal
 
 test("native HOG address queries only its contract events, not holder transfers", async (t) => {
   const client = await mockClient(t);
-  t.mock.method(client, "getTransactionsByAddress", async () => ({ refs: [{ txHash: hashFromBase58(hash(1)), height: 41n }] }));
+  t.mock.method(client, "getTransactionsByRootAddress", async () => ({ transactions: [{ transactionHash: hashFromBase58(hash(1)), blockHeight: 41n }] }));
   const events = t.mock.method(client, "getEvents", async () => ({ events: [event(2, 42n)] }));
 
   const result = await loadAddressPageData(NATIVE_HOG_ADDRESS);
   assert.equal(result.status, "ok");
   if (result.status !== "ok") assert.fail("Expected HOG address data");
   assert.deepEqual(events.mock.calls.map(({ arguments: args }) => args), [[{
-    filters: [{ contractAddresses: [addressFromBase58(NATIVE_HOG_ADDRESS)] }], order: "descending", anchor: "end", limit: 25,
+    filters: [{ addresses: [addressFromBase58(NATIVE_HOG_ADDRESS)] }], start: { order: "descending", anchor: { kind: "atEnd" } }, limit: 25,
   }]]);
   assert.deepEqual(result.transactions, [{ txHash: hash(1), height: "41" }]);
   assert.deepEqual(result.hogTransfers, []);
