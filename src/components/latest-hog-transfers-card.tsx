@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { BlockLink } from "@/components/block-link";
+import { shortenIdentifier } from "@/lib/format";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { loadLatestHogTransfers } from "@/lib/thruput/latest-hog-transfers";
 
@@ -13,8 +14,7 @@ export async function LatestHogTransfersCard() {
     <section className="w-full">
       <Card>
         <CardHeader>
-          <CardTitle>Latest HOG Transfers</CardTitle>
-          <CardDescription>Recent transfers emitted by the native HOG contract.</CardDescription>
+          <CardTitle>Latest Token Transfers</CardTitle>
           <CardAction>
             <Button asChild variant="outline" size="sm">
               <Link href={`/address/${data.nativeTokenAddress}`}>View all</Link>
@@ -23,9 +23,9 @@ export async function LatestHogTransfersCard() {
         </CardHeader>
         <CardContent>
           {data.status === "unavailable" ? (
-            <p className="text-sm text-muted-foreground">HOG transfer history is temporarily unavailable.</p>
+            <p className="text-sm text-muted-foreground">Token transfer history is temporarily unavailable.</p>
           ) : data.transfers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent HOG transfers found.</p>
+            <p className="text-sm text-muted-foreground">No recent token transfers found.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -41,8 +41,8 @@ export async function LatestHogTransfersCard() {
                 {data.transfers.map((transfer) => (
                   <TableRow key={`${transfer.txHash}-${transfer.sequenceNumber}`}>
                     <TableCell>
-                      <Link className="font-mono underline underline-offset-4" href={`/tx/${transfer.txHash}`} title={transfer.txHash}>
-                        {shortenValue(transfer.txHash)}
+                      <Link className="font-mono underline-offset-4 hover:underline" href={`/tx/${transfer.txHash}`} title={transfer.txHash}>
+                        {shortenIdentifier(transfer.txHash)}
                       </Link>
                     </TableCell>
                     <TableCell><BlockLink height={transfer.blockHeight} /></TableCell>
@@ -65,9 +65,9 @@ export function LatestHogTransfersFallback() {
     <section className="w-full" aria-busy="true">
       <Card>
         <CardHeader>
-          <CardTitle>Latest HOG Transfers</CardTitle>
-          <CardDescription>Loading recent transfers...</CardDescription>
+          <CardTitle>Latest Token Transfers</CardTitle>
         </CardHeader>
+        <CardContent><p role="status" className="text-sm text-muted-foreground">Loading recent transfers...</p></CardContent>
       </Card>
     </section>
   );
@@ -75,14 +75,10 @@ export function LatestHogTransfersFallback() {
 
 function AddressLink({ value, fallback }: { value?: string; fallback: string }) {
   return value ? (
-    <Link className="font-mono underline underline-offset-4" href={`/address/${value}`} title={value}>
-      {shortenValue(value)}
+    <Link className="font-mono underline-offset-4 hover:underline" href={`/address/${value}`} title={value}>
+      {shortenIdentifier(value)}
     </Link>
   ) : (
     <span className="text-muted-foreground">{fallback}</span>
   );
-}
-
-function shortenValue(value: string) {
-  return value.length <= 18 ? value : `${value.slice(0, 8)}...${value.slice(-6)}`;
 }

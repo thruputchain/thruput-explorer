@@ -38,7 +38,6 @@ export default async function BlockPage({
   return (
     <main>
       <PageHeader
-        eyebrow="Committed block"
         title={`Block ${height}`}
         value={toBase58(block.blockHash)}
         copyLabel="Copy block hash"

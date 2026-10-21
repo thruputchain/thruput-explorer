@@ -30,7 +30,7 @@ for (const width of [390, 1280]) {
     await expect(
       page.getByRole("button", { name: "Next page" }),
     ).toBeDisabled();
-    await page.getByRole("link", { name: "Start fresh" }).click();
+    await page.getByRole("link", { name: "Reload transactions" }).click();
     await expect(page.getByRole("button", { name: "Next page" })).toBeEnabled();
     expect(
       await page.evaluate(

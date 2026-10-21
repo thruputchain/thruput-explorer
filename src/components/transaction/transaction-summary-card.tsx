@@ -2,7 +2,7 @@ import { BlockLink } from "@/components/block-link";
 import { FieldRow } from "./field-row";
 
 import { StatusBadge } from "@/components/status-badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatFreshness } from "@/lib/thruput/format";
 import type { TransactionPageData } from "@/lib/thruput/types";
 
@@ -14,7 +14,6 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
     <Card>
       <CardHeader>
         <CardTitle>Summary</CardTitle>
-        <CardDescription>Current public RPC view of this transaction.</CardDescription>
       </CardHeader>
       <CardContent>
         <dl>
@@ -34,7 +33,6 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
               <span className="break-all font-mono">{detail.value}</span>
             </FieldRow>
           ))}
-          <FieldRow label="Chain tip">{data.chainTipHeight ? <BlockLink height={data.chainTipHeight} /> : "Unavailable"}</FieldRow>
           <FieldRow label="Freshness">{freshness ?? "-"}</FieldRow>
           <FieldRow label="Receipt">{data.receipt ? "Available" : "Not available"}</FieldRow>
           <FieldRow label="RPC URL"><span className="font-mono">{data.rpcUrl}</span></FieldRow>
