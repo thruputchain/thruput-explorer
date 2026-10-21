@@ -56,10 +56,10 @@ test("wallet-side revocation clears the shortcut", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Connect wallet", exact: true })).toBeEnabled();
 });
 
-test("missing and rejected wallets leave a retryable connection", async ({ page }) => {
+test("missing wallets disable connection and rejected wallets allow retry", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Connect wallet", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "No Thruput wallet found" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect wallet", exact: true })).toBeDisabled();
+  await expect(page.getByRole("alert").filter({ hasText: "No Thruput wallet found" })).toHaveCount(0);
   await installWallet(page, true);
   await page.reload();
   await page.getByRole("button", { name: "Connect wallet", exact: true }).click();

@@ -38,7 +38,7 @@ export function WalletMenu() {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button variant="outline" disabled={wallet.busy} onClick={() => void wallet.connect(wallet.providers[0])}>
+        <Button variant="outline" disabled={wallet.busy || wallet.providers.length === 0} onClick={() => void wallet.connect(wallet.providers[0])}>
           <WalletIcon data-icon="inline-start" />{wallet.busy ? "Please wait…" : "Connect wallet"}
         </Button>
       )}
