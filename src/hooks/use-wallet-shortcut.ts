@@ -26,11 +26,7 @@ export function useWalletShortcut() {
   }, []);
 
   async function connect(provider?: WalletProvider) {
-    if (pending.current) return;
-    if (!provider) {
-      setError("No Thruput wallet found. Open your wallet extension, then try again.");
-      return;
-    }
+    if (pending.current || !provider) return;
     pending.current = true;
     setBusy(true);
     setError(null);

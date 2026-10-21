@@ -6,7 +6,7 @@ import { FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { isBlockHeight, isTransactionHash, normalizeTransactionHash } from "@/lib/validation";
 
 type SearchResponse =
@@ -51,31 +51,37 @@ export function SearchHero() {
   }
 
   return (
-    <section className="flex max-w-2xl flex-col gap-6">
-      <p className="text-lg text-muted-foreground">Search blocks, transactions, contracts, and addresses on Thruput.</p>
+    <section className="mx-auto flex max-w-2xl flex-col gap-6">
+      <h1 className="text-center text-3xl leading-tight tracking-tight text-foreground sm:text-4xl">
+        Search <span className="text-primary">blocks</span>, <span className="text-primary">transactions</span>, <span className="text-primary">contracts</span>, and <span className="text-primary">addresses</span> on Thruput.
+      </h1>
 
       <form onSubmit={submit} aria-label="Explorer search">
-        <FieldGroup className="gap-3 sm:flex-row sm:items-start">
+        <FieldGroup>
           <Field className="flex-1" data-invalid={Boolean(error)}>
             <FieldLabel htmlFor="explorer-search" className="sr-only">Block height, transaction hash or address</FieldLabel>
-            <Input
-              id="explorer-search"
-              name="query"
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? "search-error" : undefined}
-              value={hash}
-              onChange={(event) => setHash(event.target.value)}
-              placeholder="Block height, transaction hash or address"
-            />
+            <InputGroup>
+              <InputGroupInput
+                id="explorer-search"
+                name="query"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "search-error" : undefined}
+                value={hash}
+                onChange={(event) => setHash(event.target.value)}
+                placeholder="Block height, transaction hash or address"
+              />
+              <InputGroupAddon>
+                <Button type="submit" variant="outline" size="lg" className="h-10" disabled={isPending} aria-busy={isPending}>
+                  <SearchIcon data-icon="inline-start" />
+                  Search
+                </Button>
+              </InputGroupAddon>
+            </InputGroup>
             {error ? <FieldError id="search-error">{error}</FieldError> : null}
           </Field>
-          <Button type="submit" size="lg" disabled={isPending} aria-busy={isPending}>
-            <SearchIcon data-icon="inline-start" />
-            Search
-          </Button>
         </FieldGroup>
       </form>
     </section>

@@ -23,6 +23,8 @@
   --accent: #433b10;
   --accent-foreground: var(--foreground);
   --success: #30a46c;
+  --transfer: #71b7ff;
+  --burn: #c4a0ff;
   --destructive: #ef6b6b;
   --border: #2c2c2c;
   --input: #737373;
@@ -36,6 +38,8 @@
   --font-heading: "Inter Variable", sans-serif;
   --color-signal: var(--signal);
   --color-success: var(--success);
+  --color-transfer: var(--transfer);
+  --color-burn: var(--burn);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -77,6 +81,8 @@
     --muted-foreground: #626262;
     --accent: #fff3b3;
     --success: #18794e;
+    --transfer: #175cb5;
+    --burn: #7440b5;
     --destructive: #b42318;
     --border: #d6d6d0;
     --input: #858585;
@@ -90,6 +96,7 @@
   body { @apply bg-background text-foreground; }
   h1, h2, h3, h4, h5, h6 { @apply font-heading font-medium text-balance; }
   p { @apply text-pretty; }
+  a { @apply text-primary; }
   ::selection { @apply bg-signal text-primary-foreground; }
   a:focus-visible, summary:focus-visible { @apply rounded-md outline-2 outline-offset-4 outline-ring; }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
@@ -101,6 +108,20 @@
 
 @utility app-page-title {
   @apply font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl;
+}
+
+@utility app-activity-row {
+  @apply min-h-18 py-3;
+}
+
+.json-token {
+  color: var(--shiki-dark);
+}
+
+@media (prefers-color-scheme: light) {
+  .json-token {
+    color: var(--shiki-light);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

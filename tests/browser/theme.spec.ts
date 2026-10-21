@@ -14,8 +14,8 @@ test("Stellar branding follows system changes with bundled fonts and readable ac
     await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.currentSrc)).toContain(theme === "dark" ? "/brand/stellar-dark.svg" : "/brand/stellar.svg");
     await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const search = page.getByRole("button", { name: "Search", exact: true });
-    await expect(search).toHaveCSS("background-color", "rgb(253, 218, 36)");
-    await expect(search).toHaveCSS("color", "rgb(10, 10, 10)");
+    await expect(search).toHaveCSS("background-color", theme === "dark" ? "rgb(17, 17, 17)" : "rgb(238, 238, 234)");
+    await expect(search).toHaveCSS("color", theme === "dark" ? "rgb(245, 245, 240)" : "rgb(10, 10, 10)");
     await page.getByRole("textbox").focus();
     await page.keyboard.press("Tab");
     await expect(search).toBeFocused();
@@ -37,7 +37,7 @@ test("Stellar branding follows system changes with bundled fonts and readable ac
 test("Radix tabs and receipt disclosure support keyboard navigation", async ({ page, context }) => {
   await page.goto(`/address/${address}`);
   const transactions = page.getByRole("tab", { name: "Transactions", exact: true });
-  const transfers = page.getByRole("tab", { name: "HOG Transfers", exact: true });
+  const transfers = page.getByRole("tab", { name: "Token Transfers", exact: true });
   await transactions.focus();
   await page.keyboard.press("ArrowRight");
   await expect(transfers).toBeFocused();
@@ -45,7 +45,7 @@ test("Radix tabs and receipt disclosure support keyboard navigation", async ({ p
   await expect(page.getByRole("tabpanel")).toContainText("1.5 HOG");
   await page.keyboard.press("ArrowLeft");
   await expect(transactions).toHaveAttribute("aria-selected", "true");
-  await page.locator(`a[href="/tx/${txHash}"]`).click();
+  await page.getByRole("tabpanel", { name: "Transactions", exact: true }).locator(`a[href="/tx/${txHash}"]:visible`).click();
   await expect(page).toHaveURL(`/tx/${txHash}`);
 
   const toggle = page.getByRole("button", { name: "Toggle JSON" });
@@ -80,8 +80,8 @@ for (const width of [320, 390, 768, 1440]) {
     ]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Thruput Explorer homepage" })).toBeVisible();
-      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(name === "home" ? 0 : 1);
-      if (name === "home") await expect(page.getByRole("tabpanel", { name: "Recent blocks" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      if (name === "home") await expect(page.getByRole("region", { name: "Recent blocks", exact: true })).toBeVisible();
       if (name === "transaction") await page.getByRole("button", { name: "Toggle JSON" }).click();
       await page.evaluate(() => document.fonts.ready);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
