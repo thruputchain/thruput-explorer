@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { createThruputClient, MockTransport, hashFromBase58 } from "@thruputchain/client";
-import { loadRecentActivityBlocks, loadRecentActivityTransactions, readActivityBlock } from "./recent-activity";
+import { ACTIVITY_BLOCK_PAGE_LIMIT, ACTIVITY_SCAN_BLOCK_LIMIT, loadRecentActivityBlocks, loadRecentActivityTransactions, readActivityBlock } from "./recent-activity";
 import { identifier, transferEvent } from "./test-fixtures";
 import { NATIVE_HOG_ADDRESS } from "./client";
 
@@ -65,4 +65,42 @@ test("receipt failures retain transaction links and decoded transfers retain exa
   assert.equal(feed.transactions[1].hash, identifier(2));
   assert.equal(feed.transactions[1].result, null);
   assert.equal(JSON.stringify(feed).includes("private"), false);
+});
+
+test("quiet chains stop at the scan window without fetching empty-block metadata", async (t) => {
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createThruputClient", async () => client);
+  t.mock.method(client, "getChainTip", async () => ({ height: 10000n }));
+  const metadata = t.mock.method(client, "getBlockByNumber", async () => null);
+  const pages = t.mock.method(client, "getTransactionsByBlock", async () => ({ refs: [], cursor: new Uint8Array(), oldestBlock: 1n, latestBlock: 10000n }));
+  const feed = await loadRecentActivityTransactions();
+  assert.equal(feed.limited, true);
+  assert.equal(feed.unavailable, false);
+  assert.equal(feed.transactions.length, 0);
+  assert.equal(pages.mock.callCount(), ACTIVITY_SCAN_BLOCK_LIMIT + 1);
+  assert.equal(metadata.mock.callCount(), 0);
+});
+
+test("busy-block preview reads one page and block counts stop at their page budget", async (t) => {
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(sdk, "createThruputClient", async () => client);
+  t.mock.method(client, "getChainTip", async () => ({ height: 1n }));
+  t.mock.method(client, "getBlockByNumber", async () => null);
+  t.mock.method(client, "getTransactionReceipt", async () => null);
+  const pages = t.mock.method(client, "getTransactionsByBlock", async ({ cursor }: { cursor: Uint8Array }) => {
+    const page = cursor[0] ?? 0;
+    return {
+      refs: Array.from({ length: 50 }, (_, index) => ({ txHash: hashFromBase58(identifier(page * 50 + index + 1)), height: 1n })),
+      cursor: new Uint8Array([page + 1]), oldestBlock: 1n, latestBlock: 1n,
+    };
+  });
+  const feed = await loadRecentActivityTransactions();
+  assert.equal(feed.transactions.length, 10);
+  assert.equal(feed.limited, false);
+  assert.equal(pages.mock.callCount(), 2); // Coverage probe plus preview page.
+  const beforeCount = pages.mock.callCount();
+  const block = await readActivityBlock("1");
+  assert.equal(pages.mock.callCount() - beforeCount, ACTIVITY_BLOCK_PAGE_LIMIT);
+  assert.equal(block.hashes.length, 200);
+  assert.equal(block.complete, false);
 });

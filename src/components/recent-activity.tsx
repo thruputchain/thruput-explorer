@@ -44,7 +44,7 @@ export async function RecentActivityBlocks() {
                 <dt className="text-muted-foreground">Proposer:</dt>
                 <dd className="flex min-w-0">{block.proposer ? <IdentifierLink value={block.proposer} /> : <span className="text-muted-foreground">Unavailable</span>}</dd>
                 <dt className="text-muted-foreground">Transactions:</dt>
-                <dd className="text-right"><Link href={`/block/${block.height}/transactions`} aria-label={`${block.hashes.length} ${block.hashes.length === 1 ? "transaction" : "transactions"} →`} className="font-mono tabular-nums hover:underline hover:underline-offset-4">{block.hashes.length}</Link></dd>
+                <dd className="text-right"><Link href={`/block/${block.height}/transactions`} aria-label={`${block.complete ? "" : "At least "}${block.hashes.length} ${block.hashes.length === 1 ? "transaction" : "transactions"} →`} className="font-mono tabular-nums hover:underline hover:underline-offset-4">{block.hashes.length}{block.complete ? "" : "+"}</Link></dd>
               </dl>
             </div>
           </li>
@@ -56,13 +56,13 @@ export async function RecentActivityBlocks() {
 }
 
 export async function RecentActivityTransactions() {
-  const { transactions, unavailable } = await loadRecentActivityTransactions();
+  const { transactions, unavailable, limited } = await loadRecentActivityTransactions();
   return (
     <ActivityCard title="Recent transactions">
       <ul className="divide-y">
         {transactions.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} />)}
       </ul>
-      {unavailable ? <p role="status">Some recent transactions are temporarily unavailable.</p> : transactions.length === 0 ? <p role="status">No transactions in the indexed blocks yet.</p> : null}
+      {unavailable ? <p role="status">Some recent transactions are temporarily unavailable.</p> : limited ? <p role="status" className="text-xs text-muted-foreground">Recent activity scan limit reached. Older transactions may be available.</p> : transactions.length === 0 ? <p role="status">No transactions in the indexed blocks yet.</p> : null}
     </ActivityCard>
   );
 }
