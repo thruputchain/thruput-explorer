@@ -110,6 +110,10 @@
   @apply font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl;
 }
 
+@utility app-activity-row {
+  @apply min-h-18 py-3;
+}
+
 .json-token {
   color: var(--shiki-dark);
 }

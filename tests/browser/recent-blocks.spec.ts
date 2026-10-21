@@ -22,9 +22,15 @@ for (const width of [320, 1280]) {
     const transactions = page.getByRole("region", { name: "Recent transactions", exact: true });
     await expect(transactions.getByRole("listitem")).toHaveCount(2);
     await expect(transactions.getByText("Transfer", { exact: true }).first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
     const blocksBox = await blocks.boundingBox();
     const transactionsBox = await transactions.boundingBox();
-    if (width === 1280) expect(blocksBox?.y).toBe(transactionsBox?.y);
+    if (width === 1280) {
+      expect(blocksBox?.y).toBe(transactionsBox?.y);
+      const blockRows = await blocks.getByRole("listitem").evaluateAll((rows) => rows.map((row) => ({ top: row.getBoundingClientRect().top, height: row.getBoundingClientRect().height })));
+      const transactionRows = await transactions.getByRole("listitem").evaluateAll((rows) => rows.map((row) => ({ top: row.getBoundingClientRect().top, height: row.getBoundingClientRect().height })));
+      expect(blockRows.slice(0, transactionRows.length)).toEqual(transactionRows);
+    }
     else expect(transactionsBox!.y).toBeGreaterThan(blocksBox!.y);
     expect(
       await page.evaluate(

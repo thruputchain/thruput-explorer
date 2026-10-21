@@ -31,7 +31,7 @@ export async function RecentActivityBlocks() {
     <ActivityCard title="Recent blocks">
       <ul className="divide-y">
         {blocks.map((block) => (
-          <li key={block.height} className="relative flex min-h-18 flex-col justify-center gap-0.5 py-4 pl-10 sm:pl-14">
+          <li key={block.height} className="app-activity-row relative flex flex-col justify-center gap-0.5 pl-10 sm:pl-14">
             <span aria-hidden="true" className="absolute left-0 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md bg-secondary text-muted-foreground sm:size-10">
               <BoxIcon className="size-4 sm:size-5" strokeWidth={1.5} />
             </span>
