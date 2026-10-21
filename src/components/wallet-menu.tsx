@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronDownIcon, LogOutIcon, WalletIcon } from "lucide-react";
 import { useWalletShortcut } from "@/hooks/use-wallet-shortcut";
+import { shortenIdentifier } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,7 +17,7 @@ export function WalletMenu() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" aria-label="Wallet menu">
               <WalletIcon data-icon="inline-start" />
-              {wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}
+              {shortenIdentifier(wallet.address)}
               <ChevronDownIcon data-icon="inline-end" />
             </Button>
           </DropdownMenuTrigger>

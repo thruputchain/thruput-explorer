@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BlockLink } from "@/components/block-link";
+import { shortenIdentifier } from "@/lib/format";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,7 @@ export async function LatestHogTransfersCard() {
                   <TableRow key={`${transfer.txHash}-${transfer.sequenceNumber}`}>
                     <TableCell>
                       <Link className="font-mono underline underline-offset-4" href={`/tx/${transfer.txHash}`} title={transfer.txHash}>
-                        {shortenValue(transfer.txHash)}
+                        {shortenIdentifier(transfer.txHash)}
                       </Link>
                     </TableCell>
                     <TableCell><BlockLink height={transfer.blockHeight} /></TableCell>
@@ -76,13 +77,9 @@ export function LatestHogTransfersFallback() {
 function AddressLink({ value, fallback }: { value?: string; fallback: string }) {
   return value ? (
     <Link className="font-mono underline underline-offset-4" href={`/address/${value}`} title={value}>
-      {shortenValue(value)}
+      {shortenIdentifier(value)}
     </Link>
   ) : (
     <span className="text-muted-foreground">{fallback}</span>
   );
-}
-
-function shortenValue(value: string) {
-  return value.length <= 18 ? value : `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
