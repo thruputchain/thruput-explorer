@@ -8,8 +8,8 @@ import { ERC20Metadata } from "@thruputchain/client/contracts";
 import { metadataBatchResponse } from "./test-fixtures";
 
 import { loadAddressPageData } from "./addresses";
-import { NATIVE_HOG_ADDRESS } from "./client";
-import { loadLatestHogTransfers } from "./latest-hog-transfers";
+import { NATIVE_TOKEN_ADDRESS } from "./client";
+import { loadLatestNativeTokenTransfers } from "./latest-native-token-transfers";
 import { getTokenMetadata } from "./token-metadata";
 import { loadTransactionPageData } from "./transactions";
 
@@ -33,13 +33,13 @@ for (const partial of [false, true]) {
     const result = await loadAddressPageData(hash);
     assert.equal(result.status, "ok");
     if (result.status !== "ok") assert.fail("Expected retained address data");
-    assert.deepEqual(result.nativeBalance, { rawBalance: "15000000", amount: "1.5", symbol: "HOG", height: "42" });
+    assert.deepEqual(result.nativeBalance, { rawBalance: "15000000", amount: "1.5", symbol: "native tokens", height: "42" });
     assert.deepEqual(result.transactions, [{ txHash: hash, height: "42" }]);
     assert.equal(result.transactionHistoryPartial, partial);
     assert.equal(result.transactionsError, undefined);
-    assert.deepEqual(result.hogTransfers, []);
+    assert.deepEqual(result.nativeTokenTransfers, []);
     assert.deepEqual(result.contractEvents, []);
-    assert.equal(result.hogTransfersError?.message, partial ? "Events unavailable" : undefined);
+    assert.equal(result.nativeTokenTransfersError?.message, partial ? "Events unavailable" : undefined);
     assert.equal(result.contractEventsError?.message, partial ? "Events unavailable" : undefined);
   });
 }
@@ -77,7 +77,7 @@ test("async client connection failures become unavailable for every loader", asy
     throw new Error("Unexpected RPC request after failed connection");
   });
 
-  const address = await loadAddressPageData(NATIVE_HOG_ADDRESS);
+  const address = await loadAddressPageData(NATIVE_TOKEN_ADDRESS);
   assert.equal(address.status, "unavailable");
   if (address.status !== "unavailable") assert.fail("Expected unavailable address");
   assert.equal(address.error.message, "Network handshake failed");
@@ -88,11 +88,11 @@ test("async client connection failures become unavailable for every loader", asy
   assert.equal(transaction.status.error.message, "Network handshake failed");
   assert.equal(transaction.receipt, null);
 
-  const latest = await loadLatestHogTransfers();
+  const latest = await loadLatestNativeTokenTransfers();
   assert.equal(latest.status, "unavailable");
   if (latest.status !== "unavailable") assert.fail("Expected unavailable feed");
   assert.equal(latest.error.message, "Network handshake failed");
-  assert.equal(latest.nativeTokenAddress, NATIVE_HOG_ADDRESS);
+  assert.equal(latest.nativeTokenAddress, NATIVE_TOKEN_ADDRESS);
   assert.equal(connect.mock.callCount(), 3);
   assert.equal(request.mock.callCount(), 0);
 });
@@ -117,20 +117,20 @@ test("latest feed reports RPC failure instead of an empty successful feed", asyn
     throw new Error("Events RPC unavailable");
   });
 
-  const result = await loadLatestHogTransfers();
+  const result = await loadLatestNativeTokenTransfers();
   assert.equal(result.status, "unavailable");
   if (result.status !== "unavailable") assert.fail("Expected unavailable feed");
   assert.equal(result.error.message, "Events RPC unavailable");
-  assert.equal(result.nativeTokenAddress, NATIVE_HOG_ADDRESS);
+  assert.equal(result.nativeTokenAddress, NATIVE_TOKEN_ADDRESS);
   assert.equal(request.mock.callCount(), 1);
 });
 
-test("unavailable metadata falls back for HOG but does not label other contracts HOG", async (t) => {
+test("unavailable metadata falls back for the native token but does not give other contracts native-token metadata", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
   const read = t.mock.method(client, "readViews", async () => { throw new Error("Metadata unavailable"); });
 
-  assert.deepEqual(await getTokenMetadata(client, NATIVE_HOG_ADDRESS), {
-    name: "HOG", symbol: "HOG", decimals: 7,
+  assert.deepEqual(await getTokenMetadata(client, NATIVE_TOKEN_ADDRESS), {
+    name: "Native token", symbol: "native tokens", decimals: 7,
   });
   assert.equal(read.mock.callCount(), 0);
   assert.equal(await getTokenMetadata(client, hash), undefined);

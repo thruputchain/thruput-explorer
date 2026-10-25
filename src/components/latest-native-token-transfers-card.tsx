@@ -5,10 +5,10 @@ import { shortenIdentifier } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { loadLatestHogTransfers } from "@/lib/thruput/latest-hog-transfers";
+import { loadLatestNativeTokenTransfers } from "@/lib/thruput/latest-native-token-transfers";
 
-export async function LatestHogTransfersCard() {
-  const data = await loadLatestHogTransfers();
+export async function LatestNativeTokenTransfersCard() {
+  const data = await loadLatestNativeTokenTransfers();
 
   return (
     <section className="w-full">
@@ -60,7 +60,7 @@ export async function LatestHogTransfersCard() {
   );
 }
 
-export function LatestHogTransfersFallback() {
+export function LatestNativeTokenTransfersFallback() {
   return (
     <section className="w-full" aria-busy="true">
       <Card>

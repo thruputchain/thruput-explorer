@@ -42,7 +42,7 @@ test("Radix tabs and receipt disclosure support keyboard navigation", async ({ p
   await page.keyboard.press("ArrowRight");
   await expect(transfers).toBeFocused();
   await expect(transfers).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("tabpanel")).toContainText("1.5 HOG");
+  await expect(page.getByRole("tabpanel")).toContainText("1.5 native tokens");
   await page.keyboard.press("ArrowLeft");
   await expect(transactions).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tabpanel", { name: "Transactions", exact: true }).locator(`a[href="/tx/${txHash}"]:visible`).click();
