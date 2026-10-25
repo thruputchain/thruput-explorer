@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { test, type TestContext } from "node:test";
 
 import { MockTransport, addressFromBase58, createThruputClient, hashFromBase58, toBase58, type EventQuery, type IdentifiedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
+import { thruput_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
 import { loadAddressPageData } from "./addresses";
 import { NATIVE_TOKEN_ADDRESS } from "./client";
