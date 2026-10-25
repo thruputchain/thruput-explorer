@@ -3,7 +3,7 @@ import { test, type TestContext } from "node:test";
 
 import { HttpTransport, MockTransport, JsonRpcError, toBase58, toHex0x } from "@thruputchain/client";
 
-import { NATIVE_HOG_ADDRESS } from "./client";
+import { NATIVE_TOKEN_ADDRESS } from "./client";
 import { identifier, metadataBatchResponse, transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
 
@@ -192,13 +192,13 @@ test("core events load without metadata; enrichment queries each unique contract
 });
 
 
-test("native HOG events have canonical metadata without any view requests", async (t) => {
-  const event = transferEvent({ contractAddress: NATIVE_HOG_ADDRESS, from: identifier(0x11), to: identifier(0x22), amount: 10000000n });
-  const request = mockRpc(t, { getTransactionReceipt: { ...rawReceipt, events: [{ address: NATIVE_HOG_ADDRESS, topics: event.topics.map(toHex0x), data: toHex0x(event.data) }] } });
+test("native token events have canonical metadata without any view requests", async (t) => {
+  const event = transferEvent({ contractAddress: NATIVE_TOKEN_ADDRESS, from: identifier(0x11), to: identifier(0x22), amount: 10000000n });
+  const request = mockRpc(t, { getTransactionReceipt: { ...rawReceipt, events: [{ address: NATIVE_TOKEN_ADDRESS, topics: event.topics.map(toHex0x), data: toHex0x(event.data) }] } });
   const result = await loadTransactionPageData(hash);
-  assert.equal(result.receipt!.events[0].contractName, "HOG");
+  assert.equal(result.receipt!.events[0].contractName, "Native token");
   assert.equal(result.receipt!.events[0].decoded?.amount, "1");
-  assert.equal(result.receipt!.events[0].decoded?.symbol, "HOG");
+  assert.equal(result.receipt!.events[0].decoded?.symbol, "native tokens");
   assert.deepEqual(await result.loadEnrichedEvents!(), result.receipt!.events);
   assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "simulateInvocation" || method === "simulateInvocations").length, 0);
 });

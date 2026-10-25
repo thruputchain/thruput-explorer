@@ -18,8 +18,8 @@ importers:
         specifier: 0.22.1
         version: 0.22.1
       '@thruputchain/protocol':
-        specifier: 0.18.0
-        version: 0.18.0
+        specifier: 0.19.0
+        version: 0.19.0
       bcryptjs:
         specifier: 3.0.3
         version: 3.0.3
@@ -1532,8 +1532,16 @@ packages:
     resolution: {integrity: sha512-EzH8erwQlULsM5JaDjj++hmokiNzbgBOvXRxFO7eA0qtbx9442wYxF77Z5DAzXliNYQqvr0NJrpiFbOyHRthlg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.18.0/8c155de27b2b8842d2a8fc61a0ce9f04d12efe46}
     engines: {node: '>=22.12.0'}
 
+  '@thruputchain/protocol@0.19.0':
+    resolution: {integrity: sha512-/aw+Qx0FNcpi+uy8JCVxQjJRmb3zHBxh4fpPwEgX8LvvHjfzThAVCsBH2sAH5fMhKwEOTOtAUcKnYFM4b4RMQg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.19.0/cfe0e4f89bf574876a69f7f14d7a6ff314aeddfa}
+    engines: {node: '>=22.12.0'}
+
   '@thruputchain/xdr@0.18.0':
     resolution: {integrity: sha512-dnqqP9+ByRyIahQdipxqri0+GM+MK6HMQFHEMtaqIUEKO8uKohB0Khuqd5iT7r1ScN7cpRe+UFsvSBfkmInklQ==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.18.0/20434cb9d01fbad218561008bc6b823c31ae8b3d}
+    engines: {node: '>=22.12.0'}
+
+  '@thruputchain/xdr@0.19.0':
+    resolution: {integrity: sha512-FuVfU2nRmkrh0/l7KApC6fa5XF/WC4AEYFdxTVyRNstxkYJl+MDOkbPNk5vwCRb7YUFymSQFXBys7BlPlgyr8A==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.19.0/301a4c5567a53204b6b23df45ae3ef818a550629}
     engines: {node: '>=22.12.0'}
 
   '@tybys/wasm-util@0.10.4':
@@ -4616,7 +4624,15 @@ snapshots:
       '@scure/base': 2.0.0
       '@thruputchain/xdr': 0.18.0
 
+  '@thruputchain/protocol@0.19.0':
+    dependencies:
+      '@noble/hashes': 2.2.0
+      '@scure/base': 2.0.0
+      '@thruputchain/xdr': 0.19.0
+
   '@thruputchain/xdr@0.18.0': {}
+
+  '@thruputchain/xdr@0.19.0': {}
 
   '@tybys/wasm-util@0.10.4':
     dependencies:

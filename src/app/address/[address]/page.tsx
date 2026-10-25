@@ -118,9 +118,9 @@ function AddressActivityTabs({
         />
       </TabsContent>
       <TabsContent value="transfers">
-        <HogTransfersCard
-          events={data.hogTransfers}
-          error={data.hogTransfersError}
+        <NativeTokenTransfersCard
+          events={data.nativeTokenTransfers}
+          error={data.nativeTokenTransfersError}
         />
       </TabsContent>
     </Tabs>
@@ -222,7 +222,7 @@ function TransactionHistoryFallback({ transactions }: { transactions: AddressTra
   </ul>;
 }
 
-function HogTransfersCard({
+function NativeTokenTransfersCard({
   events,
   error,
 }: {
