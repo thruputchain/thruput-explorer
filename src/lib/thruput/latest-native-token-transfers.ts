@@ -1,5 +1,5 @@
 import { addressFromBase58, toBase58 } from "@thruputchain/client";
-import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
+import { thruput_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 
 import { createExplorerThruputClient, getExplorerRpcConfig, historyPageLimit } from "./client";
 import { toRpcFailure } from "./rpc";

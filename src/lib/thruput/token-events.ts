@@ -15,9 +15,9 @@ export function decodeTokenEvent(
     return undefined;
   }
 
-  if (decoded?.name !== "TransferEvent") return undefined;
+  if (decoded?.name !== "TransferEvent" && decoded?.name !== "MintEvent") return undefined;
 
-  const from = toBase58(decoded.topics.from);
+  const from = decoded.name === "MintEvent" ? ZERO_CONTRACT_ADDRESS : toBase58(decoded.topics.from);
   const to = toBase58(decoded.topics.to);
   const rawAmount = decoded.fields.amount.toString();
   const decimals = metadata?.decimals ?? 0;

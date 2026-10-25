@@ -15,8 +15,8 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@thruputchain/client':
-        specifier: 0.22.1
-        version: 0.22.1
+        specifier: 0.24.0
+        version: 0.24.0
       '@thruputchain/protocol':
         specifier: 0.19.0
         version: 0.19.0
@@ -1520,24 +1520,16 @@ packages:
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
 
-  '@thruputchain/client@0.22.1':
-    resolution: {integrity: sha512-WWaXAhTVypi9niIlRpm6Lqj3TCNQh3B1cysZUoeri3rvn07hT80TBxbZ3mjS3uOIP1QXhU4szekp3CRdnfb/Vg==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.22.1/aca91e98078cac60ba445482a93b3a187f377393}
+  '@thruputchain/client@0.24.0':
+    resolution: {integrity: sha512-zGVq3r9Sx/Vx2f8gSRjgmBztelcUOUCVD6CyYfKjo7Y/DQyeqUX0i2EazYKI6cSH+es0WcK2G8pU9lhgkJjNjw==, tarball: https://npm.pkg.github.com/download/@thruputchain/client/0.24.0/f02c84b8ec98c465dfa72820c6641d5bc92dd08a}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/contract-spec@0.18.0':
-    resolution: {integrity: sha512-tnfrH6E89d+VmrEYpaPwpijjDDGKrqCEEG1n3kruSpeH5UNON9RxeRrlesRv9bCuXJFifFF3jYUdcAvepFzTLA==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.18.0/df0bd406f92c7d0892bcb1e4e45b8a4385a2941f}
-    engines: {node: '>=22.12.0'}
-
-  '@thruputchain/protocol@0.18.0':
-    resolution: {integrity: sha512-EzH8erwQlULsM5JaDjj++hmokiNzbgBOvXRxFO7eA0qtbx9442wYxF77Z5DAzXliNYQqvr0NJrpiFbOyHRthlg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.18.0/8c155de27b2b8842d2a8fc61a0ce9f04d12efe46}
+  '@thruputchain/contract-spec@0.19.0':
+    resolution: {integrity: sha512-gUy+lKHhZ4N5oJDw9ua/IDcyI5N3bQ7lJc4OL5GLwk/+RjiUBxdv7aygCo5INn+m+z706r6+nV+Pqip1f9nf7A==, tarball: https://npm.pkg.github.com/download/@thruputchain/contract-spec/0.19.0/bd5da3be4b8aee17ff680307cb6c2d68b58485b2}
     engines: {node: '>=22.12.0'}
 
   '@thruputchain/protocol@0.19.0':
     resolution: {integrity: sha512-/aw+Qx0FNcpi+uy8JCVxQjJRmb3zHBxh4fpPwEgX8LvvHjfzThAVCsBH2sAH5fMhKwEOTOtAUcKnYFM4b4RMQg==, tarball: https://npm.pkg.github.com/download/@thruputchain/protocol/0.19.0/cfe0e4f89bf574876a69f7f14d7a6ff314aeddfa}
-    engines: {node: '>=22.12.0'}
-
-  '@thruputchain/xdr@0.18.0':
-    resolution: {integrity: sha512-dnqqP9+ByRyIahQdipxqri0+GM+MK6HMQFHEMtaqIUEKO8uKohB0Khuqd5iT7r1ScN7cpRe+UFsvSBfkmInklQ==, tarball: https://npm.pkg.github.com/download/@thruputchain/xdr/0.18.0/20434cb9d01fbad218561008bc6b823c31ae8b3d}
     engines: {node: '>=22.12.0'}
 
   '@thruputchain/xdr@0.19.0':
@@ -4603,34 +4595,26 @@ snapshots:
       postcss: 8.5.31
       tailwindcss: 4.3.3
 
-  '@thruputchain/client@0.22.1':
+  '@thruputchain/client@0.24.0':
     dependencies:
       '@noble/ed25519': 3.2.0
       '@noble/hashes': 2.4.0
       '@noble/post-quantum': 0.7.1
       '@scure/base': 2.0.0
-      '@thruputchain/contract-spec': 0.18.0
-      '@thruputchain/protocol': 0.18.0
-      '@thruputchain/xdr': 0.18.0
+      '@thruputchain/contract-spec': 0.19.0
+      '@thruputchain/protocol': 0.19.0
+      '@thruputchain/xdr': 0.19.0
 
-  '@thruputchain/contract-spec@0.18.0':
+  '@thruputchain/contract-spec@0.19.0':
     dependencies:
-      '@thruputchain/protocol': 0.18.0
-      '@thruputchain/xdr': 0.18.0
-
-  '@thruputchain/protocol@0.18.0':
-    dependencies:
-      '@noble/hashes': 2.2.0
-      '@scure/base': 2.0.0
-      '@thruputchain/xdr': 0.18.0
+      '@thruputchain/protocol': 0.19.0
+      '@thruputchain/xdr': 0.19.0
 
   '@thruputchain/protocol@0.19.0':
     dependencies:
       '@noble/hashes': 2.2.0
       '@scure/base': 2.0.0
       '@thruputchain/xdr': 0.19.0
-
-  '@thruputchain/xdr@0.18.0': {}
 
   '@thruputchain/xdr@0.19.0': {}
 

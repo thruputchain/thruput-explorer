@@ -26,7 +26,9 @@ pnpm dev
 
 Open <http://localhost:3000>. Set `THRUPUT_RPC_URL` in `.env.local` to select a node; the default is `http://localhost:9545`. Restart the server after changing it. This replaces the old `GROUNDHOG_RPC_URL` setting; update existing deployment variables when upgrading.
 
-The explorer uses client **0.22.1**, protocol **0.19.0**, and RPC wire **14.0.0**. The SDK-qualified runtime is CLI/gateway **0.33.0** with public node **0.1.31-rc.11**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.11` in another terminal. The client checks the wire version and advertised methods when connecting. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
+The explorer uses client **0.24.0** and protocol **0.19.0**. It targets CLI/gateway **0.40.0**, public node **0.1.31-rc.16**, and RPC wire **14.1.1**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.16` in another terminal. The client checks the wire version and advertised methods when connecting. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
+
+For devnet, set `THRUPUT_RPC_URL=https://rpc.thruput.network`. Runtime rc.16 uses the renamed `thruput` contract event signatures. Older runtimes use different signatures and need the previous SDK bindings; RPC wire compatibility alone does not establish contract compatibility.
 
 ## Configuration and deployment
 

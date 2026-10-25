@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { addressFromBase58, type EmittedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if as ERC20, decodeERC20Event } from "@thruputchain/client/contracts";
+import { addressFromBase58, fromHex0x, type EmittedEvent } from "@thruputchain/client";
+import { thruput_erc20_if as ERC20, decodeERC20Event } from "@thruputchain/client/contracts";
 import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
 import { identifier, transferEvent } from "./test-fixtures";
@@ -11,6 +11,24 @@ import { decodeTokenEvent } from "./token-events";
 const from = identifier(0x11);
 const to = identifier(0x22);
 const zero = identifier(0);
+
+test("decodes a captured rc.16 HOG transfer with the renamed event signature", () => {
+  const event = {
+    address: addressFromBase58("11111111111111111111111111111112"),
+    topics: [
+      fromHex0x("0x5229153abd7aabc422c9e2217845f087f3819787d3d72375155f4c65f2089cce"),
+      fromHex0x("0x4b7eb6695aa1ba97fab80572dd46b8700f93ddccb37110d8b78d8afb068281c0"),
+      fromHex0x("0x45e5e56dfe661e3053e7db611139b31dc613641815a93a3953a7d7f5c664f9f0"),
+    ],
+    data: fromHex0x("0x00bfa0252600"),
+  };
+  assert.deepEqual(decodeTokenEvent(event, { symbol: "HOG", decimals: 7 }), {
+    kind: "token-transfer", name: "Transfer",
+    from: "65heGY5ieMdVsAVAuMwigCEmr231icK1pvQtwjbteZj5",
+    to: "5hrTFGqauBAW6B6tvUoB1zMY85aecG2BjdgeHB88paWK",
+    rawAmount: "2500000", amount: "0.25", symbol: "HOG",
+  });
+});
 
 test("shared fixture encodes a real ERC20 TransferEvent with deterministic defaults and overrides", () => {
   const event = transferEvent();
@@ -110,4 +128,13 @@ test("ignores a valid ERC20 AllowanceChangeEvent", () => {
 
   assert.equal(decodeERC20Event(event)?.name, "AllowanceChangeEvent");
   assert.equal(decodeTokenEvent(event), undefined);
+});
+
+test("decodes the native SDK 0.56 MintEvent without a sender topic", () => {
+  const event = transferEvent({ to, amount: 12_500_000n });
+  event.topics = [ERC20.v0_1.events.MintEvent.signature, addressFromBase58(to)];
+  assert.deepEqual(decodeTokenEvent(event, { symbol: "TEST", decimals: 7 }), {
+    kind: "token-mint", name: "Mint", to,
+    rawAmount: "12500000", amount: "1.25", symbol: "TEST",
+  });
 });

@@ -62,7 +62,7 @@ export async function RecentActivityTransactions() {
       <ul className="divide-y">
         {transactions.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} />)}
       </ul>
-      {unavailable ? <p role="status">Some recent transactions are temporarily unavailable.</p> : limited ? <p role="status" className="text-xs text-muted-foreground">Recent activity scan limit reached. Older transactions may be available.</p> : transactions.length === 0 ? <p role="status">No transactions in the indexed blocks yet.</p> : null}
+      {unavailable ? <p role="status">Some recent transactions are temporarily unavailable.</p> : transactions.length > 0 ? null : limited ? <p role="status" className="text-xs text-muted-foreground">Recent activity scan limit reached. Older transactions may be available.</p> : <p role="status">No transactions in the indexed blocks yet.</p>}
     </ActivityCard>
   );
 }

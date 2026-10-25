@@ -1,5 +1,5 @@
 import { addressFromBase58, toBase58, toHex0x, type EmittedEvent } from "@thruputchain/client";
-import { groundhog_erc20_if as ERC20 } from "@thruputchain/client/contracts";
+import { thruput_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
 export function identifier(byte: number): string {
