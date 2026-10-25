@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PrivateKeySigner, toBase58 } from "@thruputchain/client";
+import { Ed25519Signer, toBase58 } from "@thruputchain/client";
 import { createPubkeyAccount } from "@thruputchain/client/wallet";
 import { identifier } from "../../src/lib/thruput/test-fixtures";
 
-const signer = new PrivateKeySigner(new Uint8Array(32).fill(1));
+const signer = Ed25519Signer.fromSeed(new Uint8Array(32).fill(1));
 const account = { address: toBase58(createPubkeyAccount({ signer, nonce: 7n }).address), publicKey: toBase58(signer.publicKey.ed25519), nonce: "7" };
 
 async function installWallet(page: Page, reject = false) {
