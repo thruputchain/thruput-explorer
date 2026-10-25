@@ -6,9 +6,9 @@ import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import type { RpcFailure } from "./types";
 
-const LATEST_HOG_TRANSFER_LIMIT = 6;
+const LATEST_NATIVE_TOKEN_TRANSFER_LIMIT = 6;
 
-export type LatestHogTransferView = {
+export type LatestNativeTokenTransferView = {
   txHash: string;
   blockHeight: string;
   sequenceNumber: number;
@@ -19,20 +19,20 @@ export type LatestHogTransferView = {
   symbol: string;
 };
 
-export type LatestHogTransfersData =
-  | { status: "ok"; nativeTokenAddress: string; transfers: LatestHogTransferView[] }
+export type LatestNativeTokenTransfersData =
+  | { status: "ok"; nativeTokenAddress: string; transfers: LatestNativeTokenTransferView[] }
   | { status: "unavailable"; nativeTokenAddress: string; error: RpcFailure };
 
-export async function loadLatestHogTransfers(): Promise<LatestHogTransfersData> {
+export async function loadLatestNativeTokenTransfers(): Promise<LatestNativeTokenTransfersData> {
   const { nativeToken } = getExplorerRpcConfig();
-  const metadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals };
+  const metadata = { name: nativeToken.name, symbol: nativeToken.symbol, decimals: nativeToken.decimals };
 
   try {
     const { client } = await createExplorerThruputClient();
     const page = await client.getEvents({
       filters: [ERC20.v0_1.events.TransferEvent.filter({ addresses: [addressFromBase58(nativeToken.address)] })],
       start: { order: "descending", anchor: { kind: "atEnd" } },
-      limit: historyPageLimit(client, "events", LATEST_HOG_TRANSFER_LIMIT),
+      limit: historyPageLimit(client, "events", LATEST_NATIVE_TOKEN_TRANSFER_LIMIT),
     });
 
     return {

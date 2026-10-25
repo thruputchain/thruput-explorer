@@ -1,15 +1,18 @@
 import { cache } from "react";
 import { HttpTransport, createThruputClient, toBase58, type ThruputClient, type Transport } from "@thruputchain/client";
-import { HOG_ADDRESS } from "@thruputchain/protocol";
+import { NATIVE_TOKEN_ADDRESS as NATIVE_TOKEN_CONTRACT_ADDRESS } from "@thruputchain/protocol";
 
 const DEFAULT_RPC_URL = "http://localhost:9545";
-export const NATIVE_HOG_ADDRESS = toBase58(HOG_ADDRESS);
+/** Base58 form of the protocol-defined native-token contract address. */
+export const NATIVE_TOKEN_ADDRESS = toBase58(NATIVE_TOKEN_CONTRACT_ADDRESS);
 
 export type ExplorerRpcConfig = {
   rpcUrl: string;
   nativeToken: {
     address: string;
-    symbol: "HOG";
+    name: "Native token";
+    // The native token has no ticker; amounts read "1.5 native tokens", as in the CLI.
+    symbol: "native tokens";
     decimals: 7;
   };
 };
@@ -30,8 +33,9 @@ export function getExplorerRpcConfig(): ExplorerRpcConfig {
   return {
     rpcUrl,
     nativeToken: {
-      address: NATIVE_HOG_ADDRESS,
-      symbol: "HOG",
+      address: NATIVE_TOKEN_ADDRESS,
+      name: "Native token",
+      symbol: "native tokens",
       decimals: 7,
     },
   };

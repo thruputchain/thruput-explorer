@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { MockTransport, fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
-import { HOG_ADDRESS } from "@thruputchain/protocol";
+import { NATIVE_TOKEN_ADDRESS } from "@thruputchain/protocol";
 
 import { identifier, transferEvent } from "../../src/lib/thruput/test-fixtures";
 
@@ -17,7 +17,7 @@ async function main() {
     [identifier(0xa5)]: { status: "committed", blockHeight: "42" },
     [identifier(0xa6)]: { status: "committed", blockHeight: "42" },
   };
-  const transfer = transferEvent({ contractAddress: toBase58(HOG_ADDRESS) });
+  const transfer = transferEvent({ contractAddress: toBase58(NATIVE_TOKEN_ADDRESS) });
   const event = {
     address: toBase58(transfer.address),
     topics: transfer.topics.map(toHex0x),

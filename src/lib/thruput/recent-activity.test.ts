@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { createThruputClient, MockTransport, hashFromBase58, NativeRpcError, JsonRpcError } from "@thruputchain/client";
 import { ACTIVITY_BLOCK_PAGE_LIMIT, ACTIVITY_SCAN_BLOCK_LIMIT, loadRecentActivityBlocks, loadRecentActivityTransactions, readActivityBlock } from "./recent-activity";
 import { identifier, transferEvent } from "./test-fixtures";
-import { NATIVE_HOG_ADDRESS } from "./client";
+import { NATIVE_TOKEN_ADDRESS } from "./client";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 
@@ -56,7 +56,7 @@ test("receipt failures retain transaction links and decoded transfers retain exa
   }));
   t.mock.method(client, "getTransactionReceipt", async ({ transactionHash: hash }: { transactionHash: Uint8Array }) => {
     if (hash[0] === 2) throw new Error("private RPC details");
-    return { blockHeight: 1n, execution: { result: "return", returnData: new Uint8Array() }, events: [transferEvent({ contractAddress: NATIVE_HOG_ADDRESS })] };
+    return { blockHeight: 1n, execution: { result: "return", returnData: new Uint8Array() }, events: [transferEvent({ contractAddress: NATIVE_TOKEN_ADDRESS })] };
   });
   const feed = await loadRecentActivityTransactions();
   assert.equal(feed.transactions.length, 2);

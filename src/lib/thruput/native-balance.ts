@@ -3,11 +3,11 @@ import { addressFromBase58, formatUnits, type ThruputClient } from "@thruputchai
 export type NativeBalanceView = {
   rawBalance: string;
   amount: string;
-  symbol: "HOG";
+  symbol: "native tokens";
   height: string;
 };
 
-const NATIVE_HOG_DECIMALS = 7;
+const NATIVE_TOKEN_DECIMALS = 7;
 
 export async function getNativeBalance(client: ThruputClient, address: string): Promise<NativeBalanceView | undefined> {
   try {
@@ -16,8 +16,8 @@ export async function getNativeBalance(client: ThruputClient, address: string): 
 
     return {
       rawBalance,
-      amount: formatUnits(balance.rawBalance, NATIVE_HOG_DECIMALS),
-      symbol: "HOG",
+      amount: formatUnits(balance.rawBalance, NATIVE_TOKEN_DECIMALS),
+      symbol: "native tokens",
       height: balance.stateBlockHeight.toString(),
     };
   } catch {

@@ -37,8 +37,8 @@ export type AddressPageData =
       transactions: AddressTransactionRefView[];
       transactionsError?: RpcFailure;
       transactionHistoryPartial: boolean;
-      hogTransfers: AddressEventView[];
-      hogTransfersError?: RpcFailure;
+      nativeTokenTransfers: AddressEventView[];
+      nativeTokenTransfersError?: RpcFailure;
       contractEvents: AddressEventView[];
       contractEventsError?: RpcFailure;
     };
@@ -71,8 +71,8 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
     const { client } = await createExplorerThruputClient();
     const contractAddress = addressFromBase58(address);
     const nativeTokenAddress = addressFromBase58(nativeToken.address);
-    const nativeTokenMetadata = { name: nativeToken.symbol, symbol: nativeToken.symbol, decimals: nativeToken.decimals } satisfies TokenMetadata;
-    const hogTransfersRequest =
+    const nativeTokenMetadata = { name: nativeToken.name, symbol: nativeToken.symbol, decimals: nativeToken.decimals } satisfies TokenMetadata;
+    const nativeTokenTransfersRequest =
       address === nativeToken.address
         ? Promise.resolve({ events: [] as IdentifiedEvent[], error: undefined })
         : client
@@ -93,14 +93,14 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
             .then((page) => ({ events: page.events, error: undefined }))
             .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) }));
 
-    const [nativeBalance, metadata, rootTransactionsResult, hogTransfersResult, contractEventsResult] = await Promise.all([
+    const [nativeBalance, metadata, rootTransactionsResult, nativeTokenTransfersResult, contractEventsResult] = await Promise.all([
       getNativeBalance(client, address),
       getTokenMetadata(client, address).catch(() => undefined),
       client
         .getTransactionsByRootAddress({ address: contractAddress, start: { order: "descending", anchor: { kind: "atEnd" } }, limit: historyPageLimit(client, "transactions", ADDRESS_TX_LIMIT) })
         .then((page) => ({ refs: page.transactions, error: undefined }))
         .catch((error: unknown) => ({ refs: [], error: toRpcFailure(error) })),
-      hogTransfersRequest,
+      nativeTokenTransfersRequest,
       client
         .getEvents({ filters: [{ addresses: [contractAddress] }], start: { order: "descending", anchor: { kind: "atEnd" } }, limit: historyPageLimit(client, "events", ADDRESS_EVENT_LIMIT) })
         .then((page) => ({ events: page.events, error: undefined }))
@@ -117,14 +117,14 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
       badges,
       metadata,
       nativeBalance,
-      transactions: mergeTransactionHistory(rootTransactionsResult.refs, hogTransfersResult.events),
+      transactions: mergeTransactionHistory(rootTransactionsResult.refs, nativeTokenTransfersResult.events),
       transactionsError:
-        rootTransactionsResult.error && hogTransfersResult.error
+        rootTransactionsResult.error && nativeTokenTransfersResult.error
           ? rootTransactionsResult.error
           : undefined,
-      transactionHistoryPartial: Boolean(rootTransactionsResult.error || hogTransfersResult.error),
-      hogTransfers: hogTransfersResult.events.map((entry) => formatAddressEvent(entry, nativeTokenMetadata)),
-      hogTransfersError: hogTransfersResult.error,
+      transactionHistoryPartial: Boolean(rootTransactionsResult.error || nativeTokenTransfersResult.error),
+      nativeTokenTransfers: nativeTokenTransfersResult.events.map((entry) => formatAddressEvent(entry, nativeTokenMetadata)),
+      nativeTokenTransfersError: nativeTokenTransfersResult.error,
       contractEvents: contractEventsResult.events.map((entry) =>
         formatAddressEvent(entry, toBase58(entry.event.address) === address ? metadata : undefined),
       ),
@@ -137,7 +137,7 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
 
 function mergeTransactionHistory(
   rootTransactions: Array<{ transactionHash: Uint8Array; blockHeight: bigint }>,
-  hogTransfers: IdentifiedEvent[],
+  nativeTokenTransfers: IdentifiedEvent[],
 ): AddressTransactionRefView[] {
   const transactions = new Map<string, AddressTransactionRefView>();
 
@@ -146,7 +146,7 @@ function mergeTransactionHistory(
     transactions.set(txHash, { txHash, height: transaction.blockHeight.toString() });
   }
 
-  for (const transfer of hogTransfers) {
+  for (const transfer of nativeTokenTransfers) {
     const txHash = toBase58(transfer.transactionHash);
     transactions.set(txHash, { txHash, height: transfer.blockHeight.toString() });
   }
