@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("the branded home link works from a transaction behind Basic Auth", async ({ page }) => {
+test("the branded home link works from a transaction", async ({ page }) => {
   await expect(page.getByText("Search blocks, transactions, contracts, and addresses on Thruput.")).toBeVisible();
   await page.goto(`/tx/${txHash}`);
   const home = page.getByRole("link", { name: "Thruput Explorer homepage" });

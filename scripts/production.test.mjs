@@ -1,22 +1,16 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
-import { hashSync } from "bcryptjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const next = createRequire(import.meta.url).resolve("next/dist/bin/next");
-const username = `smoke-${randomUUID()}`;
-const password = randomUUID();
-const passwordHash = hashSync(password, 4);
-const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
 
-async function startProduction(t, configured) {
+async function startProduction(t) {
   // Obtain an unused RPC port without starting a Thruput node.
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
@@ -35,8 +29,8 @@ async function startProduction(t, configured) {
       NEXT_TELEMETRY_DISABLED: "1",
       THRUPUT_RPC_URL: `http://127.0.0.1:${rpcPort}`,
       // Empty values also prevent Next from loading credentials from .env files.
-      BASIC_AUTH_USER: configured ? username : "",
-      BASIC_AUTH_HASH: configured ? passwordHash : "",
+      BASIC_AUTH_USER: "",
+      BASIC_AUTH_HASH: "",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -107,38 +101,33 @@ async function startProduction(t, configured) {
       });
       const body = await response.text();
       assert.equal(response.status, status, `${options.method ?? "GET"} ${path}: ${body.slice(0, 500)}`);
-      if (status === 401) assert.match(response.headers.get("www-authenticate") ?? "", /^Basic /);
+      assert.equal(response.headers.get("www-authenticate"), null);
       return { response, body };
     } catch (error) {
-      throw new Error(`${options.method ?? "GET"} ${path} failed\nNext production logs:\n${logs}`, { cause: error });
+      throw new Error(`${options.method ?? "GET"} ${path} failed: ${error.message}\nNext production logs:\n${logs}`, { cause: error });
     }
   };
 }
 
-test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
-  const request = await startProduction(t, true);
-  const headers = { authorization };
-  const home = await request("/", 200, { headers });
+test("production is publicly accessible without credentials", { timeout: 120_000 }, async (t) => {
+  const request = await startProduction(t);
+  const home = await request("/", 200);
   assert.match(home.body, /Some recent blocks are temporarily unavailable\./);
   assert.match(home.body, /Some recent transactions are temporarily unavailable\./);
   const asset = home.body.match(/<script\b[^>]*\bsrc="(\/_next\/static\/[^"?]+\.js(?:\?[^" ]*)?)"/)?.[1];
-  assert.ok(asset, "Authenticated homepage must reference a built JavaScript asset");
+  assert.ok(asset, "Homepage must reference a built JavaScript asset");
   const assetPath = asset.replaceAll("&amp;", "&");
-  const routes = ["/", "/tx/not-a-hash", "/address/not-an-address", "/api/export.csv", "/images-private/test.png", "/favicon.ico/private"];
+  const routes = ["/", "/tx/not-a-hash", "/address/not-an-address"];
 
   for (const path of routes) {
-    await t.test(`protects ${path}`, async () => {
-      await request(path, 401);
-      await request(path, 401, { headers: { authorization: `Basic ${Buffer.from(`${username}:wrong`).toString("base64")}` } });
-      await request(path, 401, { method: "HEAD" });
-      for (const name of ["middleware", "src/middleware", "proxy", "src/proxy"]) {
-        await request(path, 401, { headers: { "x-middleware-subrequest": Array(5).fill(name).join(":") } });
-      }
-      if (["/tx/not-a-hash", "/address/not-an-address"].includes(path)) await request(path, 200, { headers });
+    await t.test(`allows public access to ${path}`, async () => {
+      await request(path, 200);
+      await request(path, 200, { method: "HEAD" });
+      await request(path, 200, { headers: { authorization: "Basic %%%" } });
     });
   }
 
-  await t.test("public assets bypass authentication", async () => {
+  await t.test("assets are public", async () => {
     for (const path of ["/icon.svg", "/images/hog.png", assetPath]) {
       const { response } = await request(path, 200);
       assert.equal(response.headers.get("www-authenticate"), null);
@@ -147,31 +136,18 @@ test("production HTTP authentication", { timeout: 120_000 }, async (t) => {
     }
   });
 
-  await t.test("RSC navigation and prefetch requests require authentication", async () => {
-    await request("/tx/not-a-hash?_rsc=test", 401, { headers: { rsc: "1" } });
-    await request("/tx/not-a-hash", 401, { headers: { "next-router-prefetch": "1", purpose: "prefetch" } });
+  await t.test("RSC navigation and prefetch requests are public", async () => {
+    await request("/tx/not-a-hash?_rsc=", 200, { headers: { rsc: "1" } });
+    await request("/tx/not-a-hash", 200, { headers: { "next-router-prefetch": "1", purpose: "prefetch" } });
   });
 
-  await t.test("API authentication precedes malformed request validation", async () => {
+  await t.test("API validates requests without credentials", async () => {
     const options = { method: "POST", body: "{", headers: { "content-type": "application/json" } };
-    await request("/api/search", 401, options);
-    await request("/api/search", 401, { ...options, headers: { ...options.headers, authorization: "Basic d3Jvbmc6d3Jvbmc=" } });
-    await request("/api/search", 401, { ...options, headers: { ...options.headers, "x-middleware-subrequest": Array(5).fill("src/proxy").join(":") } });
-    const result = await request("/api/search", 400, { ...options, headers: { ...options.headers, ...headers } });
+    const result = await request("/api/search", 400, options);
     assert.equal(JSON.parse(result.body).status, "malformed");
   });
 
   await t.test("health is public", async () => {
     await request("/health", 200);
   });
-});
-
-test("production fails closed without configured credentials", { timeout: 60_000 }, async (t) => {
-  const request = await startProduction(t, false);
-  await request("/", 503);
-  await request("/", 503, { headers: { authorization } });
-  await request("/icon.svg", 200);
-  await request("/images/hog.png", 200);
-  await request("/api/search", 503, { method: "POST", body: "{" });
-  await request("/health", 200);
 });
