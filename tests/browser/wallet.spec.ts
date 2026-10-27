@@ -27,7 +27,7 @@ async function installWallet(page: Page, reject = false) {
       },
     };
     window.addEventListener("test:wallet-disconnect", () => listener?.({ ...session, accounts: [] }));
-    window.addEventListener("groundhog:requestProvider", () => window.dispatchEvent(new CustomEvent("groundhog:announceProvider", { detail: provider })));
+    window.addEventListener("thruput:requestProvider", () => window.dispatchEvent(new CustomEvent("thruput:announceProvider", { detail: provider })));
   }, { account, reject, networkHash: identifier(0xab) });
 }
 
