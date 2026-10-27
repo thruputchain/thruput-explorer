@@ -104,7 +104,6 @@ test("touch controls and 200% zoom remain usable", async ({ browser }, testInfo)
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
-    httpCredentials: { username: "browser-test-only", password: "browser-test-only-password" },
   });
   const page = await context.newPage();
   const origin = String(testInfo.project.use.baseURL);

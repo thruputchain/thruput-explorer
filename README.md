@@ -35,17 +35,15 @@ For devnet, set `THRUPUT_RPC_URL=https://rpc.thruput.network`. Runtime rc.16 use
 | Variable | Purpose |
 | --- | --- |
 | `THRUPUT_RPC_URL` | Server-side RPC endpoint |
-| `BASIC_AUTH_USER` | Basic Auth username |
-| `BASIC_AUTH_HASH` | Bcrypt password hash, for example from `caddy hash-password` |
 
-Development permits access when both auth variables are unset. Production requires both and denies access if either is missing or the hash is invalid. Enter the original password in the browser. Keep bcrypt hashes single-quoted in `.env.local` so `$` characters remain literal.
+The explorer is public in development and production. No login is required.
 
 ```bash
 pnpm build
 pnpm start
 ```
 
-`railpack.json` supplies the Railway build and start commands. Set `NPM_TOKEN` for package installation and the three application variables above. `/health` is the unauthenticated health endpoint.
+`railpack.json` supplies the Railway build and start commands. Set `NPM_TOKEN` for package installation and `THRUPUT_RPC_URL` for the node connection. `/health` is the health endpoint.
 
 ## Wallet Shortcut
 
@@ -78,7 +76,7 @@ pnpm test:browser
 pnpm audit
 ```
 
-Production and browser tests require a completed build and stop their temporary servers afterward. Browser tests use port 3100, or `PLAYWRIGHT_PORT`, and refuse to reuse an existing server. CI runs lint, unit tests, build, authentication checks and browser tests. Fork CI needs access to the SDK packages.
+Production and browser tests require a completed build and stop their temporary servers afterward. Browser tests use port 3100, or `PLAYWRIGHT_PORT`, and refuse to reuse an existing server. CI runs lint, unit tests, build, public access checks and browser tests. Fork CI needs access to the SDK packages.
 
 Application dependencies use the latest compatible releases. ESLint stays on 9 and TypeScript on 6.0 until the Next.js lint plugins support their newer major versions. Node types match the Node 22 deployment runtime; pnpm stays on the current lockfile's major version. UI components are checked-in shadcn source; use `pnpm dlx shadcn@latest` when adding components.
 
