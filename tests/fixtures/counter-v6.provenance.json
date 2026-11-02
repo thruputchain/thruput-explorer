@@ -1,0 +1,11 @@
+{
+  "artifact": "counter-v6.rv32a",
+  "artifactSha256": "2fd701db90657fd4caae5e2e70739e90cd73ea59b408228e4bba92f19db14f82",
+  "artifactBytes": 6421,
+  "specBytes": 548,
+  "formatVersion": 6,
+  "formatFingerprint": "0x36f9478fa875ca39",
+  "origin": "Counter built with the local GH-558 Rust CLI/lowerer candidate",
+  "releaseQualified": false,
+  "rustc": "rustc 1.98.0-nightly (f46ec5218 2026-06-30)"
+}

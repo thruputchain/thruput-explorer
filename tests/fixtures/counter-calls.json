@@ -1,0 +1,36 @@
+[
+  {
+    "wrapped": true,
+    "method": "get",
+    "hash": "2ZWGU9hkCCgmYYLX6zL29s3FEGErthH4SzFWgZQiyEox",
+    "inputXdr": "0xbd5a66e1954de3e638e7ab035ff7ff0b68d44190430eca3fb70ea98b899ac008c3edb11fdd6d5d5800000000000f42400000002f0155868613e8ef326aea7e16c5956e84bb44cdaabbeb1e58e9e3c140e18d27713a4a63f587ead25ca6bf20a1070000000000000000000067a017a4445151ad000000000000000001e830be9cb2dd453990a3141783f958e14cb3b532beb84360858b75f180da6bcb0000000000000000",
+    "execution": "return",
+    "receipt": {
+      "transactionHash": "2ZWGU9hkCCgmYYLX6zL29s3FEGErthH4SzFWgZQiyEox",
+      "blockHeight": "4",
+      "execution": {
+        "result": "return",
+        "returnData": "0x010100"
+      },
+      "events": [],
+      "gasUsed": "38544"
+    }
+  },
+  {
+    "wrapped": true,
+    "method": "error",
+    "hash": "AmEDCpiDz3GLkZgZtN7vGemX3ww2tf9JBuPYQ485imXA",
+    "inputXdr": "0xbd5a66e1954de3e638e7ab035ff7ff0b68d44190430eca3fb70ea98b899ac008c3edb11fdd6d5d5800000000000f42400000002f0155868613e8ef326aea7e16c5956e84bb44cdaabbeb1e58e9e3c140e18d27713adcb12efadd026c01bf20a1070000000000000000000068563c8be50211b6730000000000000001e830be9cb2dd453990a3141783f958e14cb3b532beb84360858b75f180da6bcb0000000000000000",
+    "execution": "abort",
+    "receipt": {
+      "transactionHash": "AmEDCpiDz3GLkZgZtN7vGemX3ww2tf9JBuPYQ485imXA",
+      "blockHeight": "5",
+      "execution": {
+        "result": "abort",
+        "abortData": "0xff624c5ae72bf72ceb01"
+      },
+      "events": [],
+      "gasUsed": "1032"
+    }
+  }
+]

@@ -1,3 +1,5 @@
+import type { SpecEventPreview } from "./contract-spec";
+
 export type RpcFailure = {
   message: string;
   code?: number;
@@ -33,6 +35,7 @@ export type EventView = {
   contractAddress: string;
   contractName?: string;
   decoded?: DecodedEventView;
+  specEvent?: SpecEventPreview;
   topics: string[];
   data?: string;
 };
