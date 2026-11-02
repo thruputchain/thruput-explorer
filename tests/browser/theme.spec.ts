@@ -48,12 +48,13 @@ test("Radix tabs and receipt disclosure support keyboard navigation", async ({ p
   await page.getByRole("tabpanel", { name: "Transactions", exact: true }).locator(`a[href="/tx/${txHash}"]:visible`).click();
   await expect(page).toHaveURL(`/tx/${txHash}`);
 
-  const toggle = page.getByRole("button", { name: "Toggle JSON" });
+  const toggle = page.locator("summary").filter({ hasText: "Technical details" });
+  const details = page.locator("details").filter({ has: toggle });
   const receipt = page.getByLabel("Raw transaction receipt JSON");
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(details).not.toHaveAttribute("open");
   await toggle.focus();
   await page.keyboard.press("Enter");
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(details).toHaveAttribute("open", "");
   await expect(receipt).toContainText(txHash);
   await page.keyboard.press("Space");
   await expect(receipt).toBeHidden();
@@ -82,7 +83,7 @@ for (const width of [320, 390, 768, 1440]) {
       await expect(page.getByRole("link", { name: "Thruput Explorer homepage" })).toBeVisible();
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
       if (name === "home") await expect(page.getByRole("region", { name: "Recent blocks", exact: true })).toBeVisible();
-      if (name === "transaction") await page.getByRole("button", { name: "Toggle JSON" }).click();
+      if (name === "transaction") await page.getByText("Technical details", { exact: true }).click();
       await page.evaluate(() => document.fonts.ready);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
@@ -114,7 +115,7 @@ test("touch controls and 200% zoom remain usable", async ({ browser }, testInfo)
     await page.getByRole("textbox").fill(txHash);
     await search.tap();
     await expect(page).toHaveURL(`${origin}/tx/${txHash}`);
-    await page.getByRole("button", { name: "Toggle JSON" }).tap();
+    await page.getByText("Technical details", { exact: true }).tap();
     await expect(page.getByLabel("Raw transaction receipt JSON")).toBeVisible();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.evaluate(() => { document.body.style.zoom = "2"; });
