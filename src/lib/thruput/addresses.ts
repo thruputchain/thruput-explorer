@@ -109,7 +109,7 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
         .catch((error: unknown) => ({ refs: [], error: toRpcFailure(error) })),
       nativeTokenTransfersRequest,
       contractEventsRequest,
-      loadContractSpec(client, address, contractEventsRequest.then((result) => result.events)),
+      loadContractSpec(client, address, contractEventsRequest.then((result) => result.events), "root"),
     ]);
 
     const badges = buildBadges({ metadata, emittedEventCount: contractEventsResult.events.length });

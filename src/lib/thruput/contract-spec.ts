@@ -4,7 +4,7 @@ import {
   type ThruputClient,
   type IdentifiedEvent,
 } from "@thruputchain/client";
-import { getContractSpec } from "@thruputchain/client/actions";
+import { getContractSpec, getEffectiveContractSpec } from "@thruputchain/client/actions";
 import {
   ContractMethodEffect,
   ContractTypeKind,
@@ -44,8 +44,11 @@ export type ContractSpecView =
       stateBlockHeight: string;
       hash: string;
       size: number;
+      selectionSource?: "explicitDeployment" | "networkDefault";
+      wallet?: boolean;
       metadata:
         | "native"
+        | "nativeInterface"
         | "absent"
         | "unsupportedFormat"
         | "unsupportedSchema"
@@ -71,11 +74,19 @@ export async function loadContractSpec(
   client: ThruputClient,
   address: string,
   events: Promise<IdentifiedEvent[]> = Promise.resolve([]),
+  context?: "root" | "nested",
 ): Promise<ContractSpecView> {
   try {
-    const result = await getContractSpec(client, {
-      address: addressFromBase58(address),
-    });
+    const effective = context ? await getEffectiveContractSpec(client, {
+      address: addressFromBase58(address), context,
+    }) : undefined;
+    const selection = effective?.selection;
+    if (selection && !("contract" in selection))
+      throw new Error("Unsupported effective contract selection");
+    const result = effective ? {
+      ...effective,
+      deployment: selection?.contract ?? null,
+    } : await getContractSpec(client, { address: addressFromBase58(address) });
     const stateBlockHeight = result.stateBlockHeight.toString();
     if (result.deployment === null)
       return { status: "notDeployed", stateBlockHeight };
@@ -131,7 +142,7 @@ export async function loadContractSpec(
         }
       }
     }
-    const spec = metadata.kind === "spec" ? metadata.spec : undefined;
+    const spec = metadata.kind === "spec" ? metadata.spec : effective?.nativeInterface?.spec;
     const errorTypes = new Map(
       spec?.interfaces.flatMap((value) =>
         value.throws.map(
@@ -156,7 +167,9 @@ export async function loadContractSpec(
       stateBlockHeight,
       hash: toBase58(result.deployment.hash),
       size: result.deployment.size,
-      metadata: metadata.kind,
+      selectionSource: selection?.source,
+      wallet: selection?.source === "networkDefault" || effective?.nativeInterface?.name === "DefaultWallet",
+      metadata: effective?.nativeInterface ? "nativeInterface" : metadata.kind,
       name: spec?.interfaces.length === 1 ? spec.interfaces[0].name : undefined,
       errors: [...errorTypes].map(
         ([key, type]) =>
@@ -173,14 +186,14 @@ export async function loadContractSpec(
         .filter(([key]) => !errorTypes.has(key))
         .map(([, value]) => value),
       interfaces:
-        metadata.kind === "spec"
-          ? metadata.spec.interfaces.map(
+        spec
+          ? spec.interfaces.map(
               (value) => `${value.name}@${value.vers}`,
             )
           : [],
       methods:
-        metadata.kind === "spec"
-          ? metadata.spec.interfaces.flatMap((value) =>
+        spec
+          ? spec.interfaces.flatMap((value) =>
               value.methods.map((method) => ({
                 interface: `${value.name}@${value.vers}`,
                 name: method.name,

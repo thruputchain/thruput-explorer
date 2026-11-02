@@ -16,6 +16,7 @@ import type { SpecDefinitionView } from "@/lib/thruput/spec-format";
 const labels = {
   spec: "Embedded spec · artifact hash checked",
   native: "Built-in contract · no artifact-bound spec",
+  nativeInterface: "Built-in interface · not artifact-bound",
   absent: "No embedded spec",
   unsupportedFormat: "Artifact format not supported",
   unsupportedSchema: "Spec schema not supported",
@@ -40,7 +41,7 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
           </dl>
         ) : (
           <>
-            {data.metadata === "spec" ? (
+            {data.metadata === "spec" || data.metadata === "nativeInterface" ? (
               <>
                 {data.interfaces.map((iface) => (
                   <section key={iface} className="flex min-w-0 flex-col gap-3">
@@ -87,6 +88,11 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
             )}
             <InspectionDetails title="Technical details">
               <dl>
+                {data.selectionSource ? (
+                  <FieldRow label="Selection">
+                    {data.selectionSource === "networkDefault" ? "Network default · root invocation" : "Explicit deployment"}
+                  </FieldRow>
+                ) : null}
                 <FieldRow label="State block">
                   <BlockLink height={data.stateBlockHeight} />
                 </FieldRow>
@@ -97,9 +103,10 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
                 <FieldRow label="Metadata">{labels[data.metadata]}</FieldRow>
               </dl>
               <p className="text-pretty text-base text-muted-foreground sm:text-sm">
-                The spec describes the current deployment. Its hash binds it to
-                the artifact, but does not verify behavior or identify the code
-                that emitted historical events.
+                {data.metadata === "nativeInterface"
+                  ? "This built-in interface describes the selected native identifier. It does not authenticate runtime code or historical behavior."
+                  : "The spec describes the current contract. An embedded spec is bound to its artifact hash, but does not verify behavior or identify historical code."}
+                {data.selectionSource === "networkDefault" ? " The network default applies to undeployed root invocations. Selection does not prove authorization." : ""}
               </p>
             </InspectionDetails>
           </>
@@ -165,7 +172,7 @@ function Methods({
         <TableRow>
           <TableHead className="w-1/3">Method</TableHead>
           <TableHead>Parameters</TableHead>
-          <TableHead className="w-24">Returns</TableHead>
+          <TableHead className="w-1/4">Returns</TableHead>
           {effects ? <TableHead>Declared effect</TableHead> : null}
         </TableRow>
       </TableHeader>

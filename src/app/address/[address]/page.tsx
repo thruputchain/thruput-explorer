@@ -46,7 +46,10 @@ export default async function AddressPage({
     data.status === "ok"
       ? data.badges.filter((badge) => !contract || badge !== "Address")
       : [];
-  if (contract && !badges.includes("Contract")) badges.push("Contract");
+  if (contract?.wallet) {
+    if (!badges.includes("Wallet")) badges.push("Wallet");
+  } else if (contract && !badges.includes("Contract")) badges.push("Contract");
+  if (contract?.selectionSource === "networkDefault") badges.push("Network default");
 
   return (
     <main className="min-w-0 flex-1">

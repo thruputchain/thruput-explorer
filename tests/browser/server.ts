@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { MockTransport, fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
-import { NATIVE_TOKEN_ADDRESS, codec, ContractType, serialize, deserialize } from "@thruputchain/protocol";
+import { NATIVE_TOKEN_ADDRESS, codec, ContractType, HogexecPrecompiledNativeContracts, serialize, deserialize } from "@thruputchain/protocol";
 import { DefaultWallet } from "@thruputchain/client/contracts";
 import calls from "../fixtures/counter-calls.json";
 import { hashContract } from "@thruputchain/client/contract";
@@ -16,6 +16,8 @@ async function main() {
   const counterContract = { contract_type: ContractType.kRv32, rv32_contract: { data: counterArtifact } } as const;
   const counterHash = toBase58(hashContract(counterContract));
   const counterAddress = identifier(0xc1);
+  const walletContract = { contract_type: ContractType.kNative, native_contract_id: HogexecPrecompiledNativeContracts.kNativeContractDefaultWallet } as const;
+  const walletHash = toBase58(hashContract(walletContract));
   const calledAddress = toBase58(DefaultWallet.v0_1.execute.decodeArgs(deserialize(fromHex0x(calls[0].inputXdr), codec.Transaction).invocation.calldata).calls[0].target);
   const txHash = identifier(0xab);
   const statusFixtures: Record<string, unknown> = {
@@ -197,8 +199,27 @@ async function main() {
         case "getContractDeployment":
           result = { address: params.address, stateBlockHeight: "42", deployment: [counterAddress, calledAddress].includes(params.address) ? { hash: counterHash, size: counterArtifact.length, contractType: 3 } : null };
           break;
+        case "getEffectiveContract": {
+          const explicit = [counterAddress, calledAddress].includes(params.address);
+          const nativeDefault = params.address === identifier(0xc2);
+          const rv32Default = params.address === identifier(0xc3);
+          const missingArtifact = params.address === identifier(0xc4);
+          result = {
+            address: params.address, context: params.context, stateBlockHeight: "42",
+            selection: explicit || (params.context === "root" && (nativeDefault || rv32Default || missingArtifact)) ? {
+              source: explicit ? "explicitDeployment" : "networkDefault",
+              contract: nativeDefault ? { hash: walletHash, size: 0, contractType: 1 } : {
+                hash: missingArtifact ? identifier(0xc4) : counterHash, size: counterArtifact.length, contractType: 3,
+              },
+            } : null,
+          };
+          break;
+        }
         case "getContractArtifact":
-          result = { hash: counterHash, contractXdr: toHex0x(serialize(counterContract, codec.Contract)) };
+          if (params.hash === identifier(0xc4)) throw new Error("Artifact unavailable");
+          result = params.hash === walletHash
+            ? { hash: walletHash, contractXdr: toHex0x(serialize(walletContract, codec.Contract)) }
+            : { hash: counterHash, contractXdr: toHex0x(serialize(counterContract, codec.Contract)) };
           break;
         case "simulateInvocations":
           if (JSON.stringify(params).includes(identifier(0x55))) {
