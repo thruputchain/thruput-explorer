@@ -39,8 +39,9 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 font-medium whitespace-nowrap transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-primary pointer-coarse:min-h-12 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-        "group-data-[variant=line]/tabs-list:rounded-none group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent group-data-[variant=line]/tabs-list:data-[state=active]:after:absolute group-data-[variant=line]/tabs-list:data-[state=active]:after:inset-x-0 group-data-[variant=line]/tabs-list:data-[state=active]:after:-bottom-px group-data-[variant=line]/tabs-list:data-[state=active]:after:h-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:bg-primary",
+        "relative inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 font-medium whitespace-nowrap hover:text-foreground outline-none focus-visible:bg-muted disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-primary pointer-coarse:min-h-12 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "group-data-[variant=line]/tabs-list:rounded-none group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent group-data-[variant=line]/tabs-list:focus-visible:bg-muted group-data-[variant=line]/tabs-list:data-[state=active]:after:absolute group-data-[variant=line]/tabs-list:data-[state=active]:after:inset-x-0 group-data-[variant=line]/tabs-list:data-[state=active]:after:-bottom-px group-data-[variant=line]/tabs-list:data-[state=active]:after:h-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:bg-primary",
+        "group-data-[variant=line]/tabs-list:data-[state=active]:focus-visible:bg-muted",
         className,
       )}
       {...props}

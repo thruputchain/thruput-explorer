@@ -8,14 +8,11 @@ import { TransactionActivityRow } from "@/components/transaction-activity-row";
 import { loadTransactionActivity } from "@/lib/thruput/transaction-activity";
 
 import { PageHeader } from "@/components/page-header";
+import { ContractSpecCard } from "@/components/contract-spec-card";
+import { ContractEventsTable } from "@/components/contract-events-table";
 import { RpcAlert } from "@/components/rpc-alert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -41,13 +38,26 @@ export default async function AddressPage({
 }) {
   const { address } = await params;
   const data = await loadAddressPageData(address);
+  const contract =
+    data.status === "ok" && data.contractSpec.status === "available"
+      ? data.contractSpec
+      : undefined;
+  const badges =
+    data.status === "ok"
+      ? data.badges.filter((badge) => !contract || badge !== "Address")
+      : [];
+  if (contract && !badges.includes("Contract")) badges.push("Contract");
 
   return (
     <main className="min-w-0 flex-1">
       <PageHeader
-        title={data.status === "ok" && data.label ? data.label : "Address"}
+        title={
+          data.status === "ok" && data.label
+            ? data.label
+            : (contract?.name ?? (contract ? "Contract" : "Address"))
+        }
         value={data.address}
-        badges={data.status === "ok" ? data.badges : []}
+        badges={badges}
         copyLabel="Copy address"
       />
 
@@ -71,24 +81,7 @@ export default async function AddressPage({
         {data.status === "ok" ? (
           <>
             <AddressSummaryCard data={data} />
-            {data.metadata ? (
-              <ContractEventsCard
-                events={data.contractEvents}
-                error={data.contractEventsError}
-                token
-              />
-            ) : (
-              <>
-                <AddressActivityTabs data={data} />
-                {data.contractEvents.length > 0 || data.contractEventsError ? (
-                  <ContractEventsCard
-                    events={data.contractEvents}
-                    error={data.contractEventsError}
-                    token={false}
-                  />
-                ) : null}
-              </>
-            )}
+            <AddressActivityTabs data={data} />
           </>
         ) : null}
       </div>
@@ -105,11 +98,15 @@ function AddressActivityTabs({
   >;
 }) {
   return (
-    <Tabs defaultValue="transactions" className="w-full">
-      <TabsList variant="line" aria-label="Address activity">
-        <TabsTrigger value="transactions">Transactions</TabsTrigger>
-        <TabsTrigger value="transfers">Token Transfers</TabsTrigger>
-      </TabsList>
+    <Tabs defaultValue="transactions" className="min-w-0 w-full">
+      <div className="max-w-full overflow-x-auto overflow-y-hidden">
+        <TabsList variant="line" aria-label="Address activity">
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="transfers">Token Transfers</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
+          <TabsTrigger value="spec">Contract spec</TabsTrigger>
+        </TabsList>
+      </div>
       <TabsContent value="transactions">
         <TransactionHistoryCard
           transactions={data.transactions}
@@ -118,10 +115,31 @@ function AddressActivityTabs({
         />
       </TabsContent>
       <TabsContent value="transfers">
-        <NativeTokenTransfersCard
-          events={data.nativeTokenTransfers}
-          error={data.nativeTokenTransfersError}
+        {data.metadata ? (
+          <TokenContractTransfersCard
+            events={data.contractEvents}
+            error={data.contractEventsError}
+          />
+        ) : (
+          <NativeTokenTransfersCard
+            events={data.nativeTokenTransfers}
+            error={data.nativeTokenTransfersError}
+          />
+        )}
+      </TabsContent>
+      <TabsContent value="events">
+        <ContractEventsTable
+          events={data.contractEvents}
+          error={data.contractEventsError}
+          previews={
+            data.contractSpec.status === "available"
+              ? data.contractSpec.eventPreviews
+              : []
+          }
         />
+      </TabsContent>
+      <TabsContent value="spec">
+        <ContractSpecCard data={data.contractSpec} />
       </TabsContent>
     </Tabs>
   );
@@ -142,7 +160,9 @@ function AddressSummaryCard({
       </CardHeader>
       <CardContent>
         <dl>
-          <FieldRow label="Address"><span className="break-all">{data.address}</span></FieldRow>
+          <FieldRow label="Address">
+            <span className="break-all">{data.address}</span>
+          </FieldRow>
           <FieldRow label="Native balance">
             {data.nativeBalance
               ? `${data.nativeBalance.amount} ${data.nativeBalance.symbol}`
@@ -155,10 +175,14 @@ function AddressSummaryCard({
             <>
               <FieldRow label="Token name">{data.metadata.name}</FieldRow>
               <FieldRow label="Token symbol">{data.metadata.symbol}</FieldRow>
-              <FieldRow label="Token decimals">{data.metadata.decimals}</FieldRow>
+              <FieldRow label="Token decimals">
+                {data.metadata.decimals}
+              </FieldRow>
             </>
           ) : null}
-          <FieldRow label="RPC URL"><span className="break-all">{data.rpcUrl}</span></FieldRow>
+          <FieldRow label="RPC URL">
+            <span className="break-all">{data.rpcUrl}</span>
+          </FieldRow>
         </dl>
       </CardContent>
     </Card>
@@ -180,7 +204,11 @@ function TransactionHistoryCard({
         <CardTitle>Transaction History</CardTitle>
       </CardHeader>
       <CardContent>
-        {partial && !error ? <p role="status" className="mb-4 text-sm text-muted-foreground">Some activity sources are unavailable.</p> : null}
+        {partial && !error ? (
+          <p role="status" className="mb-4 text-sm text-muted-foreground">
+            Some activity sources are unavailable.
+          </p>
+        ) : null}
         {error ? (
           <RpcAlert
             title="Transaction history unavailable"
@@ -189,10 +217,16 @@ function TransactionHistoryCard({
           />
         ) : transactions.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            {partial ? "No transactions found in the available activity sources." : "No transactions found for this address."}
+            {partial
+              ? "No transactions found in the available activity sources."
+              : "No transactions found for this address."}
           </p>
         ) : (
-          <Suspense fallback={<TransactionHistoryFallback transactions={transactions} />}>
+          <Suspense
+            fallback={
+              <TransactionHistoryFallback transactions={transactions} />
+            }
+          >
             <TransactionHistoryList transactions={transactions} />
           </Suspense>
         )}
@@ -201,25 +235,68 @@ function TransactionHistoryCard({
   );
 }
 
-async function TransactionHistoryList({ transactions }: { transactions: AddressTransactionRefView[] }) {
-  const activity = await loadTransactionActivity(transactions.map((transaction) => ({ hash: transaction.txHash, height: transaction.height })));
-  return <ul className="divide-y">
-    {activity.map((transaction) => <TransactionActivityRow key={transaction.hash} transaction={transaction} showIcon={false} />)}
-  </ul>;
+async function TransactionHistoryList({
+  transactions,
+}: {
+  transactions: AddressTransactionRefView[];
+}) {
+  const activity = await loadTransactionActivity(
+    transactions.map((transaction) => ({
+      hash: transaction.txHash,
+      height: transaction.height,
+    })),
+  );
+  return (
+    <ul className="divide-y">
+      {activity.map((transaction) => (
+        <TransactionActivityRow
+          key={transaction.hash}
+          transaction={transaction}
+          showIcon={false}
+        />
+      ))}
+    </ul>
+  );
 }
 
-function TransactionHistoryFallback({ transactions }: { transactions: AddressTransactionRefView[] }) {
-  return <ul className="divide-y" aria-busy="true" aria-label="Loading transaction details">
-    {transactions.map((transaction) => (
-      <li key={transaction.txHash} className="app-activity-row flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <Link href={`/tx/${transaction.txHash}`} title={transaction.txHash} className="truncate font-mono text-sm font-medium hover:underline hover:underline-offset-4">{shortenIdentifier(transaction.txHash)}</Link>
-          <span className="text-xs leading-5 text-muted-foreground">Loading details…</span>
-        </div>
-        <Link href={`/block/${transaction.height}`} className="text-xs hover:underline hover:underline-offset-4">Block <span className="font-mono">{transaction.height}</span></Link>
-      </li>
-    ))}
-  </ul>;
+function TransactionHistoryFallback({
+  transactions,
+}: {
+  transactions: AddressTransactionRefView[];
+}) {
+  return (
+    <ul
+      className="divide-y"
+      aria-busy="true"
+      aria-label="Loading transaction details"
+    >
+      {transactions.map((transaction) => (
+        <li
+          key={transaction.txHash}
+          className="app-activity-row flex items-center justify-between gap-3"
+        >
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Link
+              href={`/tx/${transaction.txHash}`}
+              title={transaction.txHash}
+              className="truncate font-mono text-sm font-medium hover:underline hover:underline-offset-4"
+            >
+              {shortenIdentifier(transaction.txHash)}
+            </Link>
+            <span className="text-xs leading-5 text-muted-foreground">
+              Loading details…
+            </span>
+          </div>
+          <Link
+            href={`/block/${transaction.height}`}
+            className="text-xs hover:underline hover:underline-offset-4"
+          >
+            Block <span className="font-mono">{transaction.height}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function NativeTokenTransfersCard({
@@ -257,23 +334,19 @@ function NativeTokenTransfersCard({
   );
 }
 
-function ContractEventsCard({
+function TokenContractTransfersCard({
   events,
   error,
-  token,
 }: {
   events: AddressEventView[];
   error?: RpcFailure;
-  token: boolean;
 }) {
-  const visibleEvents = token ? events.filter(isTokenTransferEvent) : events;
+  const visibleEvents = events.filter(isTokenTransferEvent);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          {token ? "Token Transfer History" : "Contract Events"}
-        </CardTitle>
+        <CardTitle>Token Transfer History</CardTitle>
       </CardHeader>
       <CardContent>
         {error ? (
@@ -284,17 +357,12 @@ function ContractEventsCard({
           />
         ) : visibleEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            {token
-              ? "Transfers, mints, and burns appear here when this token emits ERC20 Transfer events."
-              : "Events appear here when this address is the emitting contract."}
+            Transfers, mints, and burns appear here when this token emits ERC20
+            Transfer events.
           </p>
         ) : (
           <Table>
-            {token ? (
-              <TokenEventTable events={visibleEvents} />
-            ) : (
-              <RawEventTable events={visibleEvents} />
-            )}
+            <TokenEventTable events={visibleEvents} />
           </Table>
         )}
       </CardContent>
@@ -326,29 +394,6 @@ function TokenEventTable({ events }: { events: AddressEventView[] }) {
   );
 }
 
-function RawEventTable({ events }: { events: AddressEventView[] }) {
-  return (
-    <>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Tx</TableHead>
-          <TableHead>Block</TableHead>
-          <TableHead>Topics</TableHead>
-          <TableHead>Data</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {events.map((event) => (
-          <RawEventRow
-            key={`${event.txHash}-${event.sequenceNumber}`}
-            event={event}
-          />
-        ))}
-      </TableBody>
-    </>
-  );
-}
-
 function TokenEventRow({ event }: { event: AddressEventView }) {
   const decoded = isTokenTransferEvent(event) ? event.decoded : undefined;
   const amount = decoded
@@ -366,7 +411,9 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
           {shortenIdentifier(event.txHash)}
         </Link>
       </TableCell>
-      <TableCell><BlockLink height={event.blockHeight} /></TableCell>
+      <TableCell>
+        <BlockLink height={event.blockHeight} />
+      </TableCell>
       <TableCell>
         <AddressLink value={decoded?.from} />
       </TableCell>
@@ -374,35 +421,6 @@ function TokenEventRow({ event }: { event: AddressEventView }) {
         <AddressLink value={decoded?.to} />
       </TableCell>
       <TableCell className="text-right">{amount}</TableCell>
-    </TableRow>
-  );
-}
-
-function RawEventRow({ event }: { event: AddressEventView }) {
-  return (
-    <TableRow>
-      <TableCell>
-        <Link
-          className="font-mono underline-offset-4 hover:underline"
-          href={`/tx/${event.txHash}`}
-          title={event.txHash}
-        >
-          {shortenIdentifier(event.txHash)}
-        </Link>
-      </TableCell>
-      <TableCell><BlockLink height={event.blockHeight} /></TableCell>
-      <TableCell>
-        <code title={event.topics.join(", ")}>
-          {event.topics.length > 0
-            ? event.topics.map(shortenIdentifier).join(", ")
-            : "-"}
-        </code>
-      </TableCell>
-      <TableCell>
-        <code title={event.data}>
-          {shortenIdentifier(event.data)}
-        </code>
-      </TableCell>
     </TableRow>
   );
 }
