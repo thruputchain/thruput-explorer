@@ -9,7 +9,7 @@ import { DefaultWallet } from "@thruputchain/client/contracts";
 import calls from "../fixtures/counter-calls.json";
 import { hashContract } from "@thruputchain/client/contract";
 
-import { identifier, transferEvent } from "../../src/lib/thruput/test-fixtures";
+import { identifier, transferEvent, metadataBatchResponse } from "../../src/lib/thruput/test-fixtures";
 
 async function main() {
   const counterArtifact = new Uint8Array(readFileSync(new URL("../fixtures/counter-v6.rv32a", import.meta.url)));
@@ -229,6 +229,10 @@ async function main() {
             : { hash: counterHash, contractXdr: toHex0x(serialize(counterContract, codec.Contract)) };
           break;
         case "simulateInvocations":
+          if (JSON.stringify(params).includes(identifier(0xc5))) {
+            result = metadataBatchResponse(["Partial token", "PART", undefined]);
+            break;
+          }
           if (JSON.stringify(params).includes(identifier(0x55))) {
             pending++;
             try { await metadataGate; } finally { pending--; }

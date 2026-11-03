@@ -122,6 +122,7 @@ function AddressActivityTabs({
           <TokenContractTransfersCard
             events={data.contractEvents}
             error={data.contractEventsError}
+            decimals={data.metadata.decimals}
           />
         ) : (
           <NativeTokenTransfersCard
@@ -340,9 +341,11 @@ function NativeTokenTransfersCard({
 function TokenContractTransfersCard({
   events,
   error,
+  decimals,
 }: {
   events: AddressEventView[];
   error?: RpcFailure;
+  decimals?: number;
 }) {
   const visibleEvents = events.filter(isTokenTransferEvent);
 
@@ -358,6 +361,11 @@ function TokenContractTransfersCard({
             description="Raw events will appear here when the RPC returns emitted events for this address."
             error={error}
           />
+        ) : decimals === undefined ? (
+          <p className="text-sm text-muted-foreground">
+            Transfer details are unavailable because token decimals could not be
+            loaded. Raw events are available in the Events tab.
+          </p>
         ) : visibleEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Transfers, mints, and burns appear here when this token emits ERC20

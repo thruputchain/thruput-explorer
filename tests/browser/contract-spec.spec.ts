@@ -91,6 +91,13 @@ test("native token contract events use built-in decoding without a spec", async 
   await expect(page.getByLabel("Event data")).toBeVisible();
 });
 
+test("token history explains unavailable decimals instead of claiming empty history", async ({ page }) => {
+  await page.goto(`/address/${identifier(0xc5)}`);
+  await page.getByRole("tab", { name: "Token Transfers", exact: true }).click();
+  await expect(page.getByText(/Transfer details are unavailable because token decimals/)).toBeVisible();
+  await expect(page.getByText(/Transfers, mints, and burns appear here/)).toHaveCount(0);
+});
+
 test("transaction events identify current spec even when input is unavailable", async ({ page }) => {
   await page.goto(`/tx/${identifier(0xa7)}`);
   await expect(page.getByText(/Original input is not retained/).first()).toBeVisible();
