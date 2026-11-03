@@ -4,6 +4,7 @@ import {
   toBase58,
   toHex0x,
   formatUnits,
+  RpcCompatibilityError,
   type ThruputClient,
   type TransactionReceipt,
 } from "@thruputchain/client";
@@ -246,7 +247,9 @@ export async function loadTransactionInput(
       reason:
         error instanceof ContractVerificationError
           ? "Input verification failed."
-          : "Input could not be retrieved.",
+          : error instanceof RpcCompatibilityError
+            ? "Transaction input is not supported by this endpoint."
+            : "Input could not be retrieved.",
     };
   }
 }

@@ -8,6 +8,7 @@ import {
   toBase58,
   hashContract,
   deriveEntrypointID,
+  RpcCompatibilityError,
 } from "@thruputchain/client";
 import { DefaultWallet } from "@thruputchain/client/contracts";
 import {
@@ -226,4 +227,19 @@ test("missing effective-discovery endpoints never guess a default wallet", async
   assert.equal(result.root.method, undefined);
   assert.deepEqual(result.requested, []);
   assert.equal(result.transactionXdr, fixture.inputXdr);
+});
+
+test("old endpoints have a distinct unsupported-input state", async (t) => {
+  const client = await createThruputClient({ transport: new MockTransport() });
+  t.mock.method(client, "requireMethods", () => {
+    throw new RpcCompatibilityError("getTransactionInput unavailable");
+  });
+  const result = await loadTransactionInput(
+    client,
+    toBase58(new Uint8Array(32)),
+  );
+  assert.deepEqual(result, {
+    status: "unavailable",
+    reason: "Transaction input is not supported by this endpoint.",
+  });
 });
