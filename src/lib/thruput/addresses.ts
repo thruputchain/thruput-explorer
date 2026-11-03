@@ -178,7 +178,9 @@ function formatAddressEvent(
     sequenceNumber: entry.sequenceNumber,
     contractAddress: eventContractAddress,
     contractName: metadata?.name,
-    decoded: decodeTokenEvent(entry.event, metadata),
+    decoded: metadata?.decimals !== undefined
+      ? decodeTokenEvent(entry.event, metadata)
+      : undefined,
     topics: entry.event.topics.map(toHex0x),
     data: toHex0x(entry.event.data),
   };
