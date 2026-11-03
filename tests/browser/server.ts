@@ -136,6 +136,13 @@ async function main() {
             : { status: params.transactionHash === identifier(0xcc) ? "pending" : "unknown" });
           break;
         case "getTransactionReceipt":
+          if (params.transactionHash === identifier(0xa7)) {
+            result = { transactionHash: params.transactionHash, blockHeight: "40", gasUsed: "1000", execution: { result: "return", returnData: "0x" }, events: [{
+              address: counterAddress,
+              topics: ["0xf0c8fa264c489d9d6bc8796daa7d6ab408d76b37ef41b6d6d951e20f63d10f52", `0x${"00".repeat(31)}2a`], data: "0x",
+            }] };
+            break;
+          }
           if (calls.some(call => call.hash === params.transactionHash)) {
             result = calls.find(call => call.hash === params.transactionHash)!.receipt;
             break;

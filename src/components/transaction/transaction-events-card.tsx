@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TokenEventBadge } from "@/components/token-event-badge";
+import { EventDetails, EventName } from "@/components/event-details";
 import { shortenIdentifier } from "@/lib/format";
 import type { EventView } from "@/lib/thruput/types";
 
@@ -46,18 +46,10 @@ export function TransactionEventsCard({ events }: { events: EventView[] }) {
                     />
                   </TableCell>
                   <TableCell className="whitespace-normal align-top font-mono wrap-anywhere">
-                    {event.decoded ? (
-                      <TokenEventBadge kind={event.decoded.kind} />
-                    ) : event.specEvent?.status === "decoded" ? (
-                      event.specEvent.name
-                    ) : event.specEvent?.status === "invalid" ? (
-                      "Could not decode"
-                    ) : (
-                      "Unknown event"
-                    )}
+                    <EventName event={event} />
                   </TableCell>
                   <TableCell className="whitespace-normal align-top font-mono wrap-anywhere">
-                    <EventFields event={event} />
+                    <EventDetails event={event} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -67,50 +59,6 @@ export function TransactionEventsCard({ events }: { events: EventView[] }) {
       </CardContent>
     </Card>
   );
-}
-
-function EventFields({ event }: { event: EventView }) {
-  if (event.decoded)
-    return (
-      <dl className="flex flex-col gap-2">
-        {event.decoded.from ? (
-          <div>
-            <dt className="text-muted-foreground">From</dt>
-            <dd>
-              <AddressLink address={event.decoded.from} />
-            </dd>
-          </div>
-        ) : null}
-        {event.decoded.to ? (
-          <div>
-            <dt className="text-muted-foreground">To</dt>
-            <dd>
-              <AddressLink address={event.decoded.to} />
-            </dd>
-          </div>
-        ) : null}
-        <div>
-          <dt className="text-muted-foreground">Amount</dt>
-          <dd>
-            {event.decoded.amount}
-            {event.decoded.symbol ? ` ${event.decoded.symbol}` : ""}
-          </dd>
-        </div>
-      </dl>
-    );
-  if (event.specEvent?.status === "decoded")
-    return event.specEvent.values.length ? (
-      <ul role="list" className="flex flex-col gap-1">
-        {event.specEvent.values.map((field) => (
-          <li key={field.name}>
-            {field.name}: {field.value}
-          </li>
-        ))}
-      </ul>
-    ) : (
-      "No fields"
-    );
-  return <span className="text-muted-foreground">—</span>;
 }
 
 function AddressLink({ address, name }: { address: string; name?: string }) {

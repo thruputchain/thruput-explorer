@@ -90,6 +90,10 @@ test("current-spec previews preserve event identity and expose malformed matches
     { name: "PingEvent", fields: "tag: u64 [indexed]" },
   ]);
   assert.equal(result.eventPreviews.length, 2);
+  for (const preview of result.eventPreviews) {
+    assert.equal(preview.hash, toBase58(contractHash));
+    assert.equal(preview.stateBlockHeight, "42");
+  }
   assert.equal(result.eventPreviews[0].status, "decoded");
   if (result.eventPreviews[0].status === "decoded")
     assert.equal(JSON.parse(result.eventPreviews[0].topics).tag, "42");

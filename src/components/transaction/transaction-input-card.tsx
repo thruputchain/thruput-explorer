@@ -23,7 +23,9 @@ export async function TransactionInputCard({
       </Card>
     );
   const wrapped = input.requested.length > 0;
-  const calls = wrapped ? input.requested : [input.root];
+  const calls = wrapped && !input.root.deployment
+    ? input.requested
+    : [input.root, ...input.requested];
   return (
     <Card>
       <CardHeader>
@@ -33,14 +35,18 @@ export async function TransactionInputCard({
             : wrapped
               ? "Requested call"
               : "Root invocation"}
-          {calls.length > 1 ? "s" : ""}
+          {!input.root.deployment && calls.length > 1 ? "s" : ""}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex min-w-0 flex-col gap-6">
         {calls.map((call, index) => (
           <section
             key={index}
-            aria-label={wrapped ? "Requested call" : "Root invocation"}
+            aria-label={
+              call.deployment
+                ? "Deployment summary"
+                : wrapped ? "Requested call" : "Root invocation"
+            }
             className="flex min-w-0 flex-col gap-4"
           >
             <h3 className="font-mono text-lg font-medium wrap-anywhere">
@@ -53,7 +59,7 @@ export async function TransactionInputCard({
               <FieldRow label={call.deployment ? "Wallet" : "Contract"}>
                 <AddressLink address={call.target} />
               </FieldRow>
-              {wrapped ? (
+              {wrapped && !input.root.deployment ? (
                 <FieldRow label="Wallet">
                   <AddressLink address={input.root.target} />
                 </FieldRow>

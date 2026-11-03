@@ -25,7 +25,12 @@ import {
   type SpecDefinitionView,
 } from "./spec-format";
 
-export type SpecEventPreview = { txHash: string; sequenceNumber: number } & (
+export type SpecEventPreview = {
+  txHash: string;
+  sequenceNumber: number;
+  hash: string;
+  stateBlockHeight: string;
+} & (
   | {
       status: "decoded";
       name: string;
@@ -104,6 +109,8 @@ export async function loadContractSpec(
         const identity = {
           txHash: toBase58(entry.transactionHash),
           sequenceNumber: entry.sequenceNumber,
+          hash: toBase58(result.deployment.hash),
+          stateBlockHeight,
         };
         try {
           const decoded = decode(entry.event);

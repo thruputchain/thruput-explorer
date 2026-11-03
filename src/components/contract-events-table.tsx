@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EventDetails, EventName } from "@/components/event-details";
 import { BlockLink } from "@/components/block-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RpcAlert } from "@/components/rpc-alert";
@@ -73,26 +74,10 @@ export function ContractEventsTable({
                         <BlockLink height={event.blockHeight} />
                       </TableCell>
                       <TableCell className="whitespace-normal align-top font-mono wrap-anywhere">
-                        {preview?.status === "decoded"
-                          ? preview.name
-                          : preview?.status === "invalid"
-                            ? "Could not decode"
-                            : "Unknown event"}
+                        <EventName event={{ ...event, specEvent: preview }} />
                       </TableCell>
-                      <TableCell className="min-w-48 whitespace-normal align-top">
-                        {preview?.status === "decoded" ? (
-                          <p className="font-mono wrap-anywhere">
-                            {preview.values.length
-                              ? preview.values
-                                  .map(
-                                    (field) => `${field.name}: ${field.value}`,
-                                  )
-                                  .join(", ")
-                              : "No fields"}
-                          </p>
-                        ) : (
-                          <p className="text-muted-foreground">—</p>
-                        )}
+                      <TableCell className="min-w-48 whitespace-normal align-top font-mono wrap-anywhere">
+                        <EventDetails event={{ ...event, specEvent: preview }} />
                       </TableCell>
                     </TableRow>
                   );
