@@ -10,7 +10,9 @@ import type { EventView } from "@/lib/thruput/types";
 export function EventName({ event }: { event: EventView }) {
   if (event.decoded) return <TokenEventBadge kind={event.decoded.kind} />;
   if (event.specEvent?.status === "decoded") return event.specEvent.name;
-  return event.specEvent?.status === "invalid" ? "Could not decode" : "Unknown event";
+  return event.specEvent?.status === "invalid"
+    ? "Could not decode"
+    : "Unknown event";
 }
 
 export function EventDetails({ event }: { event: EventView }) {
@@ -18,6 +20,9 @@ export function EventDetails({ event }: { event: EventView }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <EventFields event={event} />
+      {event.enrichmentNotice ? (
+        <p className="text-muted-foreground">{event.enrichmentNotice}</p>
+      ) : null}
       {event.decoded ? (
         <p className="text-muted-foreground font-sans">
           {event.contractAddress === toBase58(NATIVE_TOKEN_ADDRESS)
@@ -49,13 +54,17 @@ function EventFields({ event }: { event: EventView }) {
         {event.decoded.from ? (
           <div>
             <dt className="text-muted-foreground">From</dt>
-            <dd><AddressLink address={event.decoded.from} /></dd>
+            <dd>
+              <AddressLink address={event.decoded.from} />
+            </dd>
           </div>
         ) : null}
         {event.decoded.to ? (
           <div>
             <dt className="text-muted-foreground">To</dt>
-            <dd><AddressLink address={event.decoded.to} /></dd>
+            <dd>
+              <AddressLink address={event.decoded.to} />
+            </dd>
           </div>
         ) : null}
         <div>
@@ -65,16 +74,24 @@ function EventFields({ event }: { event: EventView }) {
             {event.decoded.symbol ? ` ${event.decoded.symbol}` : ""}
           </dd>
         </div>
+        <div>
+          <dt className="text-muted-foreground">Raw amount (base units)</dt>
+          <dd>{event.decoded.rawAmount}</dd>
+        </div>
       </dl>
     );
   if (event.specEvent?.status === "decoded")
     return event.specEvent.values.length ? (
       <ul role="list" className="flex flex-col gap-1">
         {event.specEvent.values.map((field) => (
-          <li key={field.name}>{field.name}: {field.value}</li>
+          <li key={field.name}>
+            {field.name} ({field.type}): {field.value}
+          </li>
         ))}
       </ul>
-    ) : "No fields";
+    ) : (
+      "No fields"
+    );
   return null;
 }
 

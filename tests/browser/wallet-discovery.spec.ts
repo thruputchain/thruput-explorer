@@ -37,6 +37,6 @@ test("RV32 fallback uses its own interface and explicit deployment has precedenc
 test("unavailable fallback metadata preserves the address page", async ({ page }) => {
   await page.goto(`/address/${identifier(0xc4)}`);
   await page.getByRole("tab", { name: "Contract spec" }).click();
-  await expect(page.getByText("Contract metadata is unavailable from this endpoint.")).toBeVisible();
+  await expect(page.getByText("Metadata is unavailable from this endpoint.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "DefaultWallet", exact: true })).toHaveCount(0);
 });

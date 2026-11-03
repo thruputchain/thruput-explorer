@@ -4,23 +4,30 @@ import {
   type ThruputClient,
   type IdentifiedEvent,
 } from "@thruputchain/client";
-import { getContractSpec, getEffectiveContractSpec } from "@thruputchain/client/actions";
+import {
+  getContractSpec,
+  getEffectiveContractSpec,
+} from "@thruputchain/client/actions";
 import {
   ContractMethodEffect,
   ContractTypeKind,
   createContractEventDecoder,
   formatSpecId,
   specIdKey,
+  topicRepresentation,
+  type ContractType,
 } from "@thruputchain/client/contract";
 
 import { toRpcFailure } from "./rpc";
+import { DisplayBudget } from "./display-budget";
+import { metadataFailure } from "./metadata-failure";
 import type { RpcFailure } from "./types";
 import {
   definitionId,
   formatDefinition,
   formatContractType,
-  formatSpecValue,
   formatArgumentValue,
+  formatFields,
   type SpecArgumentView,
   type SpecDefinitionView,
 } from "./spec-format";
@@ -34,15 +41,13 @@ export type SpecEventPreview = {
   | {
       status: "decoded";
       name: string;
-      topics: string;
-      fields: string;
       values: SpecArgumentView[];
     }
   | { status: "invalid" }
 );
 
 export type ContractSpecView =
-  | { status: "unavailable"; error: RpcFailure }
+  | { status: "unavailable"; error: RpcFailure; reason?: string }
   | { status: "notDeployed"; stateBlockHeight: string }
   | {
       status: "available";
@@ -72,6 +77,7 @@ export type ContractSpecView =
       }[];
       events: { name: string; fields: string }[];
       eventPreviews: SpecEventPreview[];
+      truncated?: boolean;
     };
 
 /** Current deployment metadata only; it does not establish historical execution identity. */
@@ -80,18 +86,24 @@ export async function loadContractSpec(
   address: string,
   events: Promise<IdentifiedEvent[]> = Promise.resolve([]),
   context?: "root" | "nested",
+  budget = new DisplayBudget(),
 ): Promise<ContractSpecView> {
   try {
-    const effective = context ? await getEffectiveContractSpec(client, {
-      address: addressFromBase58(address), context,
-    }) : undefined;
+    const effective = context
+      ? await getEffectiveContractSpec(client, {
+          address: addressFromBase58(address),
+          context,
+        })
+      : undefined;
     const selection = effective?.selection;
     if (selection && !("contract" in selection))
       throw new Error("Unsupported effective contract selection");
-    const result = effective ? {
-      ...effective,
-      deployment: selection?.contract ?? null,
-    } : await getContractSpec(client, { address: addressFromBase58(address) });
+    const result = effective
+      ? {
+          ...effective,
+          deployment: selection?.contract ?? null,
+        }
+      : await getContractSpec(client, { address: addressFromBase58(address) });
     const stateBlockHeight = result.stateBlockHeight.toString();
     if (result.deployment === null)
       return { status: "notDeployed", stateBlockHeight };
@@ -99,6 +111,16 @@ export async function loadContractSpec(
     if (metadata === null)
       throw new Error("Deployed contract has no artifact result");
     const eventPreviews: SpecEventPreview[] = [];
+    const spec =
+      metadata.kind === "spec"
+        ? metadata.spec
+        : effective?.nativeInterface?.spec;
+    const rawDefinitions = new Map(
+      spec?.type_defs.map((definition) => [
+        specIdKey(definitionId(definition)),
+        definition,
+      ]),
+    );
     if (metadata.kind === "spec") {
       const decode = createContractEventDecoder(metadata.spec);
       const eventDefinitions = new Map(
@@ -106,6 +128,11 @@ export async function loadContractSpec(
       );
       for (const entry of await events) {
         if (toBase58(entry.event.address) !== address) continue;
+        if (eventPreviews.length >= 128 || budget.remaining < 256) {
+          budget.truncated = true;
+          break;
+        }
+        budget.remaining -= 128;
         const identity = {
           txHash: toBase58(entry.transactionHash),
           sequenceNumber: entry.sequenceNumber,
@@ -119,25 +146,29 @@ export async function loadContractSpec(
             eventPreviews.push({
               ...identity,
               status: "decoded",
-              name: definition?.name.declared ?? decoded.name,
-              topics: formatSpecValue(decoded.topics),
-              fields: formatSpecValue(decoded.fields),
+              name: budget.text(definition?.name.declared ?? decoded.name),
               values: definition
                 ? [
-                    ...definition.topics.map((field) => ({
-                      name: field.name,
-                      type: `${formatContractType(field.ty)} · indexed`,
+                    ...budget.rows(definition.topics, (field) => ({
+                      name: budget.text(field.name),
+                      type: `${formatContractType(field.ty, 0, budget)} · ${topicRepresentation(field.ty) === "hash" ? "indexed hash (original value unavailable)" : "indexed"}`,
                       value: formatArgumentValue(
                         decoded.topics[field.name],
-                        field.ty,
+                        topicRepresentation(field.ty) === "hash"
+                          ? { v: ContractTypeKind.Bytes }
+                          : field.ty,
+                        budget,
+                        rawDefinitions,
                       ),
                     })),
-                    ...definition.fields.map((field) => ({
-                      name: field.name,
-                      type: formatContractType(field.ty),
+                    ...budget.rows(definition.fields, (field) => ({
+                      name: budget.text(field.name),
+                      type: formatContractType(field.ty, 0, budget),
                       value: formatArgumentValue(
                         decoded.fields[field.name],
                         field.ty,
+                        budget,
+                        rawDefinitions,
                       ),
                     })),
                   ]
@@ -149,65 +180,64 @@ export async function loadContractSpec(
         }
       }
     }
-    const spec = metadata.kind === "spec" ? metadata.spec : effective?.nativeInterface?.spec;
-    const errorTypes = new Map(
-      spec?.interfaces.flatMap((value) =>
-        value.throws.map(
-          (error) =>
-            [
-              error.ty.v === ContractTypeKind.Named
-                ? specIdKey(error.ty.named)
-                : formatContractType(error.ty),
-              error.ty,
-            ] as const,
-        ),
-      ),
-    );
-    const definitions = new Map(
-      spec?.type_defs.map((definition) => [
-        specIdKey(definitionId(definition)),
-        formatDefinition(definition),
-      ]),
-    );
+    const errorTypes = new Map<string, ContractType>();
+    errors: for (const iface of spec?.interfaces ?? []) {
+      for (const error of iface.throws) {
+        if (errorTypes.size >= 128 || budget.remaining < 256) {
+          budget.truncated = true;
+          break errors;
+        }
+        const key =
+          error.ty.v === ContractTypeKind.Named
+            ? specIdKey(error.ty.named)
+            : formatContractType(error.ty, 0, budget);
+        errorTypes.set(key, error.ty);
+      }
+    }
+    const definitions = rawDefinitions;
     return {
       status: "available",
       stateBlockHeight,
       hash: toBase58(result.deployment.hash),
       size: result.deployment.size,
       selectionSource: selection?.source,
-      wallet: selection?.source === "networkDefault" || effective?.nativeInterface?.name === "DefaultWallet",
+      wallet:
+        selection?.source === "networkDefault" ||
+        effective?.nativeInterface?.name === "DefaultWallet",
       metadata: effective?.nativeInterface ? "nativeInterface" : metadata.kind,
-      name: spec?.interfaces.length === 1 ? spec.interfaces[0].name : undefined,
-      errors: [...errorTypes].map(
-        ([key, type]) =>
-          definitions.get(key) ?? {
-            name: formatContractType(type),
-            identity:
-              type.v === ContractTypeKind.Named
-                ? formatSpecId(type.named)
-                : formatContractType(type),
-            members: [],
-          },
+      name:
+        spec?.interfaces.length === 1
+          ? budget.text(spec.interfaces[0].name)
+          : undefined,
+      errors: budget.rows([...errorTypes], ([key, type]) =>
+        definitions.has(key)
+          ? formatDefinition(definitions.get(key)!, budget)
+          : {
+              name: formatContractType(type, 0, budget),
+              identity:
+                type.v === ContractTypeKind.Named
+                  ? budget.text(formatSpecId(type.named))
+                  : formatContractType(type, 0, budget),
+              members: [],
+            },
       ),
-      types: [...definitions]
-        .filter(([key]) => !errorTypes.has(key))
-        .map(([, value]) => value),
-      interfaces:
-        spec
-          ? spec.interfaces.map(
-              (value) => `${value.name}@${value.vers}`,
-            )
-          : [],
-      methods:
-        spec
-          ? spec.interfaces.flatMap((value) =>
-              value.methods.map((method) => ({
-                interface: `${value.name}@${value.vers}`,
-                name: method.name,
-                parameters: method.args
-                  .map((arg) => `${arg.name}: ${formatContractType(arg.ty)}`)
-                  .join(", "),
-                returns: formatContractType(method.return_type),
+      types: budget.rows(
+        [...definitions].filter(([key]) => !errorTypes.has(key)),
+        ([, value]) => formatDefinition(value, budget),
+      ),
+      interfaces: spec
+        ? budget.rows(spec.interfaces, (value) =>
+            budget.text(`${value.name}@${value.vers}`),
+          )
+        : [],
+      methods: spec
+        ? budget
+            .rows(spec.interfaces, (value) =>
+              budget.rows(value.methods, (method) => ({
+                interface: budget.text(`${value.name}@${value.vers}`),
+                name: budget.text(method.name),
+                parameters: formatFields(method.args, budget),
+                returns: formatContractType(method.return_type, 0, budget),
                 effect:
                   method.effect === ContractMethodEffect.EffectPure
                     ? "pure"
@@ -219,24 +249,29 @@ export async function loadContractSpec(
                         : "",
               })),
             )
-          : [],
+            .flat()
+        : [],
       events: spec
-        ? spec.events.map((value) => ({
-            name: value.name.declared,
+        ? budget.rows(spec.events, (value) => ({
+            name: budget.text(value.name.declared),
             fields: [
-              ...value.topics.map(
-                (field) =>
-                  `${field.name}: ${formatContractType(field.ty)} [indexed]`,
-              ),
-              ...value.fields.map(
-                (field) => `${field.name}: ${formatContractType(field.ty)}`,
-              ),
-            ].join(", "),
+              value.topics.length
+                ? formatFields(value.topics, budget) + " [indexed]"
+                : "",
+              formatFields(value.fields, budget),
+            ]
+              .filter(Boolean)
+              .join("; "),
           }))
         : [],
       eventPreviews,
+      truncated: budget.truncated,
     };
   } catch (error) {
-    return { status: "unavailable", error: toRpcFailure(error) };
+    return {
+      status: "unavailable",
+      error: toRpcFailure(error),
+      reason: metadataFailure(error),
+    };
   }
 }

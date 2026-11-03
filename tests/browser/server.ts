@@ -19,6 +19,7 @@ async function main() {
   const walletContract = { contract_type: ContractType.kNative, native_contract_id: HogexecPrecompiledNativeContracts.kNativeContractDefaultWallet } as const;
   const walletHash = toBase58(hashContract(walletContract));
   const calledAddress = toBase58(DefaultWallet.v0_1.execute.decodeArgs(deserialize(fromHex0x(calls[0].inputXdr), codec.Transaction).invocation.calldata).calls[0].target);
+  const callerAddress = toBase58(deserialize(fromHex0x(calls[0].inputXdr), codec.Transaction).invocation.invoked_address);
   const txHash = identifier(0xab);
   const statusFixtures: Record<string, unknown> = {
     [identifier(0xa1)]: { status: "retry", error: { source: "scheduler", code: -7 } },
@@ -208,7 +209,7 @@ async function main() {
           break;
         case "getEffectiveContract": {
           const explicit = [counterAddress, calledAddress].includes(params.address);
-          const nativeDefault = params.address === identifier(0xc2);
+          const nativeDefault = [identifier(0xc2), callerAddress].includes(params.address);
           const rv32Default = params.address === identifier(0xc3);
           const missingArtifact = params.address === identifier(0xc4);
           result = {

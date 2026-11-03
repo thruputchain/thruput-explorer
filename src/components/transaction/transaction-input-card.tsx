@@ -23,9 +23,10 @@ export async function TransactionInputCard({
       </Card>
     );
   const wrapped = input.requested.length > 0;
-  const calls = wrapped && !input.root.deployment
-    ? input.requested
-    : [input.root, ...input.requested];
+  const calls =
+    wrapped && !input.root.deployment
+      ? input.requested
+      : [input.root, ...input.requested];
   return (
     <Card>
       <CardHeader>
@@ -45,13 +46,24 @@ export async function TransactionInputCard({
             aria-label={
               call.deployment
                 ? "Deployment summary"
-                : wrapped ? "Requested call" : "Root invocation"
+                : wrapped
+                  ? "Requested call"
+                  : "Root invocation"
             }
             className="flex min-w-0 flex-col gap-4"
           >
             <h3 className="font-mono text-lg font-medium wrap-anywhere">
               {call.displayMethod ?? "Unknown method"}
             </h3>
+            <p className="text-muted-foreground wrap-anywhere">
+              {call.metadata}
+            </p>
+            {wrapped ? (
+              <p className="text-muted-foreground">
+                Requested by the input; this does not prove execution or a child
+                outcome.
+              </p>
+            ) : null}
             {!call.deployment && call.arguments ? (
               <SpecValues values={call.arguments} />
             ) : null}
@@ -82,6 +94,12 @@ export async function TransactionInputCard({
           <p className="text-muted-foreground">
             {input.omitted} additional requests are not previewed. Full input is
             in Technical details.
+          </p>
+        ) : null}
+        {input.truncated ? (
+          <p className="text-muted-foreground">
+            Decoded preview shortened to the page display limit. Raw input is in
+            Technical details.
           </p>
         ) : null}
       </CardContent>

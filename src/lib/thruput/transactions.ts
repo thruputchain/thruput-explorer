@@ -93,13 +93,19 @@ export async function loadTransactionPageData(
     }
 
     const execution = receipt?.execution;
+    const displayBudget = new DisplayBudget();
     let inputPromise: Promise<TransactionInputView> | undefined;
     return {
       hash,
       rpcUrl,
       status,
       loadInput: () =>
-        (inputPromise ??= loadTransactionInput(client, hash, receipt)),
+        (inputPromise ??= loadTransactionInput(
+          client,
+          hash,
+          receipt,
+          displayBudget,
+        )),
       chainTipHeight:
         tipResult.status === "fulfilled"
           ? tipResult.value.blockHeight.toString()
@@ -109,7 +115,7 @@ export async function loadTransactionPageData(
           ? toRpcFailure(receiptResult.reason)
           : undefined,
       loadEnrichedEvents: receipt?.events.length
-        ? () => enrichTransactionEvents(client, receipt)
+        ? () => enrichTransactionEvents(client, receipt, displayBudget)
         : undefined,
       receipt:
         receipt && execution
@@ -149,10 +155,12 @@ export async function loadTransactionPageData(
 async function enrichTransactionEvents(
   client: ThruputClient,
   receipt: TransactionReceipt,
+  budget: DisplayBudget,
 ): Promise<EventView[]> {
   const events = receipt.events;
   const metadataByAddress = new Map<string, TokenMetadata | undefined>();
   const previews = new Map<number, SpecEventPreview>();
+  const notices = new Map<string, string>();
   const identified = events.map((event, sequenceNumber) => ({
     event,
     sequenceNumber,
@@ -163,22 +171,45 @@ async function enrichTransactionEvents(
     ...new Set(events.map((event) => toBase58(event.address))),
   ];
   // Bound optional enrichment; all receipt events remain visible even beyond this budget.
-  for (let offset = 0; offset < Math.min(addresses.length, 32); offset += 4) {
-    await Promise.all(
-      addresses.slice(offset, Math.min(offset + 4, 32)).map(async (address) => {
+  let nextAddress = 0;
+  await Promise.all(
+    Array.from({ length: 4 }, async () => {
+      while (nextAddress < Math.min(addresses.length, 32)) {
+        const address = addresses[nextAddress++];
         const [metadata, spec] = await Promise.all([
           getTokenMetadata(client, address),
           getBuiltInTokenMetadata(address)
             ? undefined
-            : loadContractSpec(client, address, Promise.resolve(identified)),
+            : loadContractSpec(
+                client,
+                address,
+                Promise.resolve(identified),
+                undefined,
+                budget,
+              ),
         ]);
         metadataByAddress.set(address, metadata);
+        if (spec?.status === "unavailable")
+          notices.set(address, spec.reason ?? "Metadata unavailable.");
+        else if (
+          spec?.status === "available" &&
+          spec.metadata.startsWith("unsupported")
+        )
+          notices.set(
+            address,
+            "This contract metadata format or schema is not supported. Raw event data is available.",
+          );
+        else if (spec?.status === "available" && spec.truncated)
+          notices.set(
+            address,
+            "Decoded preview shortened to the page display limit.",
+          );
         if (spec?.status === "available")
           for (const preview of spec.eventPreviews)
             previews.set(preview.sequenceNumber, preview);
-      }),
-    );
-  }
+      }
+    }),
+  );
   return events.map((event, index) => {
     const view = formatEvent(
       event,
@@ -186,7 +217,17 @@ async function enrichTransactionEvents(
         getBuiltInTokenMetadata(toBase58(event.address)),
     );
     const preview = previews.get(index);
-    return preview ? { ...view, specEvent: preview } : view;
+    const address = toBase58(event.address);
+    const enrichmentNotice =
+      notices.get(address) ??
+      (!metadataByAddress.has(address) && !getBuiltInTokenMetadata(address)
+        ? "Optional enrichment is limited to 32 contracts per transaction. Raw event data is available."
+        : undefined);
+    return {
+      ...view,
+      ...(preview ? { specEvent: preview } : {}),
+      ...(enrichmentNotice && !view.decoded ? { enrichmentNotice } : {}),
+    };
   });
 }
 
@@ -274,3 +315,4 @@ function formatFailureCause(
   }
   return cause;
 }
+import { DisplayBudget } from "./display-budget";

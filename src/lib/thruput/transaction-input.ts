@@ -8,12 +8,14 @@ import {
   type TransactionReceipt,
 } from "@thruputchain/client";
 import {
-  getContractSpec,
+  getEffectiveContractSpec,
   readTransactionInput,
   decodeDefaultWalletRequests,
 } from "@thruputchain/client/actions";
 import {
   createContractCallDecoder,
+  ContractVerificationError,
+  specIdKey,
   type ContractSpec,
 } from "@thruputchain/client/contract";
 import { DefaultWalletSpec, ERC20Spec } from "@thruputchain/client/contracts";
@@ -25,10 +27,13 @@ import {
 
 import {
   formatArgumentValue,
+  definitionId,
   formatContractType,
   formatSpecValue,
   type SpecArgumentView,
 } from "./spec-format";
+import { DisplayBudget } from "./display-budget";
+import { metadataFailure } from "./metadata-failure";
 
 export interface CallPreview {
   target: string;
@@ -38,7 +43,7 @@ export interface CallPreview {
   metadata: string;
   method?: string;
   displayMethod?: string;
-  source?: "current" | "native" | "walletCandidate";
+  source?: "current" | "native";
   arguments?: SpecArgumentView[];
   deployment?: { hash: string; funding: string; initializer: string };
   args?: string;
@@ -54,6 +59,7 @@ export type TransactionInputView =
       root: CallPreview;
       requested: CallPreview[];
       omitted: number;
+      truncated?: boolean;
     };
 
 const nativeHash = (id: number) =>
@@ -75,6 +81,7 @@ export async function loadTransactionInput(
   client: ThruputClient,
   hash: string,
   receipt?: TransactionReceipt | null,
+  budget = new DisplayBudget(),
 ): Promise<TransactionInputView> {
   try {
     const input = await readTransactionInput(client, {
@@ -92,8 +99,13 @@ export async function loadTransactionInput(
           "Original input is not retained. This does not prove nonexecution.",
       };
     if (receipt && input.blockHeight !== receipt.blockHeight)
-      throw new Error("Input and receipt commitment heights disagree");
-    const cache = new Map<string, ReturnType<typeof getContractSpec>>();
+      throw new ContractVerificationError(
+        "Input and receipt commitment heights disagree",
+      );
+    const cache = new Map<
+      string,
+      ReturnType<typeof getEffectiveContractSpec>
+    >();
     const describe = async (invocation: Invocation, root: boolean) => {
       const view: CallPreview = {
         target: toBase58(invocation.invoked_address),
@@ -104,21 +116,28 @@ export async function loadTransactionInput(
       };
       let wallet = false;
       try {
-        let pending = cache.get(view.target);
+        const context = root ? "root" : "nested";
+        const key = `${context}:${view.target}`;
+        let pending = cache.get(key);
         if (!pending) {
-          pending = getContractSpec(client, {
+          pending = getEffectiveContractSpec(client, {
             address: invocation.invoked_address,
+            context,
           });
-          cache.set(view.target, pending);
+          cache.set(key, pending);
         }
         const result = await pending;
+        const selection = result.selection;
+        if (selection && !("contract" in selection))
+          throw new Error("Unsupported effective contract selection");
+        const deployment = selection?.contract;
         let spec: ContractSpec | undefined;
         if (result.artifactSpec?.kind === "spec") {
           spec = result.artifactSpec.spec;
           view.source = "current";
-          view.metadata = `Current spec ${toBase58(result.deployment!.hash)} at block ${result.stateBlockHeight}; historical code identity is not established.`;
-        } else if (result.deployment) {
-          const hash = toBase58(result.deployment.hash);
+          view.metadata = `Current ${selection?.source} spec ${toBase58(deployment!.hash)} at block ${result.stateBlockHeight}; historical code identity is not established.`;
+        } else if (deployment) {
+          const hash = toBase58(deployment.hash);
           if (hash === walletHash) {
             spec = DefaultWalletSpec;
             wallet = true;
@@ -128,24 +147,25 @@ export async function loadTransactionInput(
           view.metadata = spec
             ? "Built-in native ABI preview; native identity does not authenticate runtime code or historical behavior."
             : `Metadata: ${result.artifactSpec?.kind ?? "unavailable"}.`;
-        } else if (root) {
-          // Runtime can use a chain-configured wallet for undeployed roots. Its
-          // historical hash is not exposed, so this is explicitly a candidate ABI.
-          spec = DefaultWalletSpec;
-          wallet = true;
-          view.source = "walletCandidate";
-          view.metadata =
-            "DefaultWallet ABI candidate for an undeployed root. The historical chain-configured wallet identity is unavailable.";
         } else {
           view.metadata =
             "No current deployment. A requested call may refer to a transaction-local deployment.";
         }
         if (spec) {
+          const definitions = new Map(
+            spec.type_defs.map((definition) => [
+              specIdKey(definitionId(definition)),
+              definition,
+            ]),
+          );
           const decoded = createContractCallDecoder(spec)(invocation);
           if (decoded) {
-            view.method = `${decoded.interfaceName}@${decoded.interfaceVersion}.${decoded.methodName}`;
-            view.displayMethod = `${decoded.interfaceName}.${decoded.methodName}`;
-            view.args = formatSpecValue(decoded.args ?? {});
+            view.method = budget.text(
+              `${decoded.interfaceName}@${decoded.interfaceVersion}.${decoded.methodName}`,
+            );
+            view.displayMethod = budget.text(
+              `${decoded.interfaceName}.${decoded.methodName}`,
+            );
             const method = spec.interfaces
               .find(
                 (iface) =>
@@ -154,10 +174,15 @@ export async function loadTransactionInput(
               )
               ?.methods.find((method) => method.name === decoded.methodName);
             const args = decoded.args ?? {};
-            view.arguments = method?.args.map((arg) => ({
-              name: arg.name,
-              type: formatContractType(arg.ty),
-              value: formatArgumentValue(args[arg.name], arg.ty),
+            view.arguments = budget.rows(method?.args ?? [], (arg) => ({
+              name: budget.text(arg.name),
+              type: formatContractType(arg.ty, 0, budget),
+              value: formatArgumentValue(
+                args[arg.name],
+                arg.ty,
+                budget,
+                definitions,
+              ),
             }));
             if (
               wallet &&
@@ -171,18 +196,17 @@ export async function loadTransactionInput(
                 initializer:
                   args.initializer === null
                     ? "None"
-                    : formatSpecValue(args.initializer),
+                    : formatSpecValue(args.initializer, budget),
               };
             }
             if (root && receipt) {
               const outcome = decoded.method.decodeReceiptOutcome(receipt);
-              view.output = formatSpecValue(outcome);
+              view.output = formatSpecValue(outcome, budget);
             }
           } else view.metadata += " Unknown selector.";
         }
-      } catch {
-        view.metadata +=
-          " Decoding unavailable: metadata or input could not be validated.";
+      } catch (error) {
+        view.metadata = metadataFailure(error);
       }
       return { view, wallet };
     };
@@ -214,11 +238,15 @@ export async function loadTransactionInput(
       root: root.view,
       requested,
       omitted: Math.max(0, calls.length - 32),
+      truncated: budget.truncated,
     };
-  } catch {
+  } catch (error) {
     return {
       status: "unavailable",
-      reason: "Input could not be retrieved or verified.",
+      reason:
+        error instanceof ContractVerificationError
+          ? "Input verification failed."
+          : "Input could not be retrieved.",
     };
   }
 }

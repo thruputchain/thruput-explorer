@@ -29,7 +29,7 @@ for (const call of calls) {
     await expect(
       page.getByText(/DefaultWallet@.*\.execute/, { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(/DefaultWallet ABI candidate/)).toBeVisible();
+    await expect(requested.getByText(/historical code identity is not established/)).toBeVisible();
     await expect(page.getByLabel("Canonical Transaction XDR")).toHaveText(
       call.inputXdr,
     );

@@ -96,7 +96,7 @@ test("current-spec previews preserve event identity and expose malformed matches
   }
   assert.equal(result.eventPreviews[0].status, "decoded");
   if (result.eventPreviews[0].status === "decoded")
-    assert.equal(JSON.parse(result.eventPreviews[0].topics).tag, "42");
+    assert.equal(result.eventPreviews[0].values[0].value, "42");
   assert.equal(result.eventPreviews[1].status, "invalid");
 });
 

@@ -31,7 +31,10 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
       </CardHeader>
       <CardContent className="flex min-w-0 flex-col gap-6">
         {data.status === "unavailable" ? (
-          <p>Contract metadata is unavailable from this endpoint.</p>
+          <p>
+            {data.reason ??
+              "Contract metadata is unavailable from this endpoint."}
+          </p>
         ) : data.status === "notDeployed" ? (
           <dl>
             <FieldRow label="Deployment">No contract at this snapshot</FieldRow>
@@ -41,6 +44,12 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
           </dl>
         ) : (
           <>
+            {data.truncated ? (
+              <p className="text-muted-foreground">
+                Spec preview shortened to the page display limit. Some
+                definitions or values are omitted.
+              </p>
+            ) : null}
             {data.metadata === "spec" || data.metadata === "nativeInterface" ? (
               <>
                 {data.interfaces.map((iface) => (
@@ -90,7 +99,9 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
               <dl>
                 {data.selectionSource ? (
                   <FieldRow label="Selection">
-                    {data.selectionSource === "networkDefault" ? "Network default · root invocation" : "Explicit deployment"}
+                    {data.selectionSource === "networkDefault"
+                      ? "Network default · root invocation"
+                      : "Explicit deployment"}
                   </FieldRow>
                 ) : null}
                 <FieldRow label="State block">
@@ -106,7 +117,9 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
                 {data.metadata === "nativeInterface"
                   ? "This built-in interface describes the selected native identifier. It does not authenticate runtime code or historical behavior."
                   : "The spec describes the current contract. An embedded spec is bound to its artifact hash, but does not verify behavior or identify historical code."}
-                {data.selectionSource === "networkDefault" ? " The network default applies to undeployed root invocations. Selection does not prove authorization." : ""}
+                {data.selectionSource === "networkDefault"
+                  ? " The network default applies to undeployed root invocations. Selection does not prove authorization."
+                  : ""}
               </p>
             </InspectionDetails>
           </>

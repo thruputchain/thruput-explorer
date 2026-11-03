@@ -49,7 +49,7 @@ test("activity tabs show spec definitions and one decoded events table", async (
   await expect(
     page.getByRole("cell", { name: "PingEvent", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("tag: 42", { exact: true })).toBeVisible();
+  await expect(page.getByText("tag (u64 · indexed): 42", { exact: true })).toBeVisible();
   const decoded = page.getByRole("row").filter({
     has: page.getByRole("cell", { name: "PingEvent", exact: true }),
   });
@@ -85,6 +85,7 @@ test("native token contract events use built-in decoding without a spec", async 
   await page.getByRole("tab", { name: "Events", exact: true }).click();
   await expect(page.getByText("Transfer", { exact: true })).toBeVisible();
   await expect(page.getByText("Amount", { exact: true })).toBeVisible();
+  await expect(page.getByText("Raw amount (base units)", { exact: true })).toBeVisible();
   await expect(page.getByText("Built-in native token decoding.", { exact: true })).toBeVisible();
   await expect(page.getByText(/Current spec at block/)).toHaveCount(0);
   await page.getByText("Raw event", { exact: true }).click();
