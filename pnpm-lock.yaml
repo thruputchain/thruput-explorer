@@ -18,11 +18,11 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@thruputchain/client':
-        specifier: 0.25.0
-        version: 0.25.0
+        specifier: 0.26.0
+        version: 0.26.0
       '@thruputchain/protocol':
-        specifier: 0.19.1
-        version: 0.19.1
+        specifier: 0.20.0
+        version: 0.20.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1506,20 +1506,20 @@ packages:
   '@tailwindcss/postcss@4.3.5':
     resolution: {integrity: sha512-FAV37Tlx9wBiT/hkfgVD0Q6CWsP2oUX3lf28nrfjW8+ksILjnpuFulUqWDfNR4/ZiEHHDRBX8DUTzD1Rys687A==}
 
-  '@thruputchain/client@0.25.0':
-    resolution: {integrity: sha512-GgNPeItAoV37WF6JWtOTcspG6LAzsb2nNUgmsBN36J5tqqy6HTUjX4pN1IuAWlf8xEtGvzbfEUETwuiTpMOA2w==}
+  '@thruputchain/client@0.26.0':
+    resolution: {integrity: sha512-MAZEkzUB//DkE3qJfhiP2ra7358TGkgEsHXxHRvS1et7yiU6UtNJx3f3KexxI8Pzxhey9AuzegnMKJz9MZmqQQ==}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/contract-spec@0.19.1':
-    resolution: {integrity: sha512-I9voNIwSRkmPAXi/MlZyLvZUEA+e7/x6xnxTMBqa9c60z2SQ9vMu3LeHzlxY5x2+ba2ULC03ET1Dh97+XO5TrA==}
+  '@thruputchain/contract-spec@0.20.0':
+    resolution: {integrity: sha512-jTNScXHs0JfFdywipJZFyxlP9fDQZUfNsiX6IpfC7T4FNyHkq3cIK6AUVVI739dRpqqgv6qDOs9un4ATYUWJag==}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/protocol@0.19.1':
-    resolution: {integrity: sha512-P2kCw+SFvggMhVHQJccOYv9A/mM40jFehdaAHb2fy6IE5QWgIr/52kBZcjEpbOKdKkfM5sS4ljD9cI02NuCt4A==}
+  '@thruputchain/protocol@0.20.0':
+    resolution: {integrity: sha512-R4nWFh+8NTplZhStILUhMgf2ynID+MPcWNEhMXd549i4czDSDKVbZX6cjFxwhfkBtqctgsvGprQ9XZ7DQxV3Sw==}
     engines: {node: '>=22.12.0'}
 
-  '@thruputchain/xdr@0.19.1':
-    resolution: {integrity: sha512-14G/GKsU7PVpMbSRYIZEzJqIAki6lLgT+qxcelrB2zktN87wT2K9AgSbNqYgqhuYNpKFh+NCbzQBAE+0M0FYoQ==}
+  '@thruputchain/xdr@0.20.0':
+    resolution: {integrity: sha512-ofDE18gMm6dGAREOu90VA9kc2PgT7+NWmlPCu8BWME1VzGd3td1+1W4jHgoTnz1RpYPnRxn9MPpKA7SJhRYNuQ==}
     engines: {node: '>=22.12.0'}
 
   '@types/estree@1.0.10':
@@ -4548,28 +4548,28 @@ snapshots:
       postcss: 8.5.32
       tailwindcss: 4.3.5
 
-  '@thruputchain/client@0.25.0':
+  '@thruputchain/client@0.26.0':
     dependencies:
       '@noble/ed25519': 3.2.0
       '@noble/hashes': 2.4.0
       '@noble/post-quantum': 0.7.1
       '@scure/base': 2.0.0
-      '@thruputchain/contract-spec': 0.19.1
-      '@thruputchain/protocol': 0.19.1
-      '@thruputchain/xdr': 0.19.1
+      '@thruputchain/contract-spec': 0.20.0
+      '@thruputchain/protocol': 0.20.0
+      '@thruputchain/xdr': 0.20.0
 
-  '@thruputchain/contract-spec@0.19.1':
+  '@thruputchain/contract-spec@0.20.0':
     dependencies:
-      '@thruputchain/protocol': 0.19.1
-      '@thruputchain/xdr': 0.19.1
+      '@thruputchain/protocol': 0.20.0
+      '@thruputchain/xdr': 0.20.0
 
-  '@thruputchain/protocol@0.19.1':
+  '@thruputchain/protocol@0.20.0':
     dependencies:
       '@noble/hashes': 2.2.0
       '@scure/base': 2.0.0
-      '@thruputchain/xdr': 0.19.1
+      '@thruputchain/xdr': 0.20.0
 
-  '@thruputchain/xdr@0.19.1': {}
+  '@thruputchain/xdr@0.20.0': {}
 
   '@types/estree@1.0.10': {}
 

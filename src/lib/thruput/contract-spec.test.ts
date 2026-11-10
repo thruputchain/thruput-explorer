@@ -12,7 +12,7 @@ import { loadContractSpec } from "./contract-spec";
 
 const address = new Uint8Array(32).fill(7);
 
-// Counter built by the candidate Rust v6 writer; tests consume its complete envelope.
+// Counter built by the released Rust v6 writer; tests consume its complete envelope.
 const artifact = new Uint8Array(
   readFileSync(
     new URL("../../../tests/fixtures/counter-v6.rv32a", import.meta.url),
