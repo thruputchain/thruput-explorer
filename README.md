@@ -10,7 +10,7 @@ The SVGs in `public/brand/` and `src/app/icon.svg` use the official Stellar Logo
 
 ## Setup
 
-Use Node.js 22.12+ and pnpm 10.34.7. The SDK packages currently require GitHub Packages read access, even though this repository is public. Add your token to your user-level npm configuration (`~/.npmrc`):
+Use Node.js 22.12+ and pnpm 10.34.7. The SDK packages currently require GitHub Packages read access. Add your token to your user-level npm configuration (`~/.npmrc`):
 
 ```ini
 //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
@@ -29,6 +29,15 @@ Open <http://localhost:3000>. Set `THRUPUT_RPC_URL` in `.env.local` to select a 
 The explorer uses client **0.24.0** and protocol **0.19.0**. It targets CLI/gateway **0.40.0**, public node **0.1.31-rc.16**, and RPC wire **14.1.1**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.16` in another terminal. The client checks the wire version and advertised methods when connecting. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
 
 For devnet, set `THRUPUT_RPC_URL=https://rpc.thruput.network`. Runtime rc.16 uses the renamed `thruput` contract event signatures. Older runtimes use different signatures and need the previous SDK bindings; RPC wire compatibility alone does not establish contract compatibility.
+
+## Local sample data
+
+With a local node running, use `pnpm seed:local` to create three users and three
+token owners, deploy three ERC20 tokens, and mint and transfer tokens between the
+accounts. The TypeScript runner checks final balances and saves addresses and
+transaction records in `.seed-local-node/`. See
+[the seed script guide](scripts/seed-local-node/README.md) for usage, configuration,
+and output details.
 
 ## Configuration and deployment
 
