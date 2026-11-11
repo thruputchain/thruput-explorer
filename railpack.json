@@ -7,9 +7,8 @@
   },
   "steps": {
     "install": {
-      "inputs": ["...", { "local": true, "include": ["package.json", "pnpm-lock.yaml", ".npmrc", ".npmrc.railway"] }],
-      "secrets": ["NPM_TOKEN"],
-      "commands": ["NPM_CONFIG_USERCONFIG=/app/.npmrc.railway pnpm install --frozen-lockfile"]
+      "inputs": ["...", { "local": true, "include": ["package.json", "pnpm-lock.yaml", ".npmrc"] }],
+      "commands": ["pnpm install --frozen-lockfile"]
     },
     "build": {
       "commands": ["pnpm build"]
