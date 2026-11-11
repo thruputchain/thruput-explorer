@@ -10,13 +10,7 @@ The SVGs in `public/brand/` and `src/app/icon.svg` use the official Stellar Logo
 
 ## Setup
 
-Use Node.js 22.12+ and pnpm 10.34.7. The SDK packages currently require GitHub Packages read access. Add your token to your user-level npm configuration (`~/.npmrc`):
-
-```ini
-//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
-```
-
-Export `GITHUB_PACKAGES_TOKEN` with `read:packages` access to the Thruput packages. The repository's `.npmrc` selects the registry.
+Use Node.js 22.12+ and pnpm 10.34.7. All dependencies are public on npm. No package token or GitHub login is needed to install them. The repository's `.npmrc` selects public npm for Thruput packages, including when a user-level configuration still selects GitHub Packages.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -26,7 +20,7 @@ pnpm dev
 
 Open <http://localhost:3000>. Set `THRUPUT_RPC_URL` in `.env.local` to select a node; the default is `http://localhost:9545`. Restart the server after changing it. This replaces the old `GROUNDHOG_RPC_URL` setting; update existing deployment variables when upgrading.
 
-The explorer uses client **0.24.0** and protocol **0.19.0**. It targets CLI/gateway **0.40.0**, public node **0.1.31-rc.16**, and RPC wire **14.1.1**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.16` in another terminal. The client checks the wire version and advertised methods when connecting. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
+The explorer uses client **0.25.0** and protocol **0.19.1**. It targets CLI/gateway **0.40.0**, public node **0.1.31-rc.16**, and RPC wire **14.1.1**. For local use, start `thruput node --hog-devnode-version 0.1.31-rc.16` in another terminal. The client checks the wire version and advertised methods when connecting. Block queries require a complete `block-query-v1` index; genesis metadata is outside coverage.
 
 For devnet, set `THRUPUT_RPC_URL=https://rpc.thruput.network`. Runtime rc.16 uses the renamed `thruput` contract event signatures. Older runtimes use different signatures and need the previous SDK bindings; RPC wire compatibility alone does not establish contract compatibility.
 
@@ -52,7 +46,7 @@ pnpm build
 pnpm start
 ```
 
-`railpack.json` supplies the Railway build and start commands. Set `NPM_TOKEN` for package installation and `THRUPUT_RPC_URL` for the node connection. `/health` is the health endpoint.
+`railpack.json` supplies the Railway build and start commands. Set `THRUPUT_RPC_URL` for the node connection. Package installation needs no token. `/health` is the health endpoint.
 
 ## Wallet Shortcut
 
@@ -85,10 +79,24 @@ pnpm test:browser
 pnpm audit
 ```
 
-Production and browser tests require a completed build and stop their temporary servers afterward. Browser tests use port 3100, or `PLAYWRIGHT_PORT`, and refuse to reuse an existing server. CI runs lint, unit tests, build, public access checks and browser tests. Fork CI needs access to the SDK packages.
+Production and browser tests require a completed build and stop their temporary servers afterward. Browser tests use port 3100, or `PLAYWRIGHT_PORT`, and refuse to reuse an existing server. CI runs lint, type checking, unit tests, build, public access checks and browser tests. Fork CI uses public packages without credentials.
 
 Application dependencies use the latest compatible releases. ESLint stays on 9 and TypeScript on 6.0 until the Next.js lint plugins support their newer major versions. Node types match the Node 22 deployment runtime; pnpm stays on the current lockfile's major version. UI components are checked-in shadcn source; use `pnpm dlx shadcn@latest` when adding components.
+
+The lockfile pins the TypeScript parser's `minimatch` dependency to 11.0.7 to fix
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+Remove this override when the parser's dependency range includes a fixed release.
 
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+Bundled font notices are in [public/font-licenses/](public/font-licenses/).
+For vulnerability reports, see [SECURITY.md](SECURITY.md).
+
+## Contributing
+
+Fork the repository and open a pull request against `main`. Contributors with
+write access can use repository branches. Run the checks above before requesting
+review. Changes require passing CI and approval under the repository's rules.
+Include reproduction steps for bugs and screenshots for interface changes.
