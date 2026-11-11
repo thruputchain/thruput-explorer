@@ -43,5 +43,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Personal local-node tooling
-/scripts/bootstrap-local-node.sh
+# Local seed runs (includes private fixture keys)
+/.seed-local-node/

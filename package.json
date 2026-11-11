@@ -7,12 +7,13 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "seed:local": "tsx scripts/seed-local-node/index.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test": "tsx --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\"",
     "test:production": "node --test scripts/production.test.mjs",
     "test:browser": "playwright test"
   },
