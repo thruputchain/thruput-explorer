@@ -98,6 +98,22 @@ test("address orders adjacent heights beyond safe integers without rounding", as
   ]);
 });
 
+test("custom-token events retain raw evidence when decimals are unavailable", async (t) => {
+  const client = await mockClient(t);
+  const emitted = event(4, 44n, { contractAddress: address, amount: 10_000_000n });
+  t.mock.method(client, "getTransactionsByRootAddress", async () => ({ transactions: [] }));
+  t.mock.method(client, "getEvents", async (query: EventQuery) => ({
+    events: query.filters.length === 2 ? [] : [emitted],
+  }));
+  const result = await loadAddressPageData(address);
+  if (result.status !== "ok") assert.fail("Expected address data");
+  const [view] = result.contractEvents;
+  assert.equal(view.decoded, undefined);
+  assert.equal(view.txHash, hash(4));
+  assert.equal(view.topics.length, emitted.event.topics.length);
+  assert.equal(view.data, `0x${Buffer.from(emitted.event.data).toString("hex")}`);
+});
+
 test("address keeps the newest 25 transactions after combining and deduplicating both sources", async (t) => {
   const client = await mockClient(t);
   t.mock.method(client, "getTransactionsByRootAddress", async () => ({

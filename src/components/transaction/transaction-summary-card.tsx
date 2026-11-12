@@ -36,7 +36,6 @@ export function TransactionSummaryCard({ data }: { data: TransactionPageData }) 
           <FieldRow label="Freshness">{freshness ?? "-"}</FieldRow>
           <FieldRow label="Receipt">{data.receipt ? "Available" : "Not available"}</FieldRow>
           {data.receiptError ? <FieldRow label="Receipt error">{data.receiptError.message}</FieldRow> : null}
-          <FieldRow label="RPC URL"><span className="font-mono">{data.rpcUrl}</span></FieldRow>
         </dl>
       </CardContent>
     </Card>
@@ -66,17 +65,6 @@ function getExecutionDetails(data: TransactionPageData) {
   if (data.status.status === "retry" || data.status.status === "dropped") {
     details.push({ label: "Error source", value: data.status.error.source });
     details.push({ label: "Error code", value: String(data.status.error.code) });
-  }
-
-  const receipt = data.receipt;
-  if (!receipt) return details;
-
-  if (receipt.returnData && receipt.returnData !== "0x") {
-    details.push({ label: "Return data", value: receipt.returnData });
-  }
-
-  if (receipt.abortData) {
-    details.push({ label: "Abort data", value: receipt.abortData });
   }
 
   return details;

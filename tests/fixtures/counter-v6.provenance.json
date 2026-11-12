@@ -1,0 +1,11 @@
+{
+  "artifact": "counter-v6.rv32a",
+  "artifactSha256": "a30a03b40c243f94478169ba9a2f8e4367e1ec0d5a043971a5f6238c6f12f6e2",
+  "artifactBytes": 6433,
+  "specBytes": 548,
+  "formatVersion": 6,
+  "formatFingerprint": "0x0e336ac8e46602e1",
+  "origin": "Counter template built with published thruput 0.44.0 (bc3d36df) and Rust SDK 0.60.1",
+  "releaseQualified": true,
+  "rustc": "rustc 1.98.0-nightly (f46ec5218 2026-06-30)"
+}

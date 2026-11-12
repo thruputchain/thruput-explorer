@@ -5,7 +5,8 @@ import { AlertCircleIcon } from "lucide-react";
 import { RpcAlert } from "@/components/rpc-alert";
 import { TransactionEventsCard } from "@/components/transaction/transaction-events-card";
 import { TransactionHeader } from "@/components/transaction/transaction-header";
-import { TransactionRawReceiptCard } from "@/components/transaction/transaction-raw-receipt-card";
+import { TransactionInputCard } from "@/components/transaction/transaction-input-card";
+import { TransactionTechnicalCard } from "@/components/transaction/transaction-technical-card";
 import { TransactionSummaryCard } from "@/components/transaction/transaction-summary-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { loadTransactionPageData, type LoadedTransactionPage } from "@/lib/thruput/transactions";
@@ -33,16 +34,19 @@ export default async function TransactionPage({
             <AlertCircleIcon />
             <AlertTitle>Unknown transaction</AlertTitle>
             <AlertDescription>
-              The node does not know this transaction hash yet.
+              No status is available from this lookup. Retained input or receipts may provide separate evidence.
             </AlertDescription>
           </Alert>
         ) : null}
 
+        <Suspense fallback={<p role="status">Loading transaction input…</p>}>
+          <TransactionInputCard data={data} />
+        </Suspense>
         <TransactionSummaryCard data={data} />
         <Suspense fallback={<TransactionEventsCard events={data.receipt?.events ?? []} />}>
           <EnrichedTransactionEvents data={data} />
         </Suspense>
-        <TransactionRawReceiptCard data={data} />
+        <TransactionTechnicalCard data={data} />
       </div>
     </main>
   );

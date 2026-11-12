@@ -9,6 +9,7 @@ import { toRpcFailure } from "./rpc";
 import { decodeTokenEvent } from "./token-events";
 import { getTokenMetadata, type TokenMetadata } from "./token-metadata";
 import type { DecodedEventView, RpcFailure } from "./types";
+import { loadContractSpec, type ContractSpecView } from "./contract-spec";
 
 const ADDRESS_TX_LIMIT = 25;
 const ADDRESS_EVENT_LIMIT = 25;
@@ -33,6 +34,7 @@ export type AddressPageData =
       label?: string;
       badges: string[];
       metadata?: TokenMetadata;
+      contractSpec: ContractSpecView;
       nativeBalance?: NativeBalanceView;
       transactions: AddressTransactionRefView[];
       transactionsError?: RpcFailure;
@@ -93,7 +95,12 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
             .then((page) => ({ events: page.events, error: undefined }))
             .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) }));
 
-    const [nativeBalance, metadata, rootTransactionsResult, nativeTokenTransfersResult, contractEventsResult] = await Promise.all([
+    const contractEventsRequest = client
+      .getEvents({ filters: [{ addresses: [contractAddress] }], start: { order: "descending", anchor: { kind: "atEnd" } }, limit: historyPageLimit(client, "events", ADDRESS_EVENT_LIMIT) })
+      .then((page) => ({ events: page.events, error: undefined }))
+      .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) }));
+
+    const [nativeBalance, metadata, rootTransactionsResult, nativeTokenTransfersResult, contractEventsResult, contractSpec] = await Promise.all([
       getNativeBalance(client, address),
       getTokenMetadata(client, address).catch(() => undefined),
       client
@@ -101,10 +108,8 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
         .then((page) => ({ refs: page.transactions, error: undefined }))
         .catch((error: unknown) => ({ refs: [], error: toRpcFailure(error) })),
       nativeTokenTransfersRequest,
-      client
-        .getEvents({ filters: [{ addresses: [contractAddress] }], start: { order: "descending", anchor: { kind: "atEnd" } }, limit: historyPageLimit(client, "events", ADDRESS_EVENT_LIMIT) })
-        .then((page) => ({ events: page.events, error: undefined }))
-        .catch((error: unknown) => ({ events: [], error: toRpcFailure(error) })),
+      contractEventsRequest,
+      loadContractSpec(client, address, contractEventsRequest.then((result) => result.events), "root"),
     ]);
 
     const badges = buildBadges({ metadata, emittedEventCount: contractEventsResult.events.length });
@@ -116,6 +121,7 @@ export async function loadAddressPageData(addressInput: string): Promise<Address
       label: metadata?.name,
       badges,
       metadata,
+      contractSpec,
       nativeBalance,
       transactions: mergeTransactionHistory(rootTransactionsResult.refs, nativeTokenTransfersResult.events),
       transactionsError:
@@ -172,7 +178,9 @@ function formatAddressEvent(
     sequenceNumber: entry.sequenceNumber,
     contractAddress: eventContractAddress,
     contractName: metadata?.name,
-    decoded: decodeTokenEvent(entry.event, metadata),
+    decoded: metadata?.decimals !== undefined
+      ? decodeTokenEvent(entry.event, metadata)
+      : undefined,
     topics: entry.event.topics.map(toHex0x),
     data: toHex0x(entry.event.data),
   };

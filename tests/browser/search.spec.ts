@@ -25,8 +25,9 @@ test("search uses the API and RPC, then renders the decoded transfer", async ({ 
   expect((await response).status()).toBe(200);
   await expect(page).toHaveURL(`/tx/${txHash}`);
   await expect(page.locator('[data-slot="card"]').filter({ has: page.getByRole("heading", { name: "Events", exact: true }) }).getByText("1.5 native tokens", { exact: true })).toBeVisible();
-  await expect(page.getByText("15000000", { exact: true })).toBeVisible();
   await expect(page.getByText("Transfer", { exact: true })).toBeVisible();
+  await page.getByText("Technical details", { exact: true }).click();
+  await expect(page.getByLabel("Raw event 1", { exact: true })).toContainText("topics");
 });
 
 test("search follows an address result and renders its balance", async ({ page }) => {

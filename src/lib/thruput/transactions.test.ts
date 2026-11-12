@@ -192,6 +192,23 @@ test("core events load without metadata; enrichment queries each unique contract
 });
 
 
+test("bounded enrichment preserves all events and labels omitted metadata", async (t) => {
+  const events = Array.from({ length: 33 }, (_, index) => {
+    const event = transferEvent({ contractAddress: identifier(index + 1) });
+    return { address: toBase58(event.address), topics: event.topics.map(toHex0x), data: toHex0x(event.data) };
+  });
+  const request = mockRpc(t, {
+    getTransactionReceipt: { ...rawReceipt, events },
+    simulateInvocations: metadataBatchResponse(["Token", "TOK", 2n]),
+  });
+  const result = await loadTransactionPageData(hash);
+  const enriched = await result.loadEnrichedEvents!();
+  assert.equal(enriched.length, 33);
+  assert.equal(enriched[32].data, events[32].data);
+  assert.match(enriched[32].enrichmentNotice!, /limited to 32 contracts/);
+  assert.equal(request.mock.calls.filter(({ arguments: [method] }) => method === "simulateInvocations").length, 32);
+});
+
 test("native token events have canonical metadata without any view requests", async (t) => {
   const event = transferEvent({ contractAddress: NATIVE_TOKEN_ADDRESS, from: identifier(0x11), to: identifier(0x22), amount: 10000000n });
   const request = mockRpc(t, { getTransactionReceipt: { ...rawReceipt, events: [{ address: NATIVE_TOKEN_ADDRESS, topics: event.topics.map(toHex0x), data: toHex0x(event.data) }] } });

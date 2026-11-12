@@ -2,12 +2,24 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { MockTransport, fromHex0x, toBase58, toHex0x } from "@thruputchain/client";
-import { NATIVE_TOKEN_ADDRESS } from "@thruputchain/protocol";
+import { NATIVE_TOKEN_ADDRESS, codec, ContractType, HogexecPrecompiledNativeContracts, serialize, deserialize } from "@thruputchain/protocol";
+import { DefaultWallet } from "@thruputchain/client/contracts";
+import calls from "../fixtures/counter-calls.json";
+import { hashContract } from "@thruputchain/client/contract";
 
-import { identifier, transferEvent } from "../../src/lib/thruput/test-fixtures";
+import { identifier, transferEvent, metadataBatchResponse } from "../../src/lib/thruput/test-fixtures";
 
 async function main() {
+  const counterArtifact = new Uint8Array(readFileSync(new URL("../fixtures/counter-v6.rv32a", import.meta.url)));
+  const counterContract = { contract_type: ContractType.kRv32, rv32_contract: { data: counterArtifact } } as const;
+  const counterHash = toBase58(hashContract(counterContract));
+  const counterAddress = identifier(0xc1);
+  const walletContract = { contract_type: ContractType.kNative, native_contract_id: HogexecPrecompiledNativeContracts.kNativeContractDefaultWallet } as const;
+  const walletHash = toBase58(hashContract(walletContract));
+  const calledAddress = toBase58(DefaultWallet.v0_1.execute.decodeArgs(deserialize(fromHex0x(calls[0].inputXdr), codec.Transaction).invocation.calldata).calls[0].target);
+  const callerAddress = toBase58(deserialize(fromHex0x(calls[0].inputXdr), codec.Transaction).invocation.invoked_address);
   const txHash = identifier(0xab);
   const statusFixtures: Record<string, unknown> = {
     [identifier(0xa1)]: { status: "retry", error: { source: "scheduler", code: -7 } },
@@ -120,11 +132,22 @@ async function main() {
           result = { blockHeight: "42", blockHash: identifier(0xbb) };
           break;
         case "getTransactionStatus":
-          result = statusFixtures[params.transactionHash] ?? ([txHash, paginatedTxHash, slowTxHash].includes(params.transactionHash)
+          result = calls.some(call => call.hash === params.transactionHash) ? { status: "committed", blockHeight: calls.find(call => call.hash === params.transactionHash)!.receipt.blockHeight } : statusFixtures[params.transactionHash] ?? ([txHash, paginatedTxHash, slowTxHash].includes(params.transactionHash)
             ? { status: "committed", blockHeight: "42" }
             : { status: params.transactionHash === identifier(0xcc) ? "pending" : "unknown" });
           break;
         case "getTransactionReceipt":
+          if (params.transactionHash === identifier(0xa7)) {
+            result = { transactionHash: params.transactionHash, blockHeight: "40", gasUsed: "1000", execution: { result: "return", returnData: "0x" }, events: [{
+              address: counterAddress,
+              topics: ["0xf0c8fa264c489d9d6bc8796daa7d6ab408d76b37ef41b6d6d951e20f63d10f52", `0x${"00".repeat(31)}2a`], data: "0x",
+            }] };
+            break;
+          }
+          if (calls.some(call => call.hash === params.transactionHash)) {
+            result = calls.find(call => call.hash === params.transactionHash)!.receipt;
+            break;
+          }
           if (params.transactionHash === addressActivityTxHash) {
             pendingActivity++;
             try { await activityGate; } finally { pendingActivity--; }
@@ -144,6 +167,17 @@ async function main() {
             : null;
           break;
         case "getEvents": {
+          if (params.filters.some((filter: { addresses: string[] }) => filter.addresses.includes(counterAddress))) {
+            result = { events: [{ transactionHash: txHash, blockHeight: "42", sequenceNumber: 0, event: {
+              address: counterAddress,
+              topics: ["0xf0c8fa264c489d9d6bc8796daa7d6ab408d76b37ef41b6d6d951e20f63d10f52", `0x${"00".repeat(31)}2a`], data: "0x",
+            } }, { transactionHash: txHash, blockHeight: "42", sequenceNumber: 1, event: {
+              address: counterAddress, topics: [`0x${"11".repeat(32)}`], data: "0x1234",
+            } }, { transactionHash: txHash, blockHeight: "42", sequenceNumber: 2, event: {
+              address: counterAddress, topics: ["0xf0c8fa264c489d9d6bc8796daa7d6ab408d76b37ef41b6d6d951e20f63d10f52"], data: "0x",
+            } }].reverse(), nextCursor: null, latestIndexedBlockHeight: "42", oldestIndexedBlockHeight: "42" };
+            break;
+          }
           const filter = params.filters.find((filter: { addresses: string[] }) => filter.addresses.includes(event.address));
           const matchingTransfer = transferEvent({
             contractAddress: event.address,
@@ -165,7 +199,41 @@ async function main() {
         case "getTransactionsByRootAddress":
           result = { transactions: params.address === identifier(0x66) ? [{ transactionHash: addressActivityTxHash, blockHeight: "42" }] : [], nextCursor: null, latestIndexedBlockHeight: "42", oldestIndexedBlockHeight: "42" };
           break;
+        case "getTransactionInput": {
+          const call = calls.find(call => call.hash === params.transactionHash);
+          result = call ? { status: "available", transactionHash: call.hash, blockHeight: call.receipt.blockHeight, transactionXdr: call.inputXdr } : { status: "unavailable" };
+          break;
+        }
+        case "getContractDeployment":
+          result = { address: params.address, stateBlockHeight: "42", deployment: [counterAddress, calledAddress].includes(params.address) ? { hash: counterHash, size: counterArtifact.length, contractType: 3 } : null };
+          break;
+        case "getEffectiveContract": {
+          const explicit = [counterAddress, calledAddress].includes(params.address);
+          const nativeDefault = [identifier(0xc2), callerAddress].includes(params.address);
+          const rv32Default = params.address === identifier(0xc3);
+          const missingArtifact = params.address === identifier(0xc4);
+          result = {
+            address: params.address, context: params.context, stateBlockHeight: "42",
+            selection: explicit || (params.context === "root" && (nativeDefault || rv32Default || missingArtifact)) ? {
+              source: explicit ? "explicitDeployment" : "networkDefault",
+              contract: nativeDefault ? { hash: walletHash, size: 0, contractType: 1 } : {
+                hash: missingArtifact ? identifier(0xc4) : counterHash, size: counterArtifact.length, contractType: 3,
+              },
+            } : null,
+          };
+          break;
+        }
+        case "getContractArtifact":
+          if (params.hash === identifier(0xc4)) throw new Error("Artifact unavailable");
+          result = params.hash === walletHash
+            ? { hash: walletHash, contractXdr: toHex0x(serialize(walletContract, codec.Contract)) }
+            : { hash: counterHash, contractXdr: toHex0x(serialize(counterContract, codec.Contract)) };
+          break;
         case "simulateInvocations":
+          if (JSON.stringify(params).includes(identifier(0xc5))) {
+            result = metadataBatchResponse(["Partial token", "PART", undefined]);
+            break;
+          }
           if (JSON.stringify(params).includes(identifier(0x55))) {
             pending++;
             try { await metadataGate; } finally { pending--; }
