@@ -41,7 +41,7 @@ export function ContractEventsTable({
             error={error}
           />
         ) : !events.length ? (
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             No events found for this contract.
           </p>
         ) : (

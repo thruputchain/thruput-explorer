@@ -31,7 +31,7 @@ export function ContractSpecCard({ data }: { data: ContractSpecView }) {
       </CardHeader>
       <CardContent className="flex min-w-0 flex-col gap-6">
         {data.status === "unavailable" ? (
-          <p>
+          <p className="text-sm text-muted-foreground">
             {data.reason ??
               "Contract metadata is unavailable from this endpoint."}
           </p>
