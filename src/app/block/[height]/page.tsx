@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
 import { toBase58 } from "@thruputchain/client";
 
 import { PageHeader } from "@/components/page-header";
@@ -6,7 +7,10 @@ import { BlockLink } from "@/components/block-link";
 import { RpcAlert } from "@/components/rpc-alert";
 import { FieldRow } from "@/components/transaction/field-row";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BlockActivityCard } from "@/components/block-activity-card";
 import { loadBlock, loadBlockTransactions } from "@/lib/thruput/blocks";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function BlockPage({
   params,
@@ -41,45 +45,70 @@ export default async function BlockPage({
         title={`Block ${height}`}
         value={toBase58(block.blockHash)}
         copyLabel="Copy block hash"
+        actions={
+          <nav aria-label="Block navigation" className="flex flex-wrap gap-3">
+            {transactions.status === "ok" &&
+            block.blockHeight > BigInt(transactions.data.oldest) ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/block/${block.blockHeight - 1n}`}>
+                  <ArrowLeftIcon aria-hidden="true" />
+                  Previous block
+                </Link>
+              </Button>
+            ) : null}
+            {transactions.status === "ok" &&
+            block.blockHeight < BigInt(transactions.data.latest) ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/block/${block.blockHeight + 1n}`}>
+                  Next block
+                  <ArrowRightIcon aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : null}
+          </nav>
+        }
       />
       <div className="app-container flex flex-col gap-6 py-8">
-        <dl>
-          <FieldRow label="Height">
-            <BlockLink height={block.blockHeight.toString()} />
-          </FieldRow>
-          {fields.map(([label, value]) => (
-            <FieldRow key={label} label={label}>
-              <span className="break-all font-mono tabular-nums">{value}</span>
-            </FieldRow>
-          ))}
-        </dl>
-        <nav aria-label="Block navigation" className="flex flex-wrap gap-4">
-          <Button asChild>
-            <Link href={`/block/${height}/transactions`}>
-              View transactions
-            </Link>
-          </Button>
-          {transactions.status === "ok" &&
-          block.blockHeight > BigInt(transactions.data.oldest) ? (
-            <Button asChild variant="outline">
-              <Link href={`/block/${block.blockHeight - 1n}`}>
-                Previous block
-              </Link>
-            </Button>
-          ) : null}
-          {transactions.status === "ok" &&
-          block.blockHeight < BigInt(transactions.data.latest) ? (
-            <Button asChild variant="outline">
-              <Link href={`/block/${block.blockHeight + 1n}`}>Next block</Link>
-            </Button>
-          ) : null}
-        </nav>
-        {transactions.status !== "ok" ? (
-          <RpcAlert
-            title="Transaction index not available"
-            description={transactions.message}
-          />
-        ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle>Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl>
+              <FieldRow label="Height">
+                <BlockLink height={block.blockHeight.toString()} />
+              </FieldRow>
+              {fields.map(([label, value]) => (
+                <FieldRow key={label} label={label}>
+                  <span className="break-all font-mono tabular-nums">
+                    {value}
+                  </span>
+                </FieldRow>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+        <Tabs defaultValue="transactions" className="min-w-0 w-full">
+          <div className="max-w-full overflow-x-auto overflow-y-hidden">
+            <TabsList variant="line" aria-label="Block activity">
+              <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="transactions">
+            {transactions.status === "ok" ? (
+              <BlockActivityCard
+                key={height}
+                height={height}
+                page={transactions.data}
+              />
+            ) : (
+              <RpcAlert
+                title="Transaction index not available"
+                description={transactions.message}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </main>
   );
