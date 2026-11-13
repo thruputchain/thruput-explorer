@@ -39,6 +39,10 @@ async function main() {
   const slowTxHash = identifier(0xde);
   const slowEvent = { ...event, address: identifier(0x55) };
   const addressActivityTxHash = identifier(0xdf);
+  const blockActivityTxHash = identifier(0xe0);
+  let releaseBlockActivity = () => {};
+  let blockActivityGate = Promise.resolve();
+  let pendingBlockActivity = 0;
   let releaseActivity = () => {};
   let activityGate = Promise.resolve();
   let pendingActivity = 0;
@@ -50,6 +54,17 @@ async function main() {
   const discovery = new MockTransport();
   const rpc = createServer(async (request, response) => {
     try {
+      if (request.url?.startsWith("/block-activity/")) {
+        if (request.url === "/block-activity/reset" && request.method === "POST") {
+          releaseBlockActivity();
+          blockActivityGate = new Promise<void>((resolve) => { releaseBlockActivity = resolve; });
+        } else if (request.url === "/block-activity/release" && request.method === "POST") {
+          releaseBlockActivity();
+        }
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ pending: pendingBlockActivity }));
+        return;
+      }
       if (request.url?.startsWith("/activity/")) {
         if (request.url === "/activity/reset" && request.method === "POST") {
           releaseActivity();
@@ -109,7 +124,7 @@ async function main() {
           break;
         case "getBlockByHeight": {
           const height = params.blockHeight;
-          result = ["40", "41", "42", "9007199254740993"].includes(height) ? {
+          result = ["40", "41", "42", "46", "9007199254740993"].includes(height) ? {
             blockHeight: height, blockHash: identifier(0xbb), prevBlockHash: identifier(0xaa),
             protocol: 1, networkHash: identifier(0), proposer: identifier(0x11),
             blockTimepoint: "1770000000000000000", txsHash: identifier(0x22),
@@ -122,7 +137,7 @@ async function main() {
           const { blockHeight: height, cursor, limit, start } = params;
           if (limit !== 50 || (cursor ? start !== undefined : start?.order !== "ascending")) throw new Error("Unexpected block page parameters");
           result = {
-            transactions: height === "42" ? [{ transactionHash: cursor ? paginatedTxHash : txHash, blockHeight: height }] : [],
+            transactions: height === "42" ? [{ transactionHash: cursor ? paginatedTxHash : txHash, blockHeight: height }] : height === "46" ? [{ transactionHash: blockActivityTxHash, blockHeight: height }] : [],
             nextCursor: height === "42" && !cursor ? "0xaa" : null,
             oldestIndexedBlockHeight: "40", latestIndexedBlockHeight: "9007199254740993",
           };
@@ -137,6 +152,12 @@ async function main() {
             : { status: params.transactionHash === identifier(0xcc) ? "pending" : "unknown" });
           break;
         case "getTransactionReceipt":
+          if (params.transactionHash === blockActivityTxHash) {
+            pendingBlockActivity++;
+            try { await blockActivityGate; } finally { pendingBlockActivity--; }
+            result = { transactionHash: blockActivityTxHash, blockHeight: "46", gasUsed: "1000", execution: { result: "return", returnData: "0x" }, events: [event] };
+            break;
+          }
           if (params.transactionHash === identifier(0xa7)) {
             result = { transactionHash: params.transactionHash, blockHeight: "40", gasUsed: "1000", execution: { result: "return", returnData: "0x" }, events: [{
               address: counterAddress,
@@ -274,6 +295,7 @@ async function main() {
     stopping = true;
     releaseMetadata();
     releaseActivity();
+    releaseBlockActivity();
     child.kill("SIGTERM");
     setTimeout(() => child.kill("SIGKILL"), 5_000).unref();
   };

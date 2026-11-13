@@ -1,6 +1,6 @@
 import { toBase58 } from "@thruputchain/client";
 
-import { BlockTransactions } from "@/components/block-transactions";
+import { BlockActivityCard } from "@/components/block-activity-card";
 import { PageHeader } from "@/components/page-header";
 import { RpcAlert } from "@/components/rpc-alert";
 import { loadBlock, loadBlockTransactions } from "@/lib/thruput/blocks";
@@ -36,7 +36,7 @@ export default async function BlockTransactionsPage({
         backLabel="Block details"
       />
       <div className="app-container py-8">
-        <BlockTransactions key={height} height={height} initial={page.data} />
+        <BlockActivityCard key={height} height={height} page={page.data} />
       </div>
     </main>
   );

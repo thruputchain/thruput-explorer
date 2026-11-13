@@ -1,7 +1,7 @@
 "use server";
 
-import { loadBlockTransactions } from "@/lib/thruput/blocks";
+import { loadBlockActivity } from "@/lib/thruput/block-activity";
 
-export async function nextBlockTransactions(height: string, cursor: string) {
-  return loadBlockTransactions(height, cursor);
+export async function nextBlockTransactions(height: string, cursor?: string) {
+  return loadBlockActivity(height, cursor);
 }
