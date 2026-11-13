@@ -124,7 +124,7 @@ async function main() {
           break;
         case "getBlockByHeight": {
           const height = params.blockHeight;
-          result = ["40", "41", "42", "46", "9007199254740993"].includes(height) ? {
+          result = ["40", "41", "42", "46", "47", "9007199254740993"].includes(height) ? {
             blockHeight: height, blockHash: identifier(0xbb), prevBlockHash: identifier(0xaa),
             protocol: 1, networkHash: identifier(0), proposer: identifier(0x11),
             blockTimepoint: "1770000000000000000", txsHash: identifier(0x22),
@@ -137,8 +137,8 @@ async function main() {
           const { blockHeight: height, cursor, limit, start } = params;
           if (limit !== 50 || (cursor ? start !== undefined : start?.order !== "ascending")) throw new Error("Unexpected block page parameters");
           result = {
-            transactions: height === "42" ? [{ transactionHash: cursor ? paginatedTxHash : txHash, blockHeight: height }] : height === "46" ? [{ transactionHash: blockActivityTxHash, blockHeight: height }] : [],
-            nextCursor: height === "42" && !cursor ? "0xaa" : null,
+            transactions: height === "42" ? [{ transactionHash: cursor ? paginatedTxHash : txHash, blockHeight: height }] : height === "46" ? [{ transactionHash: blockActivityTxHash, blockHeight: height }] : height === "47" && !cursor ? [{ transactionHash: txHash, blockHeight: height }] : [],
+            nextCursor: ["42", "47"].includes(height) && !cursor ? "0xaa" : null,
             oldestIndexedBlockHeight: "40", latestIndexedBlockHeight: "9007199254740993",
           };
           break;

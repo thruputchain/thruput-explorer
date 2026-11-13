@@ -87,6 +87,9 @@ for (const width of [390, 1280]) {
   test(`block search, details and bounded transactions at ${width}px`, async ({
     page,
   }) => {
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await page.getByRole("textbox", { name: /Block height/ }).fill("42");
@@ -119,10 +122,12 @@ for (const width of [390, 1280]) {
     await expect(
       page.getByTitle(identifier(0xab), { exact: true }),
     ).toHaveAttribute("href", `/tx/${identifier(0xab)}`);
+    await expect(page.getByRole("list", { name: "Block transactions" }).locator("time")).toContainText("ago");
     await page.getByRole("button", { name: "Next page" }).click();
     await expect(
       page.getByTitle(identifier(0xdd), { exact: true }),
     ).toHaveAttribute("href", `/tx/${identifier(0xdd)}`);
+    await expect(page.getByRole("list", { name: "Block transactions" }).locator("time")).toContainText("ago");
     await expect(page.getByText("No further references returned.")).toHaveCount(
       0,
     );
@@ -151,8 +156,21 @@ for (const width of [390, 1280]) {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    expect(errors).toEqual([]);
   });
 }
+
+test("empty continuation does not claim the block is empty", async ({ page }) => {
+  await page.goto("/block/47");
+  const transactions = page.getByRole("tabpanel", { name: "Transactions", exact: true });
+  await expect(transactions.getByTitle(identifier(0xab), { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await expect(page.getByText("No transactions on this page.")).toBeVisible();
+  await expect(page.getByText("No transactions in this indexed block.")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Next page", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Previous page", exact: true }).click();
+  await expect(page.getByTitle(identifier(0xab), { exact: true })).toBeVisible();
+});
 
 test("empty block, genesis, large heights and receipt navigation", async ({
   page,

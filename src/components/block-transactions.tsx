@@ -103,7 +103,9 @@ export function BlockTransactions({
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No transactions in this indexed block.
+            {index === 0 && page.cursor === null
+              ? "No transactions in this indexed block."
+              : "No transactions on this page."}
           </p>
         )}
         {message ? (
