@@ -43,5 +43,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Local seed runs (includes private fixture keys)
+# Local seed runs (reports and signed transaction evidence)
 /.seed-local-node/

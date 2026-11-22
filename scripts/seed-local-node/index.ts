@@ -1,43 +1,42 @@
-import { readFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import {
-  createThruputClient,
+  createPubkeyAccount,
+  Ed25519Signer,
   formatUnits,
+  hashFromBase58,
   localnet,
+  networkHash,
   parseUnits,
-  prepareContractDeployment,
   toBase58,
-  type ContractDeployment,
+  type ContractAddress,
 } from "@thruputchain/client";
+import {
+  createOutputDirectory,
+  loadArtifacts,
+  withScenario,
+  type RunReport,
+  type Scenario,
+  type ScenarioArtifact,
+} from "@thruputchain/testkit";
 import { ERC20, ERC20Metadata } from "@thruputchain/client/contracts";
 import { gasAmount, NATIVE_TOKEN_ADDRESS } from "@thruputchain/protocol";
 import { mintAmount, nativeTransfers, tokens, transfers, userNames } from "./config";
-import {
-  createPersona,
-  createRun,
-  record,
-  saveRun,
-  type Client,
-  type Persona,
-  type Run,
-} from "./run";
 
 const NATIVE_TOKEN_DECIMALS = 7;
-const callGas = gasAmount(500_000n); // Limits the inner ERC20 call.
-const walletGas = gasAmount(1_000_000n); // Limits the wallet root and its inner call.
-const deploymentGas = gasAmount(10_000_000n); // Limits deployment, funding, and initialization.
-// Storage funding moves native tokens to the contract; it is separate from gas limits.
+const callGas = gasAmount(500_000n);
+const walletGas = gasAmount(1_000_000n);
+const deploymentGas = gasAmount(10_000_000n);
+// Storage funding is separate from gas limits.
 const storageFunding = parseUnits("2", NATIVE_TOKEN_DECIMALS);
 const wait = { timeoutMs: 30_000 };
+type SeedScenario = Scenario<ReturnType<typeof localnet>>;
+type Token = (typeof tokens)[number] & { address: ContractAddress };
 
-interface Asset {
-  name: string;
-  symbol: string;
-  decimals: number;
-  owner: Persona;
-  deployment: ContractDeployment;
-}
+const ownerName = (symbol: string) => `${symbol} Owner`;
 
 async function main() {
   const { values } = parseArgs({
@@ -46,228 +45,194 @@ async function main() {
         type: "string",
         default: process.env.THRUPUT_RPC_URL ?? "http://127.0.0.1:9545",
       },
+      "network-hash": {
+        type: "string",
+        default: process.env.THRUPUT_NETWORK_HASH ?? toBase58(localnet().networkHash!),
+      },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) {
     console.log(
-      "Usage: pnpm seed:local [--rpc-url URL]\n" +
+      "Usage: pnpm seed:local [--rpc-url URL] [--network-hash BASE58]\n" +
         "Default: THRUPUT_RPC_URL or http://127.0.0.1:9545\n" +
+        "Network: THRUPUT_NETWORK_HASH or the default local network identity\n" +
         "Edit config.ts for scenario settings. Results go to .seed-local-node/.",
     );
     return;
   }
-  const rpcUrl = values["rpc-url"];
-  const artifact = await readFile(new URL("./contracts/erc20.rv32a", import.meta.url));
-  // Connect to the existing node and discover its network identity before signing anything.
-  const client = await createThruputClient({ cluster: localnet({ rpcUrl }) });
-  const run = await createRun(rpcUrl, toBase58(client.network.networkHash));
-  console.log(`Run: ${run.directory}`);
+  await seedLocalNode(values["rpc-url"], values["network-hash"]);
+}
+
+export async function seedLocalNode(rpcUrl: string, expectedNetworkHash: string, parent?: string) {
+  const cluster = localnet({
+    rpcUrl,
+    networkHash: networkHash(hashFromBase58(expectedNetworkHash)),
+  });
+  const { token } = await loadArtifacts({
+    token: new URL("./contracts/erc20.rv32a", import.meta.url),
+  });
+  const directory = await createOutputDirectory(parent ?? resolve(".seed-local-node"));
+  const runDirectory = join(directory, "transactions");
+  console.log(`Run: ${directory}`);
+  // Disposable local accounts. Keys are not saved: a failed run starts again with fresh accounts.
+  const names = [...userNames, ...tokens.map((token) => ownerName(token.symbol))];
+  const accounts = Object.fromEntries(
+    names.map((name) => [
+      name,
+      createPubkeyAccount({ signer: Ed25519Signer.fromSeed(randomBytes(32)) }),
+    ]),
+  );
   try {
-    // Await each step: later operations depend on earlier transactions being confirmed.
-    const users = await createUsers(client, run);
-    const assets = await createTokenOwners(client, run, artifact);
-    await fundAll(run, [...users, ...assets.map((asset) => asset.owner)]);
-    await deployTokens(run, assets);
-    await mintTokens(run, assets, users);
-    await sendNativeTokens(run, users);
-    await sendTokens(run, assets, users);
-    await checkBalances(client, run, assets, users);
-    run.manifest.status = "complete";
-    await saveRun(run);
-    printSummary(run);
+    const report = await withScenario(
+      { network: { cluster }, accounts, runDirectory },
+      async (scenario) => {
+        console.log("\nWallets:");
+        for (const [name, address] of Object.entries(scenario.run.report().actors))
+          console.log(`${name}: ${address}`);
+        try {
+          // Dependent operations await confirmation. The report records every hash, including funding.
+          await fundAll(scenario, names);
+          const deployed = await deployTokens(scenario, token);
+          await mintTokens(scenario, deployed);
+          await sendTransfers(
+            scenario,
+            NATIVE_TOKEN_ADDRESS,
+            "native",
+            NATIVE_TOKEN_DECIMALS,
+            nativeTransfers,
+          );
+          for (const token of deployed) {
+            await sendTransfers(scenario, token.address, token.symbol, token.decimals, transfers);
+          }
+          await scenario.run.step("verify-balances", () => checkBalances(scenario, deployed));
+          console.log(
+            `\nComplete: ${names.length} wallets, ${deployed.length} tokens. Balances and supplies verified.`,
+          );
+          return scenario.run.report();
+        } finally {
+          printSummary(scenario.run.report(), runDirectory);
+        }
+      },
+    );
+    return { directory, report };
   } catch (error) {
-    run.manifest.status = "failed";
-    run.manifest.error = error instanceof Error ? error.message : String(error);
-    await saveRun(run);
-    console.error(`Stopped. Inspect ${run.directory}/manifest.json before retrying.`);
+    // A run that stopped before its first step has no report to inspect.
+    if (existsSync(join(directory, "transactions", "report.json")))
+      console.error(
+        `Stopped. Run files: ${directory}. Inspect original transactions before retrying.`,
+      );
     throw error;
   }
 }
 
-async function createUsers(client: Client, run: Run) {
-  const users: Persona[] = [];
-  for (const name of userNames) {
-    users.push(await createPersona(client, run, name, "user"));
-  }
-  return users;
-}
-
-async function createTokenOwners(client: Client, run: Run, artifact: Uint8Array) {
-  const assets: Asset[] = [];
-  for (const token of tokens) {
-    const owner = await createPersona(client, run, `${token.symbol} Owner`, "owner");
-    // Reuse the artifact, but prepare a distinct deployment and predicted address per token.
-    // This is local preparation; deployTokens submits the actual transactions.
-    const deployment = prepareContractDeployment({
-      deployer: owner.account.address,
-      contract: artifact,
-    });
-    assets.push({ ...token, owner, deployment });
-  }
-  return assets;
-}
-
-async function fundAll(run: Run, personas: Persona[]) {
-  for (const persona of personas) {
-    await record(
-      run,
-      {
-        label: `Fund ${persona.name}`,
-        kind: "fund",
-        to: persona.address,
-        token: "native",
-      },
+async function fundAll(scenario: SeedScenario, names: readonly string[]) {
+  console.log("\nFaucet transactions:");
+  for (const name of names) {
+    const actor = scenario.actor(name);
+    await scenario.run.step(
+      `fund/${name}`,
       async () => {
-        // The faucet chooses the amount. requestAirdrop waits for successful execution.
-        const result = await persona.wallet.requestAirdrop(wait);
-        // Adapt the faucet response to record(), keeping the amount in display units.
-        return {
-          hash: result.transactionHash,
-          blockHeight: result.blockHeight,
-          amount: formatUnits(result.rawAmount, NATIVE_TOKEN_DECIMALS),
-        };
+        // The faucet chooses the amount. fund waits for successful execution.
+        const result = await actor.fund({ timeoutMs: wait.timeoutMs });
+        console.log(
+          `${name}: ${toBase58(result.transactionHash)} (${formatUnits(result.rawAmount, NATIVE_TOKEN_DECIMALS)} native)`,
+        );
       },
+      { metadata: { recipient: toBase58(actor.account.address), token: "native" } },
     );
   }
 }
 
-async function deployTokens(run: Run, assets: Asset[]) {
-  for (const { name, symbol, decimals, owner, deployment } of assets) {
-    // Save the predicted address even if confirmation fails. The transaction status
-    // tells readers whether deployment was confirmed.
-    run.manifest.tokens.push({
-      name,
-      symbol,
-      decimals,
-      address: toBase58(deployment.address),
-      owner: owner.address,
-    });
-    await record(
-      run,
-      {
-        label: `${owner.name} deploys ${symbol}`,
-        kind: "deploy",
-        from: owner.address,
-        token: symbol,
-      },
-      // Deployment, native-token funding, and initialization succeed or fail together.
+async function deployTokens(scenario: SeedScenario, artifact: ScenarioArtifact) {
+  const deployed: Token[] = [];
+  for (const token of tokens) {
+    const owner = scenario.actor(ownerName(token.symbol));
+    const deployment = artifact.prepare(owner.account.address);
+    const { name, symbol, decimals } = token;
+    await scenario.run.step(
+      `deploy/${symbol}`,
       () =>
-        owner.wallet.deployContractAndWait(
-          deployment,
-          {
-            gasLimit: deploymentGas,
-            amount: storageFunding,
-            initializer: ERC20Metadata.v0_1.initialize.invocation(deployment.address, callGas, {
+        owner.deploy(deployment, {
+          gasLimit: deploymentGas,
+          amount: storageFunding,
+          wait,
+          // Deployment, storage funding, and initialization succeed or fail together.
+          initializer: ERC20Metadata.v0_1.initialize.call({
+            address: deployment.address,
+            gasLimit: callGas,
+            args: {
               administrator: owner.account.address,
               name,
               symbol,
               decimals: BigInt(decimals),
-            }),
-          },
-          wait,
-        ),
+            },
+          }),
+        }),
+      // The predicted address is saved before deployment, so a failed run still shows it.
+      { metadata: { name, symbol, decimals, address: toBase58(deployment.address) } },
     );
+    deployed.push({ ...token, address: deployment.address });
   }
+  return deployed;
 }
 
-async function mintTokens(run: Run, assets: Asset[], users: Persona[]) {
-  for (const { symbol, decimals, owner, deployment } of assets) {
-    for (const user of users) {
-      // The owner signs minting calls because it is the token's administrator.
-      // invocation() encodes the inner call; executeAndWait wraps it in a wallet transaction.
-      await record(
-        run,
-        {
-          label: `${owner.name} mints ${mintAmount} ${symbol} to ${user.name}`,
-          kind: "mint",
-          from: owner.address,
-          to: user.address,
-          token: symbol,
-          amount: mintAmount,
-        },
+async function mintTokens(scenario: SeedScenario, deployed: Token[]) {
+  for (const { symbol, decimals, address } of deployed) {
+    for (const name of userNames) {
+      const receiver = scenario.actor(name).account.address;
+      await scenario.run.step(
+        `mint/${symbol}/${name}`,
+        // The owner signs minting calls because it is the token's administrator.
         () =>
-          owner.wallet.executeAndWait(
-            {
-              invocation: ERC20.v0_1.mint.invocation(deployment.address, callGas, {
-                receiver: user.account.address,
+          scenario.actor(ownerName(symbol)).call(
+            [
+              ERC20.v0_1.mint.call({
+                address,
+                gasLimit: callGas,
                 // Convert display units to bigint base units without floating-point arithmetic.
-                amount: parseUnits(mintAmount, decimals),
+                args: { receiver, amount: parseUnits(mintAmount, decimals) },
               }),
-              gasLimit: walletGas,
-            },
-            wait,
+            ],
+            { gasLimit: walletGas, wait },
           ),
+        { metadata: { recipient: toBase58(receiver), token: symbol, amount: mintAmount } },
       );
     }
   }
 }
 
-async function sendNativeTokens(run: Run, users: Persona[]) {
-  // The native token exposes the same ERC20 transfer interface as the deployed tokens.
-  const byName = Object.fromEntries(users.map((user) => [user.name, user]));
-  for (const transfer of nativeTransfers) {
-    const sender = byName[transfer.from];
-    const receiver = byName[transfer.to];
-    await record(
-      run,
-      {
-        label: `${sender.name} sends ${transfer.amount} native tokens to ${receiver.name}`,
-        kind: "transfer",
-        from: sender.address,
-        to: receiver.address,
-        token: "native",
-        amount: transfer.amount,
-      },
+async function sendTransfers(
+  scenario: SeedScenario,
+  address: ContractAddress,
+  symbol: string,
+  decimals: number,
+  transfers: readonly { from: string; to: string; amount: string }[],
+) {
+  for (const [index, transfer] of transfers.entries()) {
+    const receiver = scenario.actor(transfer.to).account.address;
+    // Sequence numbers keep repeated transfers distinct in the report.
+    await scenario.run.step(
+      `transfer/${symbol}/${index + 1}`,
       () =>
-        sender.wallet.executeAndWait(
-          {
-            invocation: ERC20.v0_1.transfer.invocation(NATIVE_TOKEN_ADDRESS, callGas, {
-              receiver: receiver.account.address,
-              amount: parseUnits(transfer.amount, NATIVE_TOKEN_DECIMALS),
+        scenario.actor(transfer.from).call(
+          [
+            ERC20.v0_1.transfer.call({
+              address,
+              gasLimit: callGas,
+              args: { receiver, amount: parseUnits(transfer.amount, decimals) },
             }),
-            gasLimit: walletGas,
-          },
-          wait,
+          ],
+          { gasLimit: walletGas, wait },
         ),
+      {
+        metadata: { recipient: toBase58(receiver), token: symbol, amount: transfer.amount },
+      },
     );
   }
 }
 
-async function sendTokens(run: Run, assets: Asset[], users: Persona[]) {
-  const byName = Object.fromEntries(users.map((user) => [user.name, user]));
-  for (const { symbol, decimals, deployment } of assets) {
-    for (const transfer of transfers) {
-      const sender = byName[transfer.from];
-      const receiver = byName[transfer.to];
-      // Use the sender's existing wallet: the contract debits the caller's balance.
-      await record(
-        run,
-        {
-          label: `${sender.name} sends ${transfer.amount} ${symbol} to ${receiver.name}`,
-          kind: "transfer",
-          from: sender.address,
-          to: receiver.address,
-          token: symbol,
-          amount: transfer.amount,
-        },
-        () =>
-          sender.wallet.executeAndWait(
-            {
-              invocation: ERC20.v0_1.transfer.invocation(deployment.address, callGas, {
-                receiver: receiver.account.address,
-                amount: parseUnits(transfer.amount, decimals),
-              }),
-              gasLimit: walletGas,
-            },
-            wait,
-          ),
-      );
-    }
-  }
-}
-
-// Calculate expectations from configuration alone, independently of transaction results.
+// Expectations come from configuration, independently of transaction results.
 export function expectedBalances(decimals: number) {
   const balances = Object.fromEntries(
     userNames.map((name) => [name, parseUnits(mintAmount, decimals)]),
@@ -280,53 +245,42 @@ export function expectedBalances(decimals: number) {
   return balances;
 }
 
-async function checkBalances(client: Client, run: Run, assets: Asset[], users: Persona[]) {
-  for (const { symbol, decimals, deployment } of assets) {
+async function checkBalances(scenario: SeedScenario, deployed: Token[]) {
+  for (const { symbol, decimals, address } of deployed) {
     const expected = expectedBalances(decimals);
-    // Views do not submit transactions. Require a snapshot that includes our last write
-    // so an older node snapshot cannot cause a false balance mismatch.
-    const view = {
-      client,
-      address: deployment.address,
-      minStateBlockHeight: run.latestBlockHeight,
-    };
-    for (const user of users) {
-      const { value } = await ERC20.v0_1.getBalanceOf.view({
-        ...view,
-        args: { addr: user.account.address },
-      });
-      if (value !== expected[user.name]) {
-        throw new Error(
-          `${user.name} ${symbol}: expected ${expected[user.name]} base units, got ${value}`,
-        );
+    // Testkit carries confirmed heights from all actors into these reads.
+    for (const name of userNames) {
+      const { value } = await scenario.view(
+        ERC20.v0_1.getBalanceOf.viewRequest({
+          address,
+          args: { addr: scenario.actor(name).account.address },
+        }),
+      );
+      if (value !== expected[name]) {
+        throw new Error(`${name} ${symbol}: expected ${expected[name]} base units, got ${value}`);
       }
     }
-    // Transfers redistribute tokens; only minting changes the expected total supply.
-    const supply = await ERC20.v0_1.totalSupply.view(view);
-    const expectedSupply = parseUnits(mintAmount, decimals) * BigInt(users.length);
-    if (supply.value !== expectedSupply) {
+    const supply = await scenario.view(ERC20.v0_1.totalSupply.viewRequest({ address }));
+    const expectedSupply = parseUnits(mintAmount, decimals) * BigInt(userNames.length);
+    if (supply.value !== expectedSupply)
       throw new Error(`${symbol} supply: expected ${expectedSupply}, got ${supply.value}`);
-    }
   }
 }
 
-function printSummary(run: Run) {
-  const { personas, tokens: assets, transactions } = run.manifest;
-  console.log(
-    `\nComplete: ${personas.length} personas, ${assets.length} tokens, ` +
-      `${transactions.length} transactions.`,
-  );
-  console.log(`Manifest: ${run.directory}/manifest.json`);
-  for (const entry of [...personas, ...assets]) {
-    console.log(`${entry.name}: ${entry.address}`);
+function printSummary(report: RunReport, directory: string) {
+  console.log(`\nReport: ${join(directory, "report.json")}`);
+  console.log("\nContracts (predicted addresses; check deployment outcomes):");
+  for (const step of report.steps.filter((step) => step.name.startsWith("deploy/"))) {
+    console.log(`${step.metadata?.symbol}: ${step.metadata?.address}`);
   }
   console.log("\nTransactions:");
-  for (const transaction of transactions) {
-    console.log(`${transaction.label}: ${transaction.hash}`);
+  for (const attempt of report.attempts) {
+    console.log(
+      `${attempt.step} (${attempt.actor}, ${attempt.outcome}): ${attempt.transactionHash ?? "no hash recorded"}`,
+    );
   }
 }
 
-// Run only when invoked directly; tests import expectedBalances without contacting a node.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
