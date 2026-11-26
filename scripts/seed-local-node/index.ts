@@ -64,6 +64,14 @@ async function main() {
   await seedLocalNode(values["rpc-url"], values["network-hash"]);
 }
 
+/** Every actor needs its own account, so no name may repeat. */
+export function actorNames(users: readonly string[], symbols: readonly string[]) {
+  const names = [...users, ...symbols.map(ownerName)];
+  const repeated = names.find((name, index) => names.indexOf(name) !== index);
+  if (repeated) throw new Error(`Actor name "${repeated}" is used twice; each actor needs its own account.`);
+  return names;
+}
+
 export async function seedLocalNode(rpcUrl: string, expectedNetworkHash: string, parent?: string) {
   const cluster = localnet({
     rpcUrl,
@@ -72,11 +80,11 @@ export async function seedLocalNode(rpcUrl: string, expectedNetworkHash: string,
   const { token } = await loadArtifacts({
     token: new URL("./contracts/erc20.rv32a", import.meta.url),
   });
+  const names = actorNames(userNames, tokens.map((token) => token.symbol));
   const directory = await createOutputDirectory(parent ?? resolve(".seed-local-node"));
   const runDirectory = join(directory, "transactions");
   console.log(`Run: ${directory}`);
   // Disposable local accounts. Keys are not saved: a failed run starts again with fresh accounts.
-  const names = [...userNames, ...tokens.map((token) => ownerName(token.symbol))];
   const accounts = Object.fromEntries(
     names.map((name) => [
       name,

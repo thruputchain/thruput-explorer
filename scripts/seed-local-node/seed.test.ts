@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { expectedBalances } from "./index";
+import { actorNames, expectedBalances } from "./index";
 
 test("calculates expected balances from the configured mint and transfer amounts", () => {
   assert.deepEqual(expectedBalances(0), { Alice: 885n, Bob: 1085n, Carol: 1030n });
@@ -9,4 +9,9 @@ test("calculates expected balances from the configured mint and transfer amounts
     Bob: 1085000000n,
     Carol: 1030000000n,
   });
+});
+
+test("rejects a user named like a token owner, so no two actors share a wallet", () => {
+  assert.deepEqual(actorNames(["Alice"], ["tUSD"]), ["Alice", "tUSD Owner"]);
+  assert.throws(() => actorNames(["tUSD Owner"], ["tUSD"]), /"tUSD Owner" is used twice/);
 });
