@@ -1,6 +1,13 @@
-import { JsonRpcError, NativeRpcError, RpcCompatibilityError } from "@thruputchain/client";
+import { isThruputError } from "@thruputchain/client";
 
 import type { RpcFailure } from "./types";
+
+/** A JSON-RPC error object from the endpoint, decoded or not. */
+function rpcErrorFields(error: unknown) {
+  return isThruputError(error, "rpcError") || isThruputError(error, "nativeRpcError")
+    ? error.context
+    : undefined;
+}
 
 export function toRpcFailure(error: unknown): RpcFailure {
   const kind = rpcErrorKind(error);
@@ -10,11 +17,12 @@ export function toRpcFailure(error: unknown): RpcFailure {
     stateHeightUnavailable: "The requested state height is not available yet.",
     backendDataInvalid: "The RPC could not provide valid data.",
   };
-  if (error instanceof JsonRpcError) {
+  const fields = rpcErrorFields(error);
+  if (fields) {
     return {
-      message: kind && messages[kind] ? messages[kind] : error.message,
-      code: error.code,
-      method: error.method,
+      message: kind && messages[kind] ? messages[kind] : (error as Error).message,
+      code: fields.code,
+      ...(fields.method === undefined ? {} : { method: fields.method }),
     };
   }
 
@@ -22,9 +30,11 @@ export function toRpcFailure(error: unknown): RpcFailure {
 }
 
 export function isUnsupportedRpcError(error: unknown) {
-  return error instanceof RpcCompatibilityError || (error instanceof JsonRpcError && error.code === -32601);
+  return isThruputError(error, "rpcIncompatible") || rpcErrorFields(error)?.code === -32601;
 }
 
 export function rpcErrorKind(error: unknown) {
-  return error instanceof NativeRpcError && error.decoded.classification === "known" ? error.decoded.data.kind : undefined;
+  return isThruputError(error, "nativeRpcError") && error.context.kind !== "unrecognized"
+    ? error.context.kind
+    : undefined;
 }

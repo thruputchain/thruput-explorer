@@ -1,10 +1,9 @@
-import { RpcCompatibilityError } from "@thruputchain/client";
-import { ContractVerificationError } from "@thruputchain/client/contract";
+import { isThruputError } from "@thruputchain/client";
 
 export function metadataFailure(error: unknown): string {
-  if (error instanceof ContractVerificationError)
+  if (isThruputError(error, "contractVerificationFailed"))
     return "Metadata verification failed; raw data remains available.";
-  if (error instanceof RpcCompatibilityError)
+  if (isThruputError(error, "rpcIncompatible"))
     return "This endpoint does not support metadata discovery.";
   return "Metadata is unavailable from this endpoint.";
 }

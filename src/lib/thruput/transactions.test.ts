@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
-import { HttpTransport, MockTransport, JsonRpcError, toBase58, toHex0x } from "@thruputchain/client";
+import { HttpTransport, MockTransport, ThruputError, toBase58, toHex0x } from "@thruputchain/client";
 
 import { NATIVE_TOKEN_ADDRESS } from "./client";
 import { identifier, metadataBatchResponse, transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
+
+// A JSON-RPC error object, as a transport reports it. The client decodes the
+// native ones from their data.
+function rpcError(code: number, rpcMessage: string, data: unknown, method: string) {
+  return new ThruputError("rpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
+    context: { code, rpcMessage, data, method, raw: { code, message: rpcMessage, data } },
+  });
+}
 
 const hash = identifier(0xab);
 const height = "9007199254740993";
@@ -293,7 +301,7 @@ test("unknown transaction status remains visible with raw evidence", async (t) =
 test("receipt error observation preserves commitment even when status is unavailable", async (t) => {
   mockRpc(t, {
     getTransactionStatus: new Error("Status unavailable"),
-    getTransactionReceipt: new JsonRpcError(-32054, "Invalid backend data", { kind: "backendDataInvalid", observation: { transactionHash: hash, blockHeight: height } }, "getTransactionReceipt"),
+    getTransactionReceipt: rpcError(-32054, "Invalid backend data", { kind: "backendDataInvalid", observation: { transactionHash: hash, blockHeight: height } }, "getTransactionReceipt"),
   });
   const result = await loadTransactionPageData(hash);
   assert.deepEqual(result.status, { status: "committed", height });
@@ -304,7 +312,7 @@ test("receipt error observation preserves commitment even when status is unavail
 test("receipt errors cannot establish commitment for a different transaction", async (t) => {
   mockRpc(t, {
     getTransactionStatus: { status: "unknown" },
-    getTransactionReceipt: new JsonRpcError(-32054, "Invalid backend data", { kind: "backendDataInvalid", observation: { transactionHash: identifier(1), blockHeight: height } }, "getTransactionReceipt"),
+    getTransactionReceipt: rpcError(-32054, "Invalid backend data", { kind: "backendDataInvalid", observation: { transactionHash: identifier(1), blockHeight: height } }, "getTransactionReceipt"),
   });
   const result = await loadTransactionPageData(hash);
   assert.equal(result.status.status, "unknown");

@@ -8,7 +8,7 @@ import {
   toBase58,
   hashContract,
   deriveEntrypointID,
-  RpcCompatibilityError,
+  ThruputError,
 } from "@thruputchain/client";
 import { DefaultWallet } from "@thruputchain/client/contracts";
 import {
@@ -111,7 +111,8 @@ test("direct and wrapped Counter calls decode without inventing child outcomes",
       ? DefaultWallet.v0_1.execute.call({
           address: target,
           gasLimit: gasAmount(1000000n),
-          args: { calls: [call] },
+          // This call mints and forwards no auth tokens.
+          args: { mints: [], calls: [{ ...call, tokens: [] }] },
         }).invocation
       : { invoked_address: target, ...call };
     const bytes = serialize(tx, codec.Transaction);
@@ -232,7 +233,9 @@ test("missing effective-discovery endpoints never guess a default wallet", async
 test("old endpoints have a distinct unsupported-input state", async (t) => {
   const client = await createThruputClient({ transport: new MockTransport() });
   t.mock.method(client, "requireMethods", () => {
-    throw new RpcCompatibilityError("getTransactionInput unavailable");
+    throw new ThruputError("rpcIncompatible", "getTransactionInput unavailable", {
+      context: { kind: "method" },
+    });
   });
   const result = await loadTransactionInput(
     client,

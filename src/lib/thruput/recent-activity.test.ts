@@ -1,10 +1,22 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { createThruputClient, MockTransport, hashFromBase58, NativeRpcError, JsonRpcError } from "@thruputchain/client";
+import { createThruputClient, MockTransport, hashFromBase58, ThruputError, type NativeRpcErrorContext } from "@thruputchain/client";
 import { ACTIVITY_BLOCK_PAGE_LIMIT, ACTIVITY_SCAN_BLOCK_LIMIT, loadRecentActivityBlocks, loadRecentActivityTransactions, readActivityBlock } from "./recent-activity";
 import { identifier, transferEvent } from "./test-fixtures";
 import { NATIVE_TOKEN_ADDRESS } from "./client";
+
+// A native RPC error, as the client decodes it from the endpoint.
+function nativeRpcError(
+  code: number,
+  rpcMessage: string,
+  data: Exclude<NativeRpcErrorContext["data"], undefined>,
+  method: string,
+) {
+  return new ThruputError("nativeRpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
+    context: { code, rpcMessage, method, raw: { code, message: rpcMessage, data }, kind: data.kind, data } as NativeRpcErrorContext,
+  });
+}
 
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 
@@ -111,7 +123,7 @@ test("activity uses typed index coverage when the committed tip is ahead", async
   t.mock.method(client, "getChainTip", async () => ({ blockHeight: 30n }));
   t.mock.method(client, "getBlockByHeight", async () => null);
   t.mock.method(client, "getTransactionsByBlock", async ({ blockHeight }: { blockHeight: bigint }) => {
-    if (blockHeight > 20n) throw new NativeRpcError(new JsonRpcError(-32013, "Index lag", { kind: "historyUnavailable", oldestIndexedBlockHeight: "18", latestIndexedBlockHeight: "20" }), "getTransactionsByBlock");
+    if (blockHeight > 20n) throw nativeRpcError(-32013, "Index lag", { kind: "historyUnavailable", oldestIndexedBlockHeight: 18n, latestIndexedBlockHeight: 20n }, "getTransactionsByBlock");
     return { transactions: [], nextCursor: null, oldestIndexedBlockHeight: 18n, latestIndexedBlockHeight: 20n };
   });
   const result = await loadRecentActivityBlocks();

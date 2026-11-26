@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { NativeRpcError, toBase58 } from "@thruputchain/client";
+import { isThruputError, toBase58 } from "@thruputchain/client";
 
 import { loadBlock, loadBlockTransactions } from "./blocks";
 import { checkBlockContinuation } from "./block-pagination";
@@ -53,9 +53,9 @@ const readTip = cache(async () => {
     return coverage.latestIndexedBlockHeight < height ? coverage.latestIndexedBlockHeight : height;
   } catch (error) {
     // The committed tip can be ahead of the history index. Use only typed coverage evidence.
-    if (error instanceof NativeRpcError && error.decoded.classification === "known") {
-      const data = error.decoded.data;
-      if (data.kind === "historyUnavailable" && data.latestIndexedBlockHeight !== undefined && data.latestIndexedBlockHeight < height) return data.latestIndexedBlockHeight;
+    if (isThruputError(error, "nativeRpcError") && error.context.kind === "historyUnavailable") {
+      const latest = error.context.data.latestIndexedBlockHeight;
+      if (latest !== undefined && latest < height) return latest;
     }
     throw error;
   }
