@@ -74,7 +74,6 @@ test("preserves unknown transaction and funding outcomes without retrying", asyn
   const { run, readManifest } = await fixture(t);
   const errors = [
     new ThruputError("transactionOutcomeUnknown", "Connection lost", {
-      context: {},
       transaction: {
         hash: evidence.transactionHash,
         outcome: "unknown",

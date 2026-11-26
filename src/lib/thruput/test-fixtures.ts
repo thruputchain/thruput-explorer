@@ -1,4 +1,11 @@
-import { addressFromBase58, toBase58, toHex0x, type EmittedEvent } from "@thruputchain/client";
+import {
+  addressFromBase58,
+  ThruputError,
+  toBase58,
+  toHex0x,
+  type EmittedEvent,
+  type NativeRpcErrorContext,
+} from "@thruputchain/client";
 import { thruput_erc20_if as ERC20 } from "@thruputchain/client/contracts";
 import { CxsWriter, Int128Codec } from "@thruputchain/protocol";
 
@@ -39,4 +46,24 @@ export function transferEvent(options: {
     ],
     data: writer.finish(),
   };
+}
+
+/** A JSON-RPC error object, as a transport reports it. The client decodes the native ones from their data. */
+export function rpcError(code: number, rpcMessage: string, data: unknown, method: string) {
+  return new ThruputError("rpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
+    context: { code, rpcMessage, data, method, raw: { code, message: rpcMessage, data } },
+  });
+}
+
+/** A native RPC error, as the client decodes it. Use it where a test replaces a client method. */
+export function nativeRpcError(
+  code: number,
+  rpcMessage: string,
+  data: Exclude<NativeRpcErrorContext["data"], undefined>,
+  method: string,
+) {
+  return new ThruputError("nativeRpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
+    // TypeScript cannot link this kind to its data arm.
+    context: { code, rpcMessage, method, raw: { code, message: rpcMessage, data }, kind: data.kind, data } as NativeRpcErrorContext,
+  });
 }

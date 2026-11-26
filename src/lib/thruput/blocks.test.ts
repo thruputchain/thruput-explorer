@@ -1,25 +1,13 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { createThruputClient, MockTransport, ThruputError, type NativeRpcErrorContext } from "@thruputchain/client";
+import { createThruputClient, MockTransport } from "@thruputchain/client";
 
 import { POST } from "../../app/api/search/route";
 import { isBlockHeight } from "../validation";
 import { checkBlockContinuation } from "./block-pagination";
 import { loadBlock, loadBlockTransactions } from "./blocks";
-import { identifier } from "./test-fixtures";
-
-// A native RPC error, as the client decodes it from the endpoint.
-function nativeRpcError(
-  code: number,
-  rpcMessage: string,
-  data: Exclude<NativeRpcErrorContext["data"], undefined>,
-  method: string,
-) {
-  return new ThruputError("nativeRpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
-    context: { code, rpcMessage, method, raw: { code, message: rpcMessage, data }, kind: data.kind, data } as NativeRpcErrorContext,
-  });
-}
+import { identifier, nativeRpcError } from "./test-fixtures";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(
   import.meta.url,

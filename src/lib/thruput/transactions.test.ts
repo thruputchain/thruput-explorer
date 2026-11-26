@@ -1,19 +1,11 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
-import { HttpTransport, MockTransport, ThruputError, toBase58, toHex0x } from "@thruputchain/client";
+import { HttpTransport, MockTransport, toBase58, toHex0x } from "@thruputchain/client";
 
 import { NATIVE_TOKEN_ADDRESS } from "./client";
-import { identifier, metadataBatchResponse, transferEvent } from "./test-fixtures";
+import { identifier, metadataBatchResponse, rpcError, transferEvent } from "./test-fixtures";
 import { loadTransactionPageData } from "./transactions";
-
-// A JSON-RPC error object, as a transport reports it. The client decodes the
-// native ones from their data.
-function rpcError(code: number, rpcMessage: string, data: unknown, method: string) {
-  return new ThruputError("rpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
-    context: { code, rpcMessage, data, method, raw: { code, message: rpcMessage, data } },
-  });
-}
 
 const hash = identifier(0xab);
 const height = "9007199254740993";

@@ -1,22 +1,10 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { createThruputClient, MockTransport, hashFromBase58, ThruputError, type NativeRpcErrorContext } from "@thruputchain/client";
+import { createThruputClient, MockTransport, hashFromBase58 } from "@thruputchain/client";
 import { ACTIVITY_BLOCK_PAGE_LIMIT, ACTIVITY_SCAN_BLOCK_LIMIT, loadRecentActivityBlocks, loadRecentActivityTransactions, readActivityBlock } from "./recent-activity";
-import { identifier, transferEvent } from "./test-fixtures";
+import { identifier, nativeRpcError, transferEvent } from "./test-fixtures";
 import { NATIVE_TOKEN_ADDRESS } from "./client";
-
-// A native RPC error, as the client decodes it from the endpoint.
-function nativeRpcError(
-  code: number,
-  rpcMessage: string,
-  data: Exclude<NativeRpcErrorContext["data"], undefined>,
-  method: string,
-) {
-  return new ThruputError("nativeRpcError", `${method}: ${rpcMessage} (RPC ${code})`, {
-    context: { code, rpcMessage, method, raw: { code, message: rpcMessage, data }, kind: data.kind, data } as NativeRpcErrorContext,
-  });
-}
 
 const sdk: typeof import("@thruputchain/client") = createRequire(import.meta.url)("@thruputchain/client");
 

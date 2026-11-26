@@ -5,7 +5,6 @@ import {
   toHex0x,
   formatUnits,
   isThruputError,
-  ThruputError,
   type ThruputClient,
   type TransactionReceipt,
 } from "@thruputchain/client";
@@ -99,11 +98,9 @@ export async function loadTransactionInput(
         reason:
           "Original input is not retained. This does not prove nonexecution.",
       };
+    // The input and the receipt must name the same commitment height.
     if (receipt && input.blockHeight !== receipt.blockHeight)
-      throw new ThruputError(
-        "contractVerificationFailed",
-        "Input and receipt commitment heights disagree",
-      );
+      return { status: "unavailable", reason: "Input verification failed." };
     const cache = new Map<
       string,
       ReturnType<typeof getEffectiveContractSpec>
