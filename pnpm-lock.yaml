@@ -60,6 +60,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.5
+      '@thruputchain/testkit':
+        specifier: 0.1.0
+        version: 0.1.0(@thruputchain/client@0.29.0)
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
@@ -1517,6 +1520,12 @@ packages:
   '@thruputchain/protocol@0.20.0':
     resolution: {integrity: sha512-R4nWFh+8NTplZhStILUhMgf2ynID+MPcWNEhMXd549i4czDSDKVbZX6cjFxwhfkBtqctgsvGprQ9XZ7DQxV3Sw==}
     engines: {node: '>=22.12.0'}
+
+  '@thruputchain/testkit@0.1.0':
+    resolution: {integrity: sha512-/nsC1MNrUJQTftukId8d+b7HQECkmIXPrt4knokl5zUGo0ubq2hE8d/8XifZiyTTNeuUy87emVr7ERIV48gP6g==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      '@thruputchain/client': ^0.29.0
 
   '@thruputchain/xdr@0.20.0':
     resolution: {integrity: sha512-ofDE18gMm6dGAREOu90VA9kc2PgT7+NWmlPCu8BWME1VzGd3td1+1W4jHgoTnz1RpYPnRxn9MPpKA7SJhRYNuQ==}
@@ -4568,6 +4577,10 @@ snapshots:
       '@noble/hashes': 2.2.0
       '@scure/base': 2.0.0
       '@thruputchain/xdr': 0.20.0
+
+  '@thruputchain/testkit@0.1.0(@thruputchain/client@0.29.0)':
+    dependencies:
+      '@thruputchain/client': 0.29.0
 
   '@thruputchain/xdr@0.20.0': {}
 
