@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { createThruputClient, MockTransport, NativeRpcError, JsonRpcError } from "@thruputchain/client";
+import { createThruputClient, MockTransport } from "@thruputchain/client";
 
 import { POST } from "../../app/api/search/route";
 import { isBlockHeight } from "../validation";
 import { checkBlockContinuation } from "./block-pagination";
 import { loadBlock, loadBlockTransactions } from "./blocks";
-import { identifier } from "./test-fixtures";
+import { identifier, nativeRpcError } from "./test-fixtures";
 
 const sdk: typeof import("@thruputchain/client") = createRequire(
   import.meta.url,
@@ -133,7 +133,7 @@ for (const [kind, code, expected] of [["invalidCursor", -32602, "invalid"], ["hi
     const client = await createThruputClient({ transport: new MockTransport() });
     t.mock.method(sdk, "createThruputClient", async () => client);
     t.mock.method(client, "getTransactionsByBlock", async () => {
-      throw new NativeRpcError(new JsonRpcError(code, "Private upstream diagnostics", { kind }), "getTransactionsByBlock");
+      throw nativeRpcError(code, "Private upstream diagnostics", { kind }, "getTransactionsByBlock");
     });
     const result = await loadBlockTransactions("42", "0xaa");
     assert.equal(result.status, expected);

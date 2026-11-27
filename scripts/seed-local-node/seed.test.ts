@@ -5,9 +5,8 @@ import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import {
   Ed25519Signer,
-  FundingObservationError,
-  TransactionExecutionError,
-  TransactionObservationError,
+  isThruputError,
+  ThruputError,
   createPubkeyAccount,
   createThruputClient,
   localnet,
@@ -53,9 +52,17 @@ test("records a committed abort as failed with its hash", async (t) => {
   };
   await assert.rejects(
     record(run, details, async () => {
-      throw new TransactionExecutionError(receipt, evidence);
+      throw new ThruputError("transactionFailed", "Transaction execution failed", {
+        transaction: {
+          hash: evidence.transactionHash,
+          outcome: "failed",
+          reason: "aborted",
+          receipt,
+          submission: evidence,
+        },
+      });
     }),
-    TransactionExecutionError,
+    (error) => isThruputError(error, "transactionFailed"),
   );
   const transaction = (await readManifest()).transactions[0];
   assert.equal(transaction.status, "failed");
@@ -66,28 +73,35 @@ test("records a committed abort as failed with its hash", async (t) => {
 test("preserves unknown transaction and funding outcomes without retrying", async (t) => {
   const { run, readManifest } = await fixture(t);
   const errors = [
-    new TransactionObservationError(
-      evidence,
-      new Error("Connection lost"),
-      undefined,
-      undefined,
-      "observation",
-    ),
-    new FundingObservationError(
-      {
-        recipient: new Uint8Array(32),
-        clientNonce: new Uint8Array(16),
-        networkHash: evidence.networkHash,
+    new ThruputError("transactionOutcomeUnknown", "Connection lost", {
+      transaction: {
+        hash: evidence.transactionHash,
+        outcome: "unknown",
+        reason: "disconnected",
+        submission: evidence,
       },
-      {
-        attemptStatus: "pending",
-        recipient: new Uint8Array(32),
-        rawAmount: 100000000n,
-        retryAfterSeconds: 1n,
-        transactionHash: evidence.transactionHash,
+    }),
+    new ThruputError("fundingStopped", "Observation timeout", {
+      context: {
+        request: {
+          recipient: new Uint8Array(32),
+          clientNonce: new Uint8Array(16),
+          networkHash: evidence.networkHash,
+        },
+        lastResponse: {
+          attemptStatus: "pending",
+          recipient: new Uint8Array(32),
+          rawAmount: 100000000n,
+          retryAfterSeconds: 1n,
+          transactionHash: evidence.transactionHash,
+        },
       },
-      new Error("Observation timeout"),
-    ),
+      transaction: {
+        hash: evidence.transactionHash,
+        outcome: "unknown",
+        reason: "timeout",
+      },
+    }),
   ];
   let calls = 0;
   for (const error of errors) {

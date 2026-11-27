@@ -4,7 +4,7 @@ import {
   toBase58,
   toHex0x,
   formatUnits,
-  RpcCompatibilityError,
+  isThruputError,
   type ThruputClient,
   type TransactionReceipt,
 } from "@thruputchain/client";
@@ -15,7 +15,6 @@ import {
 } from "@thruputchain/client/actions";
 import {
   createContractCallDecoder,
-  ContractVerificationError,
   specIdKey,
   type ContractSpec,
 } from "@thruputchain/client/contract";
@@ -99,10 +98,9 @@ export async function loadTransactionInput(
         reason:
           "Original input is not retained. This does not prove nonexecution.",
       };
+    // The input and the receipt must name the same commitment height.
     if (receipt && input.blockHeight !== receipt.blockHeight)
-      throw new ContractVerificationError(
-        "Input and receipt commitment heights disagree",
-      );
+      return { status: "unavailable", reason: "Input verification failed." };
     const cache = new Map<
       string,
       ReturnType<typeof getEffectiveContractSpec>
@@ -245,9 +243,9 @@ export async function loadTransactionInput(
     return {
       status: "unavailable",
       reason:
-        error instanceof ContractVerificationError
+        isThruputError(error, "contractVerificationFailed")
           ? "Input verification failed."
-          : error instanceof RpcCompatibilityError
+          : isThruputError(error, "rpcIncompatible")
             ? "Transaction input is not supported by this endpoint."
             : "Input could not be retrieved.",
     };

@@ -2,7 +2,7 @@ import {
   hashFromBase58,
   toBase58,
   toHex0x,
-  NativeRpcError,
+  isThruputError,
   type EmittedEvent,
   type ThruputClient,
   type TransactionReceipt,
@@ -75,21 +75,17 @@ export async function loadTransactionPageData(
     // A receipt is commitment evidence even if the parallel status read failed or lagged.
     if (receipt)
       status = { status: "committed", height: receipt.blockHeight.toString() };
+    const failure =
+      receiptResult.status === "rejected" ? receiptResult.reason : undefined;
     if (
-      receiptResult.status === "rejected" &&
-      receiptResult.reason instanceof NativeRpcError
+      isThruputError(failure, "nativeRpcError") &&
+      failure.context.kind === "backendDataInvalid" &&
+      failure.context.data.observation
     ) {
-      const decoded = receiptResult.reason.decoded;
-      if (
-        decoded.classification === "known" &&
-        decoded.data.kind === "backendDataInvalid" &&
-        decoded.data.observation
-      ) {
-        status = {
-          status: "committed",
-          height: decoded.data.observation.blockHeight.toString(),
-        };
-      }
+      status = {
+        status: "committed",
+        height: failure.context.data.observation.blockHeight.toString(),
+      };
     }
 
     const execution = receipt?.execution;
